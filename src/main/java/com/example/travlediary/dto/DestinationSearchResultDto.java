@@ -12,6 +12,7 @@ public class DestinationSearchResultDto {
     private Long countryId; // 실제 국가 카테고리 ID
     private String countryName; // 실제 국가명
     private String thumbnailUrl; // 대표 이미지
+    private boolean imageNoDerivatives; // 대표 이미지가 공공누리 제3유형(변경금지) → 잘리지 않게(contain) 그린다
 
     // 검색 확장시, 북마크 여부·댓글 수·후기 등 필요하면 나중에 추가
 

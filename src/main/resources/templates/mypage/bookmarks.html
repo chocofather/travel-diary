@@ -97,6 +97,7 @@
              th:href="@{/destinations/{id}(id=${bookmark.targetId})}">
             <img th:if="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
                  th:src="@{${bookmark.thumbnailUrl}}"
+                 th:classappend="${bookmark.imageNoDerivatives} ? 'is-no-derivatives'"
                  th:alt="#{mypage.bookmarks.imageAlt(${bookmark.name})}">
             <span th:unless="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
                   class="mypage-bookmark-placeholder" role="img"

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
+<th:block th:fragment="headFragment"></th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">공공누리 제3유형 썸네일 캐시 정리</h1>
+        <p>DB 에서 공공누리 제3유형(변경금지)으로 판정된 여행지 원본에서 예전에 만들어진 카드 썸네일 캐시만 찾습니다.
+          원본 사진·DB·1유형 썸네일·다른 캐시는 지우지 않습니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/maintenance/no-derivative-thumbnails}" class="admin-btn">dry-run 다시 보기</a>
+      </div>
+    </header>
+
+    <div th:if="${errorMessage}" class="admin-alert is-error" role="alert" th:text="${errorMessage}"></div>
+
+    <!-- execute 결과 -->
+    <div th:if="${result}" class="admin-alert is-success" role="status" data-cleanup-result>
+      <p th:text="|삭제 ${result.deleted().size()}개 · ${#numbers.formatDecimal(result.deletedBytes() / 1048576.0, 1, 2)} MB · 실패 ${result.failed().size()}개|">삭제 결과</p>
+      <p th:text="|대상 파일 모두 사라짐: ${result.targetsGone() ? '예' : '아니오'} · 원본 그대로: ${result.originalsKept() ? '예' : '아니오'}|">사후 확인</p>
+      <ul th:unless="${#lists.isEmpty(result.failed())}">
+        <li th:each="path : ${result.failed()}" th:text="|실패: ${path}|"></li>
+      </ul>
+    </div>
+
+    <!-- dry-run -->
+    <th:block th:if="${plan}">
+      <div class="admin-alert" data-cleanup-plan>
+        <p th:text="|3유형 원본 ${plan.noDerivativeOriginalCount()}개 · 지울 파일 ${plan.fileCount()}개 · ${#numbers.formatDecimal(plan.totalBytes() / 1048576.0, 1, 2)} MB (${plan.totalBytes()} bytes)|">요약</p>
+        <p>
+          <span th:each="entry, stat : ${plan.countsByVariant()}"
+                th:text="|${entry.key}: ${entry.value}개${stat.last ? '' : ' · '}|"></span>
+        </p>
+        <p th:if="${plan.isEmpty()}">정리할 파일 없음</p>
+      </div>
+
+      <div class="admin-table-wrapper" th:unless="${plan.isEmpty()}">
+        <table class="admin-table">
+          <thead><tr><th>버전/폭</th><th>파일</th><th>크기(bytes)</th></tr></thead>
+          <tbody>
+          <tr th:each="target : ${plan.targets()}">
+            <td th:text="${target.variantKey()}">v2/480</td>
+            <td th:text="${target.relativePath()}">thumbnail-cache/destinations/v2/480/a.jpg</td>
+            <td th:text="${target.bytes()}">0</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <form th:unless="${plan.isEmpty()}" th:action="@{/admin/maintenance/no-derivative-thumbnails/execute}"
+            method="post" class="admin-form-card">
+        <input type="hidden" name="expectedFileCount" th:value="${plan.fileCount()}">
+        <input type="hidden" name="expectedTotalBytes" th:value="${plan.totalBytes()}">
+        <div class="admin-form-field">
+          <label for="cleanup-confirm" th:text="|위 ${plan.fileCount()}개 파일을 지우려면 ${confirmValue} 를 입력하세요|">확인</label>
+          <input id="cleanup-confirm" type="text" name="confirm" autocomplete="off" required>
+        </div>
+        <div class="admin-form-actions">
+          <button type="submit" class="admin-btn is-danger">실제 삭제</button>
+        </div>
+      </form>
+    </th:block>
+  </section>
+</th:block>
+</html>

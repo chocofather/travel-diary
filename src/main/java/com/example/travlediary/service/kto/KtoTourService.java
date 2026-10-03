@@ -5,6 +5,7 @@ import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.dto.kto.KtoTourAreaCandidateResponse;
 import com.example.travlediary.dto.kto.KtoTourAreaResponse;
 import com.example.travlediary.dto.kto.KtoTourAutofillResponse;
+import com.example.travlediary.dto.kto.KtoTourContentImages;
 import com.example.travlediary.dto.kto.KtoTourImageCandidate;
 import com.example.travlediary.dto.kto.KtoTourSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoTourSearchResponse;
@@ -23,9 +24,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -52,6 +55,12 @@ public class KtoTourService {
     /** 시/도(17) + 한 시/도의 시/군/구를 한 번에 받기 충분한 크기. */
     private static final int AREA_CODE_PAGE_SIZE = 100;
     private static final int DETAIL_IMAGE_PAGE_SIZE = 100;
+    /** 관광사진 검색: 제목순 결과를 다시 정렬하려고 한 번에 받는 콘텐츠 수. */
+    private static final int PHOTO_SEARCH_PAGE_SIZE = 100;
+    /** 대표이미지가 있는 콘텐츠만 제목순으로 받는다. */
+    private static final String IMAGE_CONTENT_ARRANGE = "O";
+    /** 관광사진 검색에서 먼저 보여줄 관광지 계열 유형(관광지, 문화시설, 여행코스, 레포츠). */
+    private static final Set<String> PHOTO_SEARCH_PREFERRED_CONTENT_TYPES = Set.of("12", "14", "25", "28");
     /** 후보 전체 수집용 페이지 크기. 유형 하나당 최대 100 × 20 = 2,000건까지 모은다. */
     private static final int AREA_FETCH_PAGE_SIZE = 100;
     private static final int MAX_AREA_FETCH_PAGES = 20;
@@ -262,24 +271,86 @@ public class KtoTourService {
                     true));
         }
 
+        candidates.addAll(detailImageCandidates(normalizedContentId, mainImageUrl));
+        return List.copyOf(candidates);
+    }
+
+    /**
+     * 관리자 관광사진 검색용. 검색어와 관련도가 높은 콘텐츠 몇 건의 대표/추가 이미지를 준다.
+     *
+     * <p>searchKeyword2 는 관련도 정렬이 없어(제목순) 한 번에 넉넉히 받은 뒤 다시 정렬한다.
+     * 관광지 계열 유형을 먼저, 그 안에서 제목이 검색어와 같거나 검색어로 시작하는 콘텐츠를 먼저 둔다.
+     * 대표이미지는 검색 결과의 firstimage 와 cpyrhtDivCd 를 그대로 쓰고, 추가이미지는 detailImage2 로 받는다.
+     * 한 콘텐츠의 추가이미지를 받지 못해도 그 콘텐츠의 대표이미지와 다른 콘텐츠는 그대로 준다.</p>
+     */
+    public List<KtoTourContentImages> searchContentImages(String keyword, int contentLimit) {
+        String normalizedKeyword = normalize(keyword);
+        if (normalizedKeyword == null || contentLimit < 1) {
+            return List.of();
+        }
+        KtoTourApiResponse response = request("/searchKeyword2", builder -> builder
+                .queryParam("keyword", normalizedKeyword)
+                .queryParam("arrange", IMAGE_CONTENT_ARRANGE)
+                .queryParam("pageNo", 1)
+                .queryParam("numOfRows", PHOTO_SEARCH_PAGE_SIZE));
+
+        List<KtoTourApiResponse.Item> ranked = readItems(response.response().body().items()).stream()
+                .filter(item -> normalize(item.contentid()) != null)
+                .filter(item -> SUPPORTED_CONTENT_TYPES.containsKey(normalize(item.contenttypeid())))
+                .sorted(Comparator.comparingInt(item -> photoSearchRank(item, normalizedKeyword)))
+                .limit(contentLimit)
+                .toList();
+
+        List<KtoTourContentImages> contents = new ArrayList<>();
+        for (KtoTourApiResponse.Item item : ranked) {
+            String contentId = normalize(item.contentid());
+            String title = plainText(item.title());
+            String mainImageUrl = normalize(item.firstimage());
+            List<KtoTourImageCandidate> images = new ArrayList<>();
+            if (mainImageUrl != null) {
+                images.add(new KtoTourImageCandidate(
+                        contentId, title, mainImageUrl, normalize(item.cpyrhtDivCd()), true));
+            }
+            try {
+                images.addAll(detailImageCandidates(contentId, mainImageUrl));
+            } catch (KtoTourApiException exception) {
+                // 추가이미지를 못 받아도 대표이미지는 쓸 수 있다.
+            }
+            contents.add(new KtoTourContentImages(contentId, title, List.copyOf(images)));
+        }
+        return List.copyOf(contents);
+    }
+
+    private int photoSearchRank(KtoTourApiResponse.Item item, String keyword) {
+        String title = plainText(item.title());
+        int titleRank = title == null ? 2
+                : title.equals(keyword) ? 0
+                : title.startsWith(keyword) ? 1
+                : 2;
+        int typeRank = PHOTO_SEARCH_PREFERRED_CONTENT_TYPES.contains(normalize(item.contenttypeid())) ? 0 : 3;
+        return typeRank + titleRank;
+    }
+
+    private List<KtoTourImageCandidate> detailImageCandidates(String contentId, String mainImageUrl) {
         KtoTourApiResponse imageResponse = request("/detailImage2", builder -> builder
-                .queryParam("contentId", normalizedContentId)
+                .queryParam("contentId", contentId)
                 .queryParam("imageYN", "Y")
                 .queryParam("pageNo", 1)
                 .queryParam("numOfRows", DETAIL_IMAGE_PAGE_SIZE));
+        List<KtoTourImageCandidate> candidates = new ArrayList<>();
         for (KtoTourApiResponse.Item item : readItems(imageResponse.response().body().items())) {
             String originalImageUrl = normalize(item.originimgurl());
             if (originalImageUrl == null || originalImageUrl.equals(mainImageUrl)) {
                 continue;
             }
             candidates.add(new KtoTourImageCandidate(
-                    normalizedContentId,
+                    contentId,
                     plainText(item.imgname()),
                     originalImageUrl,
                     normalize(item.cpyrhtDivCd()),
                     false));
         }
-        return List.copyOf(candidates);
+        return candidates;
     }
 
     public KtoTourAutofillResponse getDetail(String contentId, String contentTypeId) {

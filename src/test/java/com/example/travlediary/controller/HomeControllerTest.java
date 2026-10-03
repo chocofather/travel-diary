@@ -20,6 +20,7 @@ import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
@@ -74,6 +75,8 @@ class HomeControllerTest {
     private DestinationViewClock viewClock;
     @MockitoBean
     private DestinationCardThumbnailService cardThumbnailService;
+    @MockitoBean
+    private DestinationImageService destinationImageService;
     @MockitoBean
     private TravelInfoService travelInfoService;
     @MockitoBean

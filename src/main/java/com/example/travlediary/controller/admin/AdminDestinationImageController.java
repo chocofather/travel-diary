@@ -75,8 +75,10 @@ public class AdminDestinationImageController {
           이미 만들어 둔 썸네일만 쓴다. 아직 없는 사진은 원본으로 바로 보여 주고 다음 방문부터 썸네일을 쓴다.
           관리 화면이 썸네일 만들기를 기다리게 하면 첫 화면이 늦고, 그 요청이 공개 화면의 썸네일 요청 앞에 줄을 선다.
         */
+        // 공공누리 제3유형(변경금지)은 예전에 만들어 둔 썸네일이 있어도 쓰지 않고 원본을 그대로 보여 준다.
         Map<Long, String> imageThumbnails = new HashMap<>();
-        images.forEach(image -> cardThumbnailService.cardImage(image.getImageUrl())
+        images.stream().filter(image -> !image.isNoDerivatives())
+                .forEach(image -> cardThumbnailService.cardImage(image.getImageUrl())
                 .filter(card -> cardThumbnailService.isSmallThumbnailReady(image.getImageUrl()))
                 .ifPresent(card -> imageThumbnails.put(image.getId(), card.src())));
         model.addAttribute("imageThumbnails", imageThumbnails);

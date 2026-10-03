@@ -1613,3 +1613,15 @@ img.protected-image {
     -webkit-user-drag: none;
     user-select: none;
 }
+
+/*
+  공공누리 제3유형(변경금지) 사진: 카드 썸네일에서도 잘라 보이지 않게 원본 비율 전체를 담는다.
+  이미지 칸 크기는 각 카드 규칙 그대로 두고 남는 자리만 중립 배경으로 채운다.
+  카드마다 cover·확대(hover) 규칙의 우선순위가 달라 여기서 한 번에 덮는다.
+*/
+img.is-no-derivatives {
+    object-fit: contain !important;
+    object-position: center !important;
+    transform: none !important;
+    background-color: #f3f4f6;
+}

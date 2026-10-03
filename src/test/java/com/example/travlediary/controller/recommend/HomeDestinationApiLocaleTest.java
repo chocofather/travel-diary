@@ -11,6 +11,7 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.example.travlediary.service.destination.DestinationImageService;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,18 +30,22 @@ class HomeDestinationApiLocaleTest {
 
     @Mock private PopularRecommendService popularRecommendService;
     @Mock private DestinationRecommendService destinationRecommendService;
+    @Mock private DestinationImageService destinationImageService;
     /** 이 테스트의 카드에는 이미지가 없어 썸네일을 채우지 않는다. (업로드 폴더도 비어 있다) */
     private final DestinationCardThumbnailService cardThumbnailService =
-            new DestinationCardThumbnailService("build/tmp/no-uploads");
+            new DestinationCardThumbnailService("build/tmp/no-uploads",
+                    org.mockito.Mockito.mock(DestinationImageService.class));
 
     @ParameterizedTest
     @EnumSource(SupportedLanguage.class)
     void homeDestinationApisUseTheLocaleCookieForTheirLocalizedJson(
             SupportedLanguage language) throws Exception {
         PopularRecommendController popularController =
-                new PopularRecommendController(popularRecommendService, cardThumbnailService);
+                new PopularRecommendController(popularRecommendService, cardThumbnailService,
+                        destinationImageService);
         DestinationRecommendController seasonController =
-                new DestinationRecommendController(destinationRecommendService, cardThumbnailService);
+                new DestinationRecommendController(destinationRecommendService, cardThumbnailService,
+                        destinationImageService);
         MockMvc mockMvc = MockMvcBuilders
                 .standaloneSetup(popularController, seasonController)
                 .setLocaleResolver(new TravelDiaryLocaleResolver())

@@ -57,6 +57,7 @@
       <article th:each="result : ${searchPage.results}" class="global-search-result">
         <a th:href="${result.detailUrl}">
           <img class="global-search-thumbnail"
+               th:classappend="${result.imageNoDerivatives} ? 'is-no-derivatives'"
                th:if="${(result.type == 'destination' or result.type == 'event') and result.thumbnailUrl != null and !result.thumbnailUrl.isBlank()}"
                th:src="${result.thumbnailUrl}" th:alt="${result.title}"
                loading="lazy" onerror="this.remove()" />

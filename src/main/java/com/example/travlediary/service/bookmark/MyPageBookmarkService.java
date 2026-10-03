@@ -2,10 +2,12 @@ package com.example.travlediary.service.bookmark;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.MyPageBookmarkPageDto;
+import com.example.travlediary.dto.MyPageDestinationBookmarkDto;
 import com.example.travlediary.dto.MyPageTravelInfoBookmarkDto;
 import com.example.travlediary.repository.bookmark.MyPageBookmarkMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class MyPageBookmarkService {
     private final MyPageBookmarkMapper myPageBookmarkMapper;
     private final CountryCategoryService countryCategoryService;
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    private final DestinationImageService destinationImageService;
 
     @Transactional(readOnly = true)
     public MyPageBookmarkPageDto getBookmarks(Long userId, String section,
@@ -111,10 +114,13 @@ public class MyPageBookmarkService {
 
         int totalCount = myPageBookmarkMapper.countDestinationBookmarks(
                 userId, scope, koreaRootId);
-        List<?> bookmarks = totalCount == 0
+        List<MyPageDestinationBookmarkDto> bookmarks = totalCount == 0
                 ? List.of()
                 : myPageBookmarkMapper.findDestinationBookmarks(
                         userId, scope, koreaRootId, offset, PAGE_SIZE);
+        // 대표 이미지가 공공누리 제3유형(변경금지)이면 잘리지 않게 그린다.
+        destinationImageService.markNoDerivatives(bookmarks, MyPageDestinationBookmarkDto::getThumbnailUrl,
+                MyPageDestinationBookmarkDto::setImageNoDerivatives);
         return page(bookmarks, "destination", scope, "all", page, totalCount);
     }
 

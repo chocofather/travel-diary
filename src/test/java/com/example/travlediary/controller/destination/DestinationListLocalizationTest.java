@@ -55,7 +55,8 @@ class DestinationListLocalizationTest {
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService,
                 referenceNameLocalizationService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
         seoul = region(38L, "서울", 3, 7L);
         jongno = region(235L, "종로구", 4, 38L);
         destination = new Destination();

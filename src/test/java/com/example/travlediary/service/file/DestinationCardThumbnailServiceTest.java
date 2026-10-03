@@ -1,5 +1,6 @@
 package com.example.travlediary.service.file;
 
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.file.DestinationCardThumbnailService.CardImage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,9 +15,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * 여행지 카드(메인·목록) 썸네일. 원본은 그대로 두고, 카드 상자를 빈틈없이 채우는 크기까지만 줄여 캐시한다.
@@ -25,6 +34,102 @@ class DestinationCardThumbnailServiceTest {
 
     @TempDir
     Path uploadRoot;
+
+    private final Set<String> noDerivativeUrls = ConcurrentHashMap.newKeySet();
+    private final AtomicInteger licenseLookups = new AtomicInteger();
+    private volatile boolean licenseLookupFails;
+    private final DestinationImageService licenses = licenses();
+
+    /** 공공누리 제3유형(변경금지)은 요청이 와도 줄이거나 잘라 만든 파일을 두지 않고 원본을 보낸다. */
+    @Test
+    void noDerivativesPhotosNeverGetAThumbnailFileAndServeTheOriginal() throws IOException {
+        byte[] type3 = original("kogl3.jpg", 3000, 2000);
+        original("kogl1.jpg", 3000, 2000);
+        noDerivativeUrls.add("/uploads/destinations/kogl3.jpg");
+        DestinationCardThumbnailService service = service();
+
+        for (int width : new int[]{480, 960}) {
+            Path served = service.resolve("v2", width, "kogl3.jpg").orElseThrow();
+            assertThat(served).isEqualTo(uploadRoot.resolve("destinations/kogl3.jpg"));
+            assertThat(service.isThumbnailFile(served)).isFalse();
+            assertThat(uploadRoot.resolve("thumbnail-cache/destinations/v2/" + width + "/kogl3.jpg")).doesNotExist();
+        }
+        assertThat(Files.readAllBytes(uploadRoot.resolve("destinations/kogl3.jpg"))).isEqualTo(type3);
+        // 1유형은 기존처럼 썸네일을 만든다.
+        assertThat(dimensions(service.resolve("v2", 480, "kogl1.jpg").orElseThrow())).containsExactly(540, 360);
+        assertThat(service.generatedCount()).isEqualTo(1);
+    }
+
+    /** 관리 화면·업로드 뒤 미리 만들기와 서버 시작 미리 만들기도 3유형은 건너뛴다. 라이선스는 한꺼번에 묻는다. */
+    @Test
+    void prewarmAndStartupPrewarmSkipNoDerivativesPhotos() throws Exception {
+        original("kogl1.jpg", 3000, 2000);
+        original("kogl3.jpg", 3000, 2000);
+        original("startup1.jpg", 2400, 1600);
+        original("startup3.jpg", 2400, 1600);
+        noDerivativeUrls.addAll(List.of("/uploads/destinations/kogl3.jpg", "/uploads/destinations/startup3.jpg"));
+        DestinationCardThumbnailService service = service();
+
+        service.prewarm(List.of("/uploads/destinations/kogl1.jpg", "/uploads/destinations/kogl3.jpg"));
+        awaitFile(uploadRoot.resolve("thumbnail-cache/destinations/v2/480/kogl1.jpg"));
+
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "prewarmOnStartup", true);
+        service.prewarmExistingImages();
+        awaitFile(uploadRoot.resolve("thumbnail-cache/destinations/v2/480/startup1.jpg"));
+        awaitCondition(() -> service.generatedCount() == 2);
+        Thread.sleep(200);
+
+        assertThat(uploadRoot.resolve("thumbnail-cache/destinations/v2/480/kogl3.jpg")).doesNotExist();
+        assertThat(uploadRoot.resolve("thumbnail-cache/destinations/v2/480/startup3.jpg")).doesNotExist();
+        assertThat(service.isSmallThumbnailReady("/uploads/destinations/kogl3.jpg")).isFalse();
+        assertThat(service.generatedCount()).isEqualTo(2);
+    }
+
+    /** 원본이 바뀌어 다시 만들 차례가 와도 3유형은 만들지 않는다. 예전에 만든 파일은 고쳐 쓰지 않는다. */
+    @Test
+    void regenerationSkipsNoDerivativesPhotosAndLeavesAnOldFileUntouched() throws IOException {
+        original("kogl3.jpg", 3000, 2000);
+        Path legacy = uploadRoot.resolve("thumbnail-cache/destinations/v2/480/kogl3.jpg");
+        Files.createDirectories(legacy.getParent());
+        Files.write(legacy, jpeg(540, 360));
+        FileTime old = FileTime.from(Instant.parse("2026-01-01T00:00:00Z"));
+        Files.setLastModifiedTime(legacy, old);
+        noDerivativeUrls.add("/uploads/destinations/kogl3.jpg");
+        DestinationCardThumbnailService service = service();
+
+        assertThat(service.resolve("v2", 480, "kogl3.jpg")).contains(uploadRoot.resolve("destinations/kogl3.jpg"));
+        assertThat(Files.getLastModifiedTime(legacy)).isEqualTo(old);
+        assertThat(service.generatedCount()).isZero();
+    }
+
+    /** 라이선스를 확인하지 못하면 이번에는 만들지 않고 원본을 보낸다(추정하지 않는다). */
+    @Test
+    void unknownLicenseStateCreatesNothingThisTime() throws Exception {
+        original("photo.jpg", 3000, 2000);
+        licenseLookupFails = true;
+        DestinationCardThumbnailService service = service();
+
+        assertThat(service.resolve("v2", 480, "photo.jpg")).contains(uploadRoot.resolve("destinations/photo.jpg"));
+        service.prewarm(List.of("/uploads/destinations/photo.jpg"));
+        Thread.sleep(200);
+        assertThat(uploadRoot.resolve("thumbnail-cache/destinations/v2/480/photo.jpg")).doesNotExist();
+
+        licenseLookupFails = false;
+        assertThat(service.isThumbnailFile(service.resolve("v2", 480, "photo.jpg").orElseThrow())).isTrue();
+    }
+
+    /** 이미 썸네일이 있는 사진은 라이선스를 다시 묻지 않는다(목록 요청마다 DB 를 묻지 않게). */
+    @Test
+    void existingThumbnailsAreServedWithoutAskingForTheLicenseAgain() throws IOException {
+        original("photo.jpg", 3000, 2000);
+        DestinationCardThumbnailService service = service();
+        Path thumbnail = service.resolve("v2", 480, "photo.jpg").orElseThrow();
+        int lookups = licenseLookups.get();
+
+        assertThat(service.resolve("v2", 480, "photo.jpg")).contains(thumbnail);
+        service.prewarm(List.of("/uploads/destinations/photo.jpg"));
+        assertThat(licenseLookups.get()).isEqualTo(lookups);
+    }
 
     /**
      * srcset 의 폭(w)은 실제로 보내는 파일의 가로 픽셀과 같아야 한다.
@@ -246,7 +351,23 @@ class DestinationCardThumbnailServiceTest {
     }
 
     private DestinationCardThumbnailService service() {
-        return new DestinationCardThumbnailService(uploadRoot.toString());
+        return new DestinationCardThumbnailService(uploadRoot.toString(), licenses);
+    }
+
+    /** 공통 라이선스 판정 대신 쓰는 자리. {@link #noDerivativeUrls} 에 든 원본만 공공누리 제3유형으로 답한다. */
+    @SuppressWarnings("unchecked")
+    private DestinationImageService licenses() {
+        DestinationImageService service = mock(DestinationImageService.class);
+        when(service.noDerivativeImageUrls(any())).thenAnswer(invocation -> {
+            if (licenseLookupFails) {
+                throw new IllegalStateException("db down");
+            }
+            licenseLookups.incrementAndGet();
+            return ((Collection<String>) invocation.getArgument(0)).stream()
+                    .filter(noDerivativeUrls::contains)
+                    .collect(Collectors.toSet());
+        });
+        return service;
     }
 
     private static String srcset(DestinationCardThumbnailService service, String name) {

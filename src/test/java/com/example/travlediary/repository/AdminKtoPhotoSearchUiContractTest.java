@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
-    private static final String KTO_PHOTO_SCRIPT_VERSION = "20260925-1";
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261003-1";
 
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
@@ -212,6 +212,25 @@ class AdminKtoPhotoSearchUiContractTest {
         assertThat(create).contains("/js/admin-kto-photo-search.js?v=" + KTO_PHOTO_SCRIPT_VERSION);
         assertThat(imageManagement)
                 .contains("/js/admin-kto-photo-search.js?v=" + KTO_PHOTO_SCRIPT_VERSION);
+    }
+
+    /** 공공누리 제3유형(변경금지)은 관리자 미리보기와 공개 상세에서 잘라 보이지 않게 원본 비율로 그린다. */
+    @Test
+    void noDerivativesPhotosAreShownWholeAndTheLicenseIsNeverAssumed() throws IOException {
+        String script = resource("/static/js/admin-kto-photo-search.js");
+        assertThat(script)
+                .contains("\"KOGL_TYPE_3\"")
+                .contains("\"is-no-derivatives\"")
+                // 서버가 준 라벨이 없을 때 1유형으로 가정하지 않는다
+                .doesNotContain("?? \"공공누리 제1유형\"");
+        assertThat(resource("/static/css/destination-create.css"))
+                .contains(".admin-kto-photo-card.is-no-derivatives .admin-kto-photo-preview img")
+                .contains("object-fit: contain");
+
+        assertThat(resource("/templates/destination/detail.html"))
+                .contains("img.noDerivatives ? 'is-no-derivatives'");
+        assertThat(resource("/static/css/destination-detail-mobile.css"))
+                .contains(".carousel .slide.is-no-derivatives img { object-fit: contain; }");
     }
 
     private String readFile(String path) throws IOException {

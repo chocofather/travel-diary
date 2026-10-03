@@ -346,6 +346,8 @@ public class DestinationController {
 
         List<Destination> similarEntities = destinationService.getSimilarDestinations(id, 4);
         List<DestinationDto> similarDtos = destinationService.convertToDtoWithBookmark(similarEntities, userId);
+        destinationImageService.markNoDerivatives(similarDtos, DestinationDto::getThumbnailPath,
+                DestinationDto::setImageNoDerivatives);
         model.addAttribute("similarDestinations", similarDtos);
 
         String seoImage = dto.getImages() == null ? null : dto.getImages().stream()
@@ -811,7 +813,11 @@ public class DestinationController {
                         destinations, userId, requestedLanguage, localizedRegionNames);
         // 목록 카드는 원본 대신 카드 크기 썸네일을 쓴다. (메인 추천 카드와 같은 규칙)
         // 카드 사진 칸은 4:3 이다(destination.css 의 aspect-ratio).
-        cardThumbnailService.applyCardImages(localizedDestinations, DestinationDto::getThumbnailPath,
+        // 공공누리 제3유형(변경금지)은 줄이고 잘라 만든 썸네일 대신 원본을 쓴다.
+        destinationImageService.markNoDerivatives(localizedDestinations, DestinationDto::getThumbnailPath,
+                DestinationDto::setImageNoDerivatives);
+        cardThumbnailService.applyCardImages(localizedDestinations,
+                destination -> destination.isImageNoDerivatives() ? null : destination.getThumbnailPath(),
                 (destination, image) -> {
                     destination.setCardImageUrl(image.src());
                     destination.setCardImageSrcset(image.srcset());

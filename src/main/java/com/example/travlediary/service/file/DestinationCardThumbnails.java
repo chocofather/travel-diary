@@ -1,7 +1,13 @@
 package com.example.travlediary.service.file;
 
+import com.example.travlediary.service.destination.DestinationImageService;
+
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,7 +33,18 @@ public final class DestinationCardThumbnails {
      */
     public static final String VERSION = "v2";
 
+    /**
+     * 캐시 폴더에 남아 있을 수 있는 규칙 버전. 앞의 것은 더 이상 만들지 않는 예전 규칙이다.
+     * 새로 만드는 것은 {@link #VERSION} 뿐이고, 정리 작업이 예전 파일까지 찾을 때 이 목록을 쓴다.
+     */
+    static final List<String> CACHE_VERSIONS = List.of("v1", VERSION);
+
     static final String URL_PREFIX = "/thumbnails/destinations/";
+
+    /** 업로드 폴더 안 여행지 원본 폴더. */
+    static final String ORIGINAL_DIRECTORY = "destinations";
+    /** 업로드 폴더 안 여행지 카드 썸네일 캐시 폴더. 공개 정적 매핑 목록에 없고, 지워도 다시 만들어진다. */
+    static final String CACHE_DIRECTORY = "thumbnail-cache/destinations";
 
     /** 여행지 업로드 폴더의 JPEG/PNG 파일 이름만 받는다. 경로 구분자·상위 폴더 표기는 들어올 수 없다. */
     private static final Pattern FILE_NAME = Pattern.compile(
@@ -56,6 +73,10 @@ public final class DestinationCardThumbnails {
             return Arrays.stream(values()).filter(variant -> variant.width == width).findFirst();
         }
 
+        int width() {
+            return width;
+        }
+
         /**
          * 바로 선 원본 치수로 이 썸네일의 실제 가로 픽셀을 셈한다.
          * {@link RasterImageResizer#coverThumbnail} 과 같은 식이라 만든 파일의 폭과 같다.
@@ -80,6 +101,45 @@ public final class DestinationCardThumbnails {
         }
         Matcher matcher = ORIGINAL_URL.matcher(imageUrl.trim());
         return matcher.matches() ? Optional.of(matcher.group(1)) : Optional.empty();
+    }
+
+    /** 파일 이름에서 DB 에 저장된 원본 주소({@code /uploads/destinations/{파일}})를 되돌린다. */
+    static String originalUrl(String fileName) {
+        return "/uploads/" + ORIGINAL_DIRECTORY + "/" + fileName;
+    }
+
+    /** 한 번에 라이선스를 확인할 파일 수. 폴더 전체를 나눠 묻는다. */
+    static final int LICENSE_LOOKUP_BATCH = 500;
+
+    /**
+     * 주어진 파일 중 공공누리 제3유형(변경금지) 원본의 파일 이름.
+     * 판정은 {@link DestinationImageService#noDerivativeImageUrls} 의 공통 규칙(출처 행 우선)을 그대로 쓴다.
+     *
+     * @throws RuntimeException 라이선스를 확인하지 못했을 때. 부르는 쪽이 추정하지 않고 멈춘다.
+     */
+    static Set<String> noDerivativeFileNames(DestinationImageService licenses, List<String> fileNames) {
+        Set<String> result = new HashSet<>();
+        for (int start = 0; start < fileNames.size(); start += LICENSE_LOOKUP_BATCH) {
+            List<String> urls = fileNames.subList(start, Math.min(fileNames.size(), start + LICENSE_LOOKUP_BATCH))
+                    .stream()
+                    .map(DestinationCardThumbnails::originalUrl)
+                    .toList();
+            licenses.noDerivativeImageUrls(urls).forEach(url -> fileName(url).ifPresent(result::add));
+        }
+        return result;
+    }
+
+    /** 업로드 폴더 안 여행지 원본 폴더 위치. */
+    static Path originalDirectory(Path uploadRoot) {
+        return uploadRoot.resolve(ORIGINAL_DIRECTORY).normalize();
+    }
+
+    /** 이 규칙 버전·폭의 썸네일 캐시 폴더 위치({@code thumbnail-cache/destinations/{버전}/{폭}}). */
+    static Path cacheDirectory(Path uploadRoot, String version, int width) {
+        return uploadRoot.resolve(CACHE_DIRECTORY)
+                .resolve(version)
+                .resolve(String.valueOf(width))
+                .normalize();
     }
 
     static String url(Variant variant, String fileName) {

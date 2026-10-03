@@ -43,6 +43,11 @@
             return DestinationImageLicenseType.displayName(licenseType);
         }
 
+        /** 공공누리 제3유형(변경금지). 화면에서도 잘라 보이지 않게 원본 비율로 그린다. */
+        public boolean isNoDerivatives() {
+            return DestinationImageLicenseType.KOGL_TYPE_3.name().equals(text(licenseType));
+        }
+
         /** 세부조건, 라이선스 표기명, 기본 라벨 순으로 사람이 읽는 값을 쓴다. */
         public String getLicenseDisplay() {
             String detail = text(licenseDetail);

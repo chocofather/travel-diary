@@ -8,6 +8,7 @@ import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.repository.recommend.RandomRecommendMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,8 @@ class RandomRecommendServiceTest {
     private DestinationService destinationService;
     @Mock
     private ReferenceNameLocalizationService referenceNameLocalizationService;
+    @Mock
+    private DestinationImageService destinationImageService;
 
     @Test
     void existingRegionRecommendationKeepsItsListContract() {
@@ -226,7 +229,7 @@ class RandomRecommendServiceTest {
 
     private RandomRecommendService service() {
         return new RandomRecommendService(mapper, countryCategoryService,
-                destinationService, referenceNameLocalizationService);
+                destinationService, referenceNameLocalizationService, destinationImageService);
     }
 
     private CountryCategory country(Long id, String name, Long parentId) {

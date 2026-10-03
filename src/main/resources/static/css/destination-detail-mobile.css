@@ -44,6 +44,8 @@
     .destination-detail-page .carousel { border-radius: 8px; background: #f3f4f6; }
     .destination-detail-page .carousel .slide { aspect-ratio: 4 / 3; }
     .destination-detail-page .carousel img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+    /* 공공누리 제3유형(변경금지)은 화면에서도 잘라 보이지 않게 전체를 원본 비율로 담는다. */
+    .destination-detail-page .carousel .slide.is-no-derivatives img { object-fit: contain; }
     .destination-detail-page .carousel.no-image { width: calc(100% - 32px); aspect-ratio: 4 / 3; margin: 0 auto 28px; }
     .destination-detail-page .carousel .nav {
         width: 40px; height: 40px; padding: 0; border-radius: 6px; font-size: 14px; line-height: 40px;

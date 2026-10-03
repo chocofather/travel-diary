@@ -13,6 +13,7 @@ import com.example.travlediary.service.category.ReferenceNameLocalizationService
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.example.travlediary.service.destination.DestinationImageService;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -37,6 +38,7 @@ class MyPageTravelInfoBookmarkLocalizationTest {
 
     @Mock private MyPageBookmarkMapper myPageBookmarkMapper;
     @Mock private CountryCategoryService countryCategoryService;
+    @Mock private DestinationImageService destinationImageService;
     @Mock private CountryCategoryMapper countryCategoryMapper;
     @Mock private CategoryMapper categoryMapper;
     @Mock private InfoCategoryMapper infoCategoryMapper;
@@ -47,7 +49,8 @@ class MyPageTravelInfoBookmarkLocalizationTest {
     void setUp() {
         service = new MyPageBookmarkService(myPageBookmarkMapper, countryCategoryService,
                 new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
-                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()),
+                destinationImageService);
     }
 
     @Test

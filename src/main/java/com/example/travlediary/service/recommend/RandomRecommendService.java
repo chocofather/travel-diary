@@ -9,6 +9,7 @@ import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.repository.recommend.RandomRecommendMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import org.springframework.stereotype.Service;
 
@@ -25,16 +26,19 @@ public class RandomRecommendService {
     private final CountryCategoryService countryCategoryService;
     private final DestinationService destinationService;
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    private final DestinationImageService destinationImageService;
 
     public RandomRecommendService(
             RandomRecommendMapper randomRecommendMapper,
             CountryCategoryService countryCategoryService,
             DestinationService destinationService,
-            ReferenceNameLocalizationService referenceNameLocalizationService) {
+            ReferenceNameLocalizationService referenceNameLocalizationService,
+            DestinationImageService destinationImageService) {
         this.randomRecommendMapper = randomRecommendMapper;
         this.countryCategoryService = countryCategoryService;
         this.destinationService = destinationService;
         this.referenceNameLocalizationService = referenceNameLocalizationService;
+        this.destinationImageService = destinationImageService;
     }
 
     // 특정 regionId 및 하위 모든 지역의 여행지 중 랜덤 N개
@@ -175,6 +179,9 @@ public class RandomRecommendService {
                         destination.getRegionId(), destination.getRegionName()));
             }
         }
+        // 대표 이미지가 공공누리 제3유형(변경금지)이면 잘리지 않게 그린다.
+        destinationImageService.markNoDerivatives(available, RandomDestinationDto::getImageUrl,
+                RandomDestinationDto::setImageNoDerivatives);
         return available;
     }
 

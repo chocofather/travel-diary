@@ -1,5 +1,6 @@
 package com.example.travlediary.service.file;
 
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.file.DestinationCardThumbnails.Variant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,8 @@ import java.util.stream.Stream;
  * 원본({@code destinations/})과 DB 는 건드리지 않는다. 캐시 폴더는 공개 정적 매핑 목록에 없으며
  * 지워도 다시 만들어진다.
  *
+ * <p>공공누리 제3유형(변경금지) 사진은 어떤 경로로도 썸네일 파일을 만들지 않고 원본을 쓴다.
+ *
  * <p>만드는 일은 정해진 작업자에게 맡긴다.
  * <ul>
  *   <li>브라우저 요청: 작업자 {@value #REQUEST_THREADS}개가 요청 순서대로 만든다. 예전처럼 서버 전체가 한 장씩
@@ -68,8 +71,6 @@ public class DestinationCardThumbnailService implements DisposableBean {
      */
     static final int DECODE_EDGE = 6000;
 
-    private static final String ORIGINAL_DIRECTORY = "destinations";
-    private static final String CACHE_DIRECTORY = "thumbnail-cache/destinations";
 
     /** 치수를 읽을 때 여는 앞부분. EXIF(최대 64KB)와 치수 표시가 대개 이 안에 있다. */
     private static final int HEADER_BYTES = 256 * 1024;
@@ -101,8 +102,16 @@ public class DestinationCardThumbnailService implements DisposableBean {
     @Value("${custom.thumbnails.prewarm-on-startup:true}")
     private boolean prewarmOnStartup = false;
 
-    public DestinationCardThumbnailService(@Value("${custom.upload-path}") String uploadPath) {
+    /**
+     * 공공누리 제3유형(변경금지) 판정. 공개 카드와 같은 공통 규칙(출처 행 우선)을 쓴다.
+     * 변경금지 사진은 줄이거나 잘라 다시 저장한 파생 파일을 어떤 경로로도 만들지 않는다.
+     */
+    private final DestinationImageService destinationImageService;
+
+    public DestinationCardThumbnailService(@Value("${custom.upload-path}") String uploadPath,
+                                           DestinationImageService destinationImageService) {
         this.uploadRoot = Paths.get(uploadPath).toAbsolutePath().normalize();
+        this.destinationImageService = destinationImageService;
     }
 
     /**
@@ -205,7 +214,7 @@ public class DestinationCardThumbnailService implements DisposableBean {
 
     /** {@link #resolve} 가 돌려준 파일이 썸네일인지(아니면 대신 보내는 원본). */
     public boolean isThumbnailFile(Path file) {
-        return file.toAbsolutePath().normalize().startsWith(uploadRoot.resolve(CACHE_DIRECTORY));
+        return file.toAbsolutePath().normalize().startsWith(uploadRoot.resolve(DestinationCardThumbnails.CACHE_DIRECTORY));
     }
 
     /**
@@ -218,7 +227,11 @@ public class DestinationCardThumbnailService implements DisposableBean {
         if (imageUrls == null) {
             return;
         }
-        imageUrls.forEach(imageUrl -> DestinationCardThumbnails.fileName(imageUrl).ifPresent(this::prewarmFile));
+        prewarmFiles(imageUrls.stream()
+                .map(DestinationCardThumbnails::fileName)
+                .flatMap(Optional::stream)
+                .distinct()
+                .toList());
     }
 
     /** 서버가 뜨면 기존 여행지 사진 폴더를 훑어 없는 관리용 썸네일만 뒤에서 만든다. */
@@ -227,18 +240,60 @@ public class DestinationCardThumbnailService implements DisposableBean {
         if (!prewarmOnStartup) {
             return;
         }
-        Path originalDirectory = uploadRoot.resolve(ORIGINAL_DIRECTORY);
+        Path originalDirectory = DestinationCardThumbnails.originalDirectory(uploadRoot);
         if (!Files.isDirectory(originalDirectory)) {
             return;
         }
+        List<String> fileNames;
         try (Stream<Path> files = Files.list(originalDirectory)) {
-            files.map(path -> path.getFileName().toString())
+            fileNames = files.map(path -> path.getFileName().toString())
                     .filter(DestinationCardThumbnails::isFileName)
                     .sorted()
-                    .forEach(this::prewarmFile);
+                    .toList();
         } catch (IOException | RuntimeException failure) {
             log.warn("Existing destination images could not be listed for thumbnail prewarm: failureType={}",
                     failure.getClass().getSimpleName());
+            return;
+        }
+        prewarmFiles(fileNames);
+    }
+
+    /**
+     * 아직 작은 썸네일이 없는 파일만 골라, 변경금지 사진을 빼고 미리 만들기 줄에 넣는다.
+     * 라이선스는 줄에 넣기 전에 한꺼번에 묻는다. 확인하지 못하면 이번에는 넣지 않는다(요청 때 다시 판단한다).
+     */
+    private void prewarmFiles(List<String> fileNames) {
+        List<String> missing = fileNames.stream().filter(this::needsSmallThumbnail).toList();
+        if (missing.isEmpty()) {
+            return;
+        }
+        Set<String> noDerivatives = noDerivativeFileNames(missing);
+        if (noDerivatives == null) {
+            return;
+        }
+        missing.stream()
+                .filter(fileName -> !noDerivatives.contains(fileName))
+                .forEach(this::prewarmFile);
+    }
+
+    private boolean needsSmallThumbnail(String fileName) {
+        Optional<Path> found = original(fileName);
+        Optional<Path> cachedPath = cachePath(Variant.SMALL, fileName);
+        return found.isPresent() && cachedPath.isPresent() && !isFresh(cachedPath.get(), found.get());
+    }
+
+    /**
+     * 주어진 파일 중 공공누리 제3유형(변경금지) 원본의 파일 이름.
+     *
+     * @return 라이선스를 확인하지 못하면 {@code null} — 부르는 쪽은 이번에는 파생 파일을 만들지 않는다
+     */
+    private Set<String> noDerivativeFileNames(List<String> fileNames) {
+        try {
+            return DestinationCardThumbnails.noDerivativeFileNames(destinationImageService, fileNames);
+        } catch (RuntimeException failure) {
+            log.warn("Destination image licenses could not be checked, thumbnails are not created this time:"
+                    + " files={}, failureType={}", fileNames.size(), failure.getClass().getSimpleName());
+            return null;
         }
     }
 
@@ -293,6 +348,15 @@ public class DestinationCardThumbnailService implements DisposableBean {
         boolean decodeSlot = false;
         try {
             if (!isFresh(cached, original)) {
+                /*
+                  썸네일 파일을 만드는 길(브라우저 요청·업로드 뒤·관리 화면·서버 시작)은 모두 여기를 지난다.
+                  공공누리 제3유형(변경금지)이거나 라이선스를 확인하지 못하면 파생 파일을 만들지 않고 원본을 쓴다.
+                */
+                Set<String> noDerivatives = noDerivativeFileNames(List.of(original.getFileName().toString()));
+                if (noDerivatives == null || !noDerivatives.isEmpty()) {
+                    result.complete(original);
+                    return;
+                }
                 decodePermits.acquire();
                 decodeSlot = true;
                 // 기다리는 사이 다른 작업이 만들었을 수 있다.
@@ -323,10 +387,8 @@ public class DestinationCardThumbnailService implements DisposableBean {
 
     /** 이 크기 썸네일의 캐시 파일 위치. 캐시 폴더 밖을 가리키면 empty. */
     private Optional<Path> cachePath(Variant variant, String fileName) {
-        Path cacheDirectory = uploadRoot.resolve(CACHE_DIRECTORY)
-                .resolve(DestinationCardThumbnails.VERSION)
-                .resolve(String.valueOf(variant.width))
-                .normalize();
+        Path cacheDirectory = DestinationCardThumbnails.cacheDirectory(
+                uploadRoot, DestinationCardThumbnails.VERSION, variant.width);
         Path cached = cacheDirectory.resolve(fileName).normalize();
         return cached.startsWith(cacheDirectory) ? Optional.of(cached) : Optional.empty();
     }
@@ -357,7 +419,7 @@ public class DestinationCardThumbnailService implements DisposableBean {
         if (!DestinationCardThumbnails.isFileName(fileName)) {
             return Optional.empty();
         }
-        Path originalDirectory = uploadRoot.resolve(ORIGINAL_DIRECTORY).normalize();
+        Path originalDirectory = DestinationCardThumbnails.originalDirectory(uploadRoot);
         Path original = originalDirectory.resolve(fileName).normalize();
         if (!original.startsWith(originalDirectory) || !Files.isRegularFile(original)) {
             return Optional.empty();

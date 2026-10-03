@@ -20,10 +20,12 @@ class DestinationImageAttributionTest {
         DestinationImage image = new DestinationImage();
         image.setLicenseType("KOGL_TYPE_1");
         assertThat(image.getLicenseLabel()).isEqualTo("공공누리 제1유형");
+        assertThat(image.isNoDerivatives()).isFalse();
         image.setLicenseType("KOGL_TYPE_2");
         assertThat(image.getLicenseLabel()).isEqualTo("공공누리 제2유형");
         image.setLicenseType("KOGL_TYPE_3");
-        assertThat(image.getLicenseLabel()).isEqualTo("공공누리 제3유형");
+        assertThat(image.getLicenseLabel()).isEqualTo("공공누리 제3유형 · 변경금지");
+        assertThat(image.isNoDerivatives()).isTrue();
         image.setLicenseType("KOGL_TYPE_4");
         assertThat(image.getLicenseLabel()).isEqualTo("공공누리 제4유형");
 

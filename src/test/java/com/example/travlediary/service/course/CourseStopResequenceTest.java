@@ -8,6 +8,7 @@ import com.example.travlediary.repository.course.CourseMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
@@ -47,6 +48,8 @@ class CourseStopResequenceTest {
     private static final Long OTHER_COURSE_ID = 11L;
 
     @Mock
+    private DestinationImageService destinationImageService;
+    @Mock
     private CourseMapper courseMapper;
     @Mock
     private DestinationMapper destinationMapper;
@@ -65,7 +68,7 @@ class CourseStopResequenceTest {
                 new DestinationLocalizationService(destinationMapper),
                 new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
                         infoCategoryMapper, new LocalizedReferenceNameResolver()),
-                new LocalContentLanguageDetector());
+                new LocalContentLanguageDetector(), destinationImageService);
     }
 
     @Test

@@ -11,7 +11,8 @@ import java.util.Arrays;
 public enum DestinationImageLicenseType {
     KOGL_TYPE_1("공공누리 제1유형"),
     KOGL_TYPE_2("공공누리 제2유형"),
-    KOGL_TYPE_3("공공누리 제3유형"),
+    /** 출처표시·상업적 이용 가능·변경금지. 변경금지 조건이 출처 표시에서 보이도록 라벨에 함께 쓴다. */
+    KOGL_TYPE_3("공공누리 제3유형 · 변경금지"),
     KOGL_TYPE_4("공공누리 제4유형"),
     DIRECT("직접 촬영 / 자체 저작권"),
     CREATIVE_COMMONS("Creative Commons"),

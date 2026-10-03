@@ -2,6 +2,7 @@ package com.example.travlediary.controller.recommend;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.RecommendDestinationDto;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.PopularRecommendService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class PopularRecommendController {
 
     private final PopularRecommendService popularRecommendService;
     private final DestinationCardThumbnailService cardThumbnailService;
+    private final DestinationImageService destinationImageService;
 
     // 국내 인기
     @GetMapping("/domestic")
@@ -80,9 +82,15 @@ public class PopularRecommendController {
         return SupportedLanguage.fromLocale(locale).orElse(SupportedLanguage.KOREAN);
     }
 
-    /** 카드는 원본 대신 카드 크기 썸네일을 쓴다. (공개 여행지 목록 카드와 같은 규칙) */
+    /**
+     * 카드는 원본 대신 카드 크기 썸네일을 쓴다. (공개 여행지 목록 카드와 같은 규칙)
+     * 공공누리 제3유형(변경금지)은 줄이고 잘라 만든 썸네일 대신 원본을 쓴다.
+     */
     private List<RecommendDestinationDto> withCardImages(List<RecommendDestinationDto> destinations) {
-        return cardThumbnailService.applyCardImages(destinations, RecommendDestinationDto::getImageUrl,
+        destinationImageService.markNoDerivatives(destinations, RecommendDestinationDto::getImageUrl,
+                RecommendDestinationDto::setImageNoDerivatives);
+        return cardThumbnailService.applyCardImages(destinations,
+                destination -> destination.isImageNoDerivatives() ? null : destination.getImageUrl(),
                 (destination, image) -> {
                     destination.setCardImageUrl(image.src());
                     destination.setCardImageSrcset(image.srcset());

@@ -4,6 +4,7 @@ import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.GlobalSearchPage;
 import com.example.travlediary.dto.GlobalSearchResultDto;
 import com.example.travlediary.repository.search.GlobalSearchMapper;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
@@ -29,6 +30,8 @@ class GlobalSearchServiceImplTest {
     private DestinationLocalizationService destinationLocalizationService;
     @Mock
     private MessageSource messageSource;
+    @Mock
+    private DestinationImageService destinationImageService;
 
     @InjectMocks
     private GlobalSearchServiceImpl globalSearchService;

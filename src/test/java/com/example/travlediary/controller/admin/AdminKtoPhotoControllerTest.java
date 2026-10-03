@@ -6,7 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.kto.KtoPhotoSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoPhotoSearchResponse;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.kto.KtoPhotoGalleryService;
+import com.example.travlediary.service.kto.KtoPhotoSearchService;
 import com.example.travlediary.service.kto.KtoPhotoApiException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +36,7 @@ class AdminKtoPhotoControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private KtoPhotoGalleryService ktoPhotoGalleryService;
+    private KtoPhotoSearchService ktoPhotoSearchService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -46,7 +46,7 @@ class AdminKtoPhotoControllerTest {
 
     @Test
     void adminSearchReceivesTheDedicatedPhotoJsonResponse() throws Exception {
-        when(ktoPhotoGalleryService.search("경복궁", 1, 12)).thenReturn(response());
+        when(ktoPhotoSearchService.search("경복궁", 1, 12)).thenReturn(response());
 
         mockMvc.perform(get("/admin/api/kto/photos/search")
                         .param("keyword", "  경복궁  ")
@@ -60,7 +60,7 @@ class AdminKtoPhotoControllerTest {
                 .andExpect(jsonPath("$.items[0].sourceType").value("KTO_PHOTO_GALLERY"))
                 .andExpect(jsonPath("$.items[0].licenseLabel").value("공공누리 제1유형"));
 
-        verify(ktoPhotoGalleryService).search("경복궁", 1, 12);
+        verify(ktoPhotoSearchService).search("경복궁", 1, 12);
     }
 
     @Test
@@ -76,7 +76,7 @@ class AdminKtoPhotoControllerTest {
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isBadRequest());
 
-        verify(ktoPhotoGalleryService, never()).search(org.mockito.ArgumentMatchers.any(),
+        verify(ktoPhotoSearchService, never()).search(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
@@ -91,7 +91,7 @@ class AdminKtoPhotoControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertSafeErrorBody(responseBody);
-        verify(ktoPhotoGalleryService, never()).search(org.mockito.ArgumentMatchers.any(),
+        verify(ktoPhotoSearchService, never()).search(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
@@ -102,13 +102,13 @@ class AdminKtoPhotoControllerTest {
                         .with(user("member").roles("USER")))
                 .andExpect(status().isForbidden());
 
-        verify(ktoPhotoGalleryService, never()).search(org.mockito.ArgumentMatchers.any(),
+        verify(ktoPhotoSearchService, never()).search(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
     void upstreamFailuresUseASafeBadGatewayResponse() throws Exception {
-        when(ktoPhotoGalleryService.search("경복궁", 1, 12))
+        when(ktoPhotoSearchService.search("경복궁", 1, 12))
                 .thenThrow(KtoPhotoApiException.upstreamFailure());
 
         String responseBody = mockMvc.perform(get("/admin/api/kto/photos/search")
@@ -124,7 +124,7 @@ class AdminKtoPhotoControllerTest {
 
     @Test
     void missingApiKeyUsesASafeServiceUnavailableJsonResponse() throws Exception {
-        when(ktoPhotoGalleryService.search("경복궁", 1, 12))
+        when(ktoPhotoSearchService.search("경복궁", 1, 12))
                 .thenThrow(KtoPhotoApiException.missingApiKey());
 
         String responseBody = mockMvc.perform(get("/admin/api/kto/photos/search")

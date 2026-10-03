@@ -123,6 +123,7 @@
                   썸네일을 받지 못하면 원본으로 한 번만 되돌린다. (랜드마크 카드와 같은 방식)
                 -->
                 <img th:src="${destination.cardImageUrl != null} ? ${destination.cardImageUrl} : @{${destination.imageUrl}}"
+                     th:classappend="${destination.imageNoDerivatives} ? 'is-no-derivatives'"
                      th:alt="${destination.name}"
                      th:attr="srcset=${destination.cardImageSrcset},
                               sizes=${destination.cardImageSrcset == null} ? null : (${stat.first}
@@ -244,6 +245,7 @@
                 sizes 는 레일 카드 폭(한 화면 6장 → 4장 → 2.3장)에 3:4 칸을 cover 로 채울 때의 사진 폭 배율을 곱한 값이다.
               -->
               <img th:src="${landmark.cardImageUrl != null} ? ${landmark.cardImageUrl} : @{${landmark.imageUrl}}"
+                   th:classappend="${landmark.imageNoDerivatives} ? 'is-no-derivatives'"
                    th:with="k=${landmark.cardImageCoverScale}"
                    th:attr="srcset=${landmark.cardImageSrcset},
                             sizes=${landmark.cardImageSrcset != null} ? ('(max-width: 680px) calc((43.5vw - 21px) * ' + ${k} + '), (max-width: 960px) calc((25vw - 22px) * ' + ${k} + '), (max-width: 1160px) calc((16.7vw - 23px) * ' + ${k} + '), calc(170px * ' + ${k} + ')') : null,
@@ -307,7 +309,7 @@
   </div>
 
   <script src="/js/home-season-preview.js?v=20260929-1" defer></script>
-  <script src="/js/home.js?v=20260929-2" defer></script>
+  <script src="/js/home.js?v=20261003-1" defer></script>
   <script src="/js/home-festival.js?v=20261002-1" defer></script>
   <script src="/js/slider.js?v=20261003-home-hero" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>

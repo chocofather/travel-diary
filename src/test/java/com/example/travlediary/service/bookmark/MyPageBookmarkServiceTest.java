@@ -7,6 +7,7 @@ import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.example.travlediary.service.destination.DestinationImageService;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,6 +28,8 @@ class MyPageBookmarkServiceTest {
     private CountryCategoryService countryCategoryService;
     @Mock
     private ReferenceNameLocalizationService referenceNameLocalizationService;
+    @Mock
+    private DestinationImageService destinationImageService;
 
     @Test
     void invalidParametersFallBackToDestinationAllAndFirstPage() {
@@ -120,6 +123,6 @@ class MyPageBookmarkServiceTest {
 
     private MyPageBookmarkService service() {
         return new MyPageBookmarkService(mapper, countryCategoryService,
-                referenceNameLocalizationService);
+                referenceNameLocalizationService, destinationImageService);
     }
 }

@@ -193,6 +193,7 @@
                             -->
                             <img th:if="${d.thumbnailPath != null}"
                                  th:src="${d.cardImageUrl != null} ? ${d.cardImageUrl} : @{${d.thumbnailPath}}"
+                                 th:classappend="${d.imageNoDerivatives} ? 'is-no-derivatives'"
                                  th:with="k=${d.cardImageCoverScale}"
                                  th:attr="srcset=${d.cardImageSrcset},
                                           sizes=${d.cardImageSrcset != null} ? ('(max-width: 600px) calc((50vw - 22px) * ' + ${k} + '), (max-width: 820px) calc((33.333333vw - 18.666667px) * ' + ${k} + '), (max-width: 1024px) calc((50vw - 20px) * ' + ${k} + '), (max-width: 1300px) calc((25vw - 28px) * ' + ${k} + '), calc(301px * ' + ${k} + ')') : null,

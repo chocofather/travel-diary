@@ -71,7 +71,8 @@ class DestinationDetailNotFoundTest {
                 countryCategoryService,
                 destinationCommentService,
                 referenceNameLocalizationService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(anonymousPrincipalResolver())
                 .build();

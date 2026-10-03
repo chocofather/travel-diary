@@ -977,6 +977,17 @@
     color: #6577b7;
 }
 
+/* 공공누리 제3유형(변경금지): 사진을 잘라 보이지 않게 원본 비율로 담고, 조건을 눈에 띄게 둔다. */
+.admin-kto-photo-card.is-no-derivatives .admin-kto-photo-preview img,
+.admin-kto-photo-selected-thumbnail.is-no-derivatives img {
+    object-fit: contain;
+}
+
+.admin-kto-photo-card.is-no-derivatives .admin-kto-photo-license {
+    color: #b45309;
+    font-weight: 600;
+}
+
 .admin-kto-photo-selected-area {
     display: grid;
     gap: 11px;

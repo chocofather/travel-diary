@@ -60,8 +60,53 @@ class AdminDestinationImageControllerTest {
                 requestParser,
                 ktoImageManagementService,
                 commonsImageManagementService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+    }
+
+    /**
+     * 관리 화면도 공공누리 제3유형(변경금지)은 썸네일 파일 대신 원본을 쓴다.
+     * 예전에 만들어 둔 3유형 썸네일이 남아 있어도 쓰지 않고, 1유형은 기존처럼 만들어 둔 썸네일을 쓴다.
+     */
+    @Test
+    void imageManagementUsesOriginalsForNoDerivativesPhotos(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root)
+            throws Exception {
+        for (String name : List.of("kogl1.jpg", "kogl3.jpg")) {
+            java.nio.file.Path original = root.resolve("destinations").resolve(name);
+            java.nio.file.Path legacy = root.resolve("thumbnail-cache/destinations/v2/480").resolve(name);
+            java.nio.file.Files.createDirectories(original.getParent());
+            java.nio.file.Files.createDirectories(legacy.getParent());
+            javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(1200, 900,
+                    java.awt.image.BufferedImage.TYPE_INT_RGB), "jpg", original.toFile());
+            java.nio.file.Files.copy(original, legacy);
+        }
+        // 두 사진 모두 썸네일 파일이 이미 있어 미리 만들기는 라이선스를 묻지 않는다. 화면은 사진의 라이선스로 고른다.
+        DestinationImageService licenses = org.mockito.Mockito.mock(DestinationImageService.class);
+        AdminDestinationImageController screen = new AdminDestinationImageController(
+                destinationImageService, destinationService, requestParser, ktoImageManagementService,
+                commonsImageManagementService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService(root.toString(), licenses));
+        DestinationImage type1 = image(1L, "/uploads/destinations/kogl1.jpg", "KOGL_TYPE_1");
+        DestinationImage type3 = image(3L, "/uploads/destinations/kogl3.jpg", "KOGL_TYPE_3");
+        when(destinationImageService.getImages(10L)).thenReturn(List.of(type1, type3));
+        when(destinationService.getTranslationsByDestinationId(10L)).thenReturn(List.of(translation("ko", "경복궁")));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        screen.showImageUploadForm(10L, model);
+
+        @SuppressWarnings("unchecked")
+        java.util.Map<Long, String> thumbnails = (java.util.Map<Long, String>) model.get("imageThumbnails");
+        assertThat(thumbnails).containsOnlyKeys(1L);
+        assertThat(type3.isNoDerivatives()).isTrue();
+    }
+
+    private DestinationImage image(Long id, String imageUrl, String licenseType) {
+        DestinationImage image = new DestinationImage();
+        image.setId(id);
+        image.setImageUrl(imageUrl);
+        image.setLicenseType(licenseType);
+        return image;
     }
 
     @Test

@@ -84,6 +84,10 @@
         // 이미지 url 리스트 조회 (nested select 용)
         List<DestinationImage> findImagesByDestinationId(Long destinationId);
 
+        // 주어진 이미지 주소 중 표시 기준 라이선스가 licenseType 인 것 (출처 행이 있으면 그 값)
+        List<String> findImageUrlsByLicenseType(@Param("imageUrls") Collection<String> imageUrls,
+                                                @Param("licenseType") String licenseType);
+
         List<Destination> findAllWithRegion();
 
         DestinationImage findImageById(Long imageId);

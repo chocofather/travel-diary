@@ -62,7 +62,8 @@ class DestinationDetailRegionLinkTest {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService, referenceNameLocalizationService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(KOREA_ROOT_ID));
     }
 

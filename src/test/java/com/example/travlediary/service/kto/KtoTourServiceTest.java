@@ -63,6 +63,61 @@ class KtoTourServiceTest {
         server.verify();
     }
 
+    /** 관광사진 검색: 제목순 결과에서 관광지 계열·제목 일치 콘텐츠를 먼저 골라 이미지와 저작권 코드를 그대로 준다. */
+    @Test
+    void photoSearchPicksRelevantContentsAndKeepsCopyrightCodesPerImage() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+        String image = "https://tong.visitkorea.or.kr/cms/resource/";
+        String search = """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{
+                  "numOfRows":100,"pageNo":1,"totalCount":5,"items":{"item":[
+                    {"contentid":"shop","contenttypeid":"38","title":"경복궁 기념품점",
+                     "firstimage":"%1$sshop.jpg","cpyrhtDivCd":"Type3"},
+                    {"contentid":"festival","contenttypeid":"15","title":"경복궁 축제",
+                     "firstimage":"%1$sfestival.jpg","cpyrhtDivCd":"Type1"},
+                    {"contentid":"geonchung","contenttypeid":"12","title":"경복궁 건청궁",
+                     "firstimage":"%1$sgeonchung.jpg","cpyrhtDivCd":"Type1"},
+                    {"contentid":"126508","contenttypeid":"12","title":"경복궁",
+                     "firstimage":"%1$smain.jpg","cpyrhtDivCd":"Type1"}
+                  ]}}}}
+                """.formatted(image);
+        String details = """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{
+                  "numOfRows":100,"pageNo":1,"totalCount":2,"items":{"item":[
+                    {"contentid":"126508","imgname":"경복궁_1","originimgurl":"%1$smain.jpg","cpyrhtDivCd":"Type1"},
+                    {"contentid":"126508","imgname":"경복궁_2","originimgurl":"%1$sextra.jpg","cpyrhtDivCd":"Type3"}
+                  ]}}}}
+                """.formatted(image);
+
+        server.expect(request -> {
+            assertThat(request.getURI().getPath()).isEqualTo("/KorService2/searchKeyword2");
+            assertDecodedQuery(request.getURI(), "keyword", "경복궁");
+            assertDecodedQuery(request.getURI(), "arrange", "O");
+            assertDecodedQuery(request.getURI(), "numOfRows", "100");
+        }).andRespond(withSuccess(search, MediaType.APPLICATION_JSON));
+        server.expect(request -> {
+            assertThat(request.getURI().getPath()).isEqualTo("/KorService2/detailImage2");
+            assertDecodedQuery(request.getURI(), "contentId", "126508");
+        }).andRespond(withSuccess(details, MediaType.APPLICATION_JSON));
+        // 한 콘텐츠의 추가이미지 실패는 그 콘텐츠의 대표이미지와 다른 콘텐츠를 막지 않는다.
+        server.expect(request -> assertDecodedQuery(request.getURI(), "contentId", "geonchung"))
+                .andRespond(withServerError());
+
+        var contents = service.searchContentImages("경복궁", 2);
+
+        assertThat(contents).extracting("contentId", "title")
+                .containsExactly(tuple("126508", "경복궁"), tuple("geonchung", "경복궁 건청궁"));
+        assertThat(contents.get(0).images()).extracting("imageUrl", "copyrightDivisionCode", "main")
+                .containsExactly(
+                        tuple(image + "main.jpg", "Type1", true),
+                        tuple(image + "extra.jpg", "Type3", false));
+        assertThat(contents.get(1).images()).extracting("imageUrl", "copyrightDivisionCode")
+                .containsExactly(tuple(image + "geonchung.jpg", "Type1"));
+        server.verify();
+    }
+
     @Test
     void keepsEncodedGeneralKeyUnchangedInTheFinalRawQuery() {
         RestClient.Builder builder = RestClient.builder();

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/detail.css?v=20260927-2">
     <link rel="stylesheet" href="/css/comment.css">
     <link rel="stylesheet" href="/css/content-comment.css">
-    <link rel="stylesheet" href="/css/destination-detail-mobile.css?v=20261001-2">
+    <link rel="stylesheet" href="/css/destination-detail-mobile.css?v=20261003-1">
     <!--
       detail-carousel.js 가 $ 를 쓴다. 공통 layout 에서 내려온 jQuery 에 기대지 않고 여기서 부른다.
       defer 라 문서 순서대로 실행된다 — head 의 이 파일이 body 의 detail-carousel.js 보다 먼저다.
@@ -108,7 +108,7 @@
             <button class="nav prev" th:aria-label="#{destination.detail.gallery.previous}">&#10094;</button>
             <div class="track">
                 <div class="slide" th:each="img, idx : ${images}"
-                     th:classappend="${idx.index == 0} ? 'active'"
+                     th:classappend="|${idx.index == 0 ? 'active' : ''} ${img.noDerivatives ? 'is-no-derivatives' : ''}|"
                      th:attr="data-source-name=${img.sourceName},
                               data-license-label=${img.licenseDisplay},
                               data-license-url=${img.safeLicenseUrl},
@@ -1289,6 +1289,7 @@
                                th:href="@{'/destinations/' + ${d.id}}"
                                th:attr="aria-label=${d.name}">
                                 <img th:src="${d.thumbnailPath}" th:alt="${d.name}"
+                                     th:classappend="${d.imageNoDerivatives} ? 'is-no-derivatives'"
                                      loading="lazy" class="similar-destination-thumbnail"/>
                             </a>
                             <!-- 북마크 버튼: 이미지 우상단 오버레이 (토글 로직은 기존 그대로) -->

@@ -70,7 +70,8 @@ class DestinationSubregionSelectionTest {
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService,
                 referenceNameLocalizationService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
 
         when(countryCategoryService.getById(38L)).thenReturn(seoul);
         when(countryCategoryService.getById(235L)).thenReturn(jongno);

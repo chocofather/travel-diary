@@ -12,10 +12,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KtoPhotoImportPersistenceService {
 
-    /** 출처를 따로 넘기지 않는 관광사진 갤러리 경로의 기본값. */
-    private static final String SOURCE_TYPE = "KTO_PHOTO_GALLERY";
-    private static final String SOURCE_NAME = "한국관광공사";
-    private static final String LICENSE_TYPE = "KOGL_TYPE_1";
+    /**
+     * 출처를 따로 넘기지 않는 관광사진 갤러리 경로의 기본값.
+     * 라이선스는 공식 API 데이터셋 이용허락범위를 근거로 한 TYPE1 이다({@link KtoPhotoGalleryService#DATASET_LICENSE_TYPE}).
+     */
+    private static final String SOURCE_TYPE = KtoPhotoGalleryService.SOURCE_TYPE;
+    private static final String SOURCE_NAME = KtoPhotoGalleryService.SOURCE_NAME;
+    private static final String LICENSE_TYPE = KtoPhotoGalleryService.DATASET_LICENSE_TYPE;
 
     private final DestinationImageService destinationImageService;
 

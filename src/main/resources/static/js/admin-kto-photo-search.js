@@ -89,6 +89,11 @@ function createKtoPhotoSelectionState() {
     };
 }
 
+// 공공누리 제3유형은 변경금지라 미리보기도 잘라 보이지 않게 원본 비율로 그린다
+function isKtoPhotoNoDerivatives(item) {
+    return String(item?.licenseType ?? "").trim() === "KOGL_TYPE_3";
+}
+
 function serializeKtoSelectedPhotos(entries) {
     return entries.map(({ item, isMain }) => ({
         externalContentId: String(item.externalContentId ?? "").trim(),
@@ -187,6 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const isMain = selectionState.isMain(item);
             card.classList.toggle("is-selected", isSelected);
             card.classList.toggle("is-main", isMain);
+            card.classList.toggle("is-no-derivatives", isKtoPhotoNoDerivatives(item));
             card.setAttribute("role", "button");
             card.setAttribute("aria-pressed", String(isSelected));
             card.setAttribute(
@@ -269,11 +275,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 photoDetails.length > 0 ? photoDetails.join(" · ") : "촬영 정보 없음"
             ));
             body.append(textElement("p", "admin-kto-photo-source", attribution(item)));
-            body.append(textElement(
-                "p",
-                "admin-kto-photo-license",
-                String(item.licenseLabel ?? "공공누리 제1유형")
-            ));
+            // 라이선스 라벨은 서버가 출처별 근거로 정한 값만 쓴다. 없으면 유형을 가정하지 않는다
+            const licenseLabel = String(item.licenseLabel ?? "").trim();
+            if (licenseLabel) {
+                body.append(textElement("p", "admin-kto-photo-license", licenseLabel));
+            }
 
             card.append(preview, body);
             return card;
@@ -286,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const thumbnail = document.createElement("div");
             thumbnail.className = "admin-kto-photo-selected-thumbnail";
+            thumbnail.classList.toggle("is-no-derivatives", isKtoPhotoNoDerivatives(item));
             const imageUrl = String(item.imageUrl ?? "").trim();
             if (imageUrl) {
                 const image = document.createElement("img");

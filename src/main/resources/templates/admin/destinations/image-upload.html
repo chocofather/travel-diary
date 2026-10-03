@@ -2,9 +2,9 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css">
-  <link rel="stylesheet" href="/css/admin-destination-images.css?v=20260927-5">
-  <script src="/js/admin-kto-photo-search.js?v=20260925-1" defer></script>
+  <link rel="stylesheet" href="/css/destination-create.css?v=20261003-1">
+  <link rel="stylesheet" href="/css/admin-destination-images.css?v=20261003-1">
+  <script src="/js/admin-kto-photo-search.js?v=20261003-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-image-batch-upload.js?v=20260927-2" defer></script>
   <script src="/js/admin-destination-image-bulk-source.js?v=20260927-1" defer></script>
@@ -192,6 +192,7 @@
             <div class="admin-image-order-thumb">
               <!-- 작은 칸이므로 만들어 둔 카드 썸네일을 쓴다(아직이면 원본). 옮길 때 큰 원본을 다시 펼치지 않게 한다. -->
               <img th:src="${imageThumbnails[img.id] != null} ? ${imageThumbnails[img.id]} : @{${img.imageUrl}}"
+                   th:classappend="${img.noDerivatives} ? 'is-no-derivatives'"
                    alt="" loading="lazy" decoding="async" draggable="false"
                    onerror="this.onerror=null;this.src='/images/default.png';">
               <span class="admin-image-order-number" data-image-order-number th:text="${stat.count}">1</span>
@@ -233,6 +234,7 @@
           <div class="admin-destination-image-preview">
             <!-- 이미 만들어 둔 썸네일을 쓴다(아직이면 원본, 만들기를 기다리지 않는다). 화면 아래 사진은 보일 때 불러온다. -->
             <img th:src="${imageThumbnails[img.id] != null} ? ${imageThumbnails[img.id]} : @{${img.imageUrl}}"
+                 th:classappend="${img.noDerivatives} ? 'is-no-derivatives'"
                  loading="lazy" decoding="async"
                  th:alt="${img.sourceTitle != null and !#strings.isEmpty(img.sourceTitle) ? img.sourceTitle : '여행지 이미지'}"
                  onerror="this.onerror=null;this.src='/images/default.png';">

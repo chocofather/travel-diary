@@ -15,6 +15,8 @@ public class GlobalSearchResultDto {
     private Timestamp createdAt;
     private String detailUrl;
     private String thumbnailUrl;
+    // 여행지 대표 이미지가 공공누리 제3유형(변경금지)이면 true → 잘리지 않게(contain) 그린다
+    private boolean imageNoDerivatives;
     private LocalDate startDate;
     private LocalDate endDate;
 

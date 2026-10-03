@@ -2,7 +2,7 @@ package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.kto.KtoPhotoSearchResponse;
 import com.example.travlediary.service.kto.KtoPhotoApiException;
-import com.example.travlediary.service.kto.KtoPhotoGalleryService;
+import com.example.travlediary.service.kto.KtoPhotoSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +18,7 @@ public class AdminKtoPhotoController {
 
     private static final int MAX_NUM_OF_ROWS = 50;
 
-    private final KtoPhotoGalleryService ktoPhotoGalleryService;
+    private final KtoPhotoSearchService ktoPhotoSearchService;
 
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String keyword,
@@ -37,7 +37,7 @@ public class AdminKtoPhotoController {
         }
 
         try {
-            return ResponseEntity.ok(ktoPhotoGalleryService.search(normalizedKeyword, pageNo, numOfRows));
+            return ResponseEntity.ok(ktoPhotoSearchService.search(normalizedKeyword, pageNo, numOfRows));
         } catch (KtoPhotoApiException exception) {
             HttpStatus status = exception.getKind() == KtoPhotoApiException.Kind.CONFIGURATION
                     ? HttpStatus.SERVICE_UNAVAILABLE

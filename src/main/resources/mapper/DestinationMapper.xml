@@ -289,6 +289,19 @@
         VALUES (#{destinationId}, #{categoryId})
     </insert>
 
+    <!-- 목록·카드 썸네일의 라이선스 확인용. 라이선스 판정은 imageSelectColumns 와 같은 규칙(출처 행 우선)을 쓴다. -->
+    <select id="findImageUrlsByLicenseType" resultType="string">
+        SELECT DISTINCT di.image_url
+        FROM destination_images di
+        LEFT JOIN destination_image_sources s ON s.destination_image_id = di.id
+        WHERE di.image_url IN
+        <foreach item="imageUrl" collection="imageUrls" open="(" separator="," close=")">
+            #{imageUrl}
+        </foreach>
+          AND (CASE WHEN s.destination_image_id IS NOT NULL THEN s.license_type ELSE di.license_type END)
+              = #{licenseType}
+    </select>
+
     <select id="findImagesByDestinationId" resultMap="imageMap">
         SELECT
             <include refid="imageSelectColumns"/>

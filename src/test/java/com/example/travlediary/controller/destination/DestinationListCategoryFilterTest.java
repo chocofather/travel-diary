@@ -75,7 +75,8 @@ class DestinationListCategoryFilterTest {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService, referenceNameLocalizationService,
-                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
         when(countryCategoryService.getById(38L)).thenReturn(region(38L, "서울", 3, 7L));
         when(countryCategoryService.getSubregions(38L, 4)).thenReturn(List.of());
         when(countryCategoryService.getAllRegionIdsUnder(38L)).thenReturn(SEOUL_REGION_IDS);

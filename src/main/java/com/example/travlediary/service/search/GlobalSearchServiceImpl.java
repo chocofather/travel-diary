@@ -5,6 +5,7 @@ import com.example.travlediary.dto.GlobalSearchPage;
 import com.example.travlediary.dto.GlobalSearchResultDto;
 import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.repository.search.GlobalSearchMapper;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -30,6 +31,7 @@ public class GlobalSearchServiceImpl implements GlobalSearchService {
     /** 결과에 보이는 여행지 이름·요약을 현재 언어로 바꾼다. (여행지 목록과 같은 일괄 조회) */
     private final DestinationLocalizationService destinationLocalizationService;
     private final MessageSource messageSource;
+    private final DestinationImageService destinationImageService;
 
     @Override
     public GlobalSearchPage search(String query, String type, int page,
@@ -55,6 +57,9 @@ public class GlobalSearchServiceImpl implements GlobalSearchService {
                         keywordPattern, normalizedType.getQueryValue(),
                         language.getLanguageTag(), offset, PAGE_SIZE);
         localizeDestinationResults(results, language);
+        // 여행지 대표 이미지가 공공누리 제3유형(변경금지)이면 잘리지 않게 그린다. (여행지 사진 외 주소는 맞는 것이 없다)
+        destinationImageService.markNoDerivatives(results, GlobalSearchResultDto::getThumbnailUrl,
+                GlobalSearchResultDto::setImageNoDerivatives);
         results.forEach(result -> result.setSummary(toPlainSummary(result.getSummary(), language)));
 
         int pageStart = Math.max(1, currentPage - 2);

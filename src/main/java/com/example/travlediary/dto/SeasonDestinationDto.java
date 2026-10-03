@@ -21,6 +21,8 @@ public class SeasonDestinationDto {
     // 카드 썸네일 (여행지 업로드 사진이 아니면 null → imageUrl 을 쓴다), 후보 srcset (폭은 실제 픽셀)
     private String cardImageUrl;
     private String cardImageSrcset;
+    // 대표 이미지가 공공누리 제3유형(변경금지)이면 true → 카드 썸네일 대신 원본을 잘리지 않게(contain) 그린다
+    private boolean imageNoDerivatives;
     // 메인 랜드마크의 3:4 아치 칸을 cover 로 채울 때 사진 폭 배율 (img sizes 에 곱한다)
     private double cardImageCoverScale = 1;
 

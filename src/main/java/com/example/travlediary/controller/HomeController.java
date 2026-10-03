@@ -11,6 +11,7 @@ import com.example.travlediary.seo.SeoTextUtils;
 import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import com.example.travlediary.service.travelinfo.FestivalDetailService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
@@ -39,6 +40,7 @@ public class HomeController {
     private final DestinationRecommendService recommendService;
     private final PopularRecommendService popularRecommendService;
     private final DestinationCardThumbnailService cardThumbnailService;
+    private final DestinationImageService destinationImageService;
     private final DestinationViewClock viewClock;
     private final TravelInfoService travelInfoService;
     private final EventService eventService;
@@ -48,6 +50,7 @@ public class HomeController {
                           DestinationRecommendService recommendService,
                           PopularRecommendService popularRecommendService,
                           DestinationCardThumbnailService cardThumbnailService,
+                          DestinationImageService destinationImageService,
                           DestinationViewClock viewClock,
                           TravelInfoService travelInfoService,
                           EventService eventService,
@@ -56,6 +59,7 @@ public class HomeController {
      this.recommendService = recommendService;
      this.popularRecommendService = popularRecommendService;
      this.cardThumbnailService = cardThumbnailService;
+     this.destinationImageService = destinationImageService;
      this.viewClock = viewClock;
      this.travelInfoService = travelInfoService;
      this.eventService = eventService;
@@ -114,7 +118,9 @@ public class HomeController {
     */
     private List<SeasonDestinationDto> homeLandmarks(SupportedLanguage language) {
         List<SeasonDestinationDto> landmarks = recommendService.findHomeLandmarks(language);
-        cardThumbnailService.applyCardImages(landmarks, SeasonDestinationDto::getImageUrl,
+        destinationImageService.markNoDerivatives(landmarks, SeasonDestinationDto::getImageUrl,
+                SeasonDestinationDto::setImageNoDerivatives);
+        cardThumbnailService.applyCardImages(landmarks, HomeController::cardSourceUrl,
                 (destination, image) -> {
                     destination.setCardImageUrl(image.src());
                     destination.setCardImageSrcset(image.srcset());
@@ -133,7 +139,9 @@ public class HomeController {
         if (destinations == null || destinations.size() != HOME_POPULAR_LIMIT) {
             return destinations == null ? List.of() : destinations;
         }
-        cardThumbnailService.applyCardImages(destinations, SeasonDestinationDto::getImageUrl,
+        destinationImageService.markNoDerivatives(destinations, SeasonDestinationDto::getImageUrl,
+                SeasonDestinationDto::setImageNoDerivatives);
+        cardThumbnailService.applyCardImages(destinations, HomeController::cardSourceUrl,
                 (destination, image) -> {
                     destination.setCardImageUrl(image.src());
                     destination.setCardImageSrcset(image.srcset());
@@ -149,7 +157,10 @@ public class HomeController {
     private List<SeasonDestinationDto> popularDestinations(SupportedLanguage language) {
         List<RecommendDestinationDto> destinations =
                 popularRecommendService.findDomesticPopular(HOME_POPULAR_LIMIT, language);
-        cardThumbnailService.applyCardImages(destinations, RecommendDestinationDto::getImageUrl,
+        destinationImageService.markNoDerivatives(destinations, RecommendDestinationDto::getImageUrl,
+                RecommendDestinationDto::setImageNoDerivatives);
+        cardThumbnailService.applyCardImages(destinations,
+                destination -> destination.isImageNoDerivatives() ? null : destination.getImageUrl(),
                 (destination, image) -> {
                     destination.setCardImageUrl(image.src());
                     destination.setCardImageSrcset(image.srcset());
@@ -167,7 +178,15 @@ public class HomeController {
         card.setRegionName(popular.getRegionName());
         card.setCardImageUrl(popular.getCardImageUrl());
         card.setCardImageSrcset(popular.getCardImageSrcset());
+        card.setImageNoDerivatives(popular.isImageNoDerivatives());
         return card;
+    }
+
+    /**
+     * 카드 썸네일을 만들 원본. 공공누리 제3유형(변경금지)은 줄이고 잘라 만든 썸네일 대신 원본을 그대로 쓴다.
+     */
+    private static String cardSourceUrl(SeasonDestinationDto destination) {
+        return destination.isImageNoDerivatives() ? null : destination.getImageUrl();
     }
 
     private CustomUserDetails authenticatedUser(Authentication auth) {

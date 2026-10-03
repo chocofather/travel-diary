@@ -14,6 +14,7 @@ import com.example.travlediary.model.CourseDestination;
 import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.repository.course.CourseMapper;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
@@ -50,6 +51,7 @@ public class CourseServiceImpl implements CourseService {
     /** STOP 지역명은 지역 번역에서 가져온다. */
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
     private final LocalContentLanguageDetector languageDetector;
+    private final DestinationImageService destinationImageService;
 
     @Override
     @Transactional
@@ -167,6 +169,9 @@ public class CourseServiceImpl implements CourseService {
                         stop.getRegionId(), stop.getRegionName()));
             }
         }
+        // 대표 이미지가 공공누리 제3유형(변경금지)이면 잘리지 않게 그린다.
+        destinationImageService.markNoDerivatives(available, CourseStopDto::getImageUrl,
+                CourseStopDto::setImageNoDerivatives);
         return available;
     }
 

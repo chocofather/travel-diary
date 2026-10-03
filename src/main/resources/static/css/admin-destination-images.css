@@ -656,6 +656,13 @@
     object-fit: cover;
 }
 
+/* 공공누리 제3유형(변경금지): 썸네일 파일 대신 원본을 쓰고, 칸 크기는 그대로 둔 채 잘리지 않게 담는다. */
+.admin-image-order-thumb img.is-no-derivatives,
+.admin-destination-image-preview img.is-no-derivatives {
+    object-fit: contain;
+    background-color: #f3f4f6;
+}
+
 .admin-image-state-badge,
 .admin-image-source-badge {
     display: inline-flex;

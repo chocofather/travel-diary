@@ -3,6 +3,7 @@ package com.example.travlediary.service.kto;
 import com.example.travlediary.dto.kto.KtoPhotoGalleryApiResponse;
 import com.example.travlediary.dto.kto.KtoPhotoSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoPhotoSearchResponse;
+import com.example.travlediary.model.DestinationImageLicenseType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,16 +13,29 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class KtoPhotoGalleryService {
 
-    private static final String SOURCE_TYPE = "KTO_PHOTO_GALLERY";
-    private static final String SOURCE_NAME = "한국관광공사";
-    private static final String LICENSE_TYPE = "KOGL_TYPE_1";
-    private static final String LICENSE_LABEL = "공공누리 제1유형";
+    public static final String SOURCE_TYPE = "KTO_PHOTO_GALLERY";
+    public static final String SOURCE_NAME = "한국관광공사";
+    /**
+     * 공식 API 데이터셋 이용허락범위를 근거로 TYPE1 처리한다.
+     *
+     * <p>공공데이터포털 '한국관광공사_관광사진 정보_GW'(https://www.data.go.kr/data/15101914/openapi.do)
+     * 설명: "포토코리아의 사진들은 공공누리 1유형의 콘텐츠들로서, 자유롭게 다운로드 및 활용이 가능합니다."
+     * 이 API 응답에는 사진별 저작권 구분 필드가 없다. 사진별 유형을 추정한 값이 아니라
+     * 데이터셋 단위 이용허락을 출처 정책으로 적용한 값이다. 워터마크 유무는 판정에 쓰지 않는다.
+     * 데이터셋 이용허락이 바뀌면 이 값을 다시 확인해야 한다.</p>
+     */
+    public static final String DATASET_LICENSE_TYPE = "KOGL_TYPE_1";
+    private static final String LICENSE_LABEL = DestinationImageLicenseType.displayName(DATASET_LICENSE_TYPE);
+    /** 관광사진 API(포토코리아)가 주는 웹용 이미지 경로. TourAPI 이미지는 /cms/resource/ 를 쓴다. */
+    private static final String GALLERY_IMAGE_HOST = "tong.visitkorea.or.kr";
+    private static final String GALLERY_IMAGE_PATH_PREFIX = "/cms2/website/";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -120,11 +134,30 @@ public class KtoPhotoGalleryService {
                     item.galModifiedtime(),
                     SOURCE_TYPE,
                     SOURCE_NAME,
-                    LICENSE_TYPE,
+                    DATASET_LICENSE_TYPE,
                     LICENSE_LABEL
             ));
         } catch (Exception exception) {
             throw KtoPhotoApiException.upstreamFailure();
+        }
+    }
+
+    /**
+     * 관광사진 API 가 주는 이미지 주소인지 본다. 데이터셋 이용허락(TYPE1)은 이 주소의 사진에만 적용한다.
+     * 화면이 보낸 출처 값을 믿지 않고 저장 시 서버가 주소로 출처를 나눌 때 쓴다.
+     */
+    public static boolean isGalleryImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(imageUrl.strip());
+            return uri.getHost() != null
+                    && GALLERY_IMAGE_HOST.equalsIgnoreCase(uri.getHost())
+                    && uri.getPath() != null
+                    && uri.getPath().startsWith(GALLERY_IMAGE_PATH_PREFIX);
+        } catch (IllegalArgumentException exception) {
+            return false;
         }
     }
 

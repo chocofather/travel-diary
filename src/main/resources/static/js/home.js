@@ -116,6 +116,8 @@ function createDestinationCard(dest, imageSizes = SEASON_CARD_IMAGE_SIZES) {
         </div>
     `;
     const image = card.querySelector('img');
+    // 공공누리 제3유형(변경금지)은 잘라 보이지 않게 원본 비율 전체를 담는다.
+    if (dest.imageNoDerivatives) image.classList.add('is-no-derivatives');
     if (dest.cardImageUrl) {
         // 썸네일을 받지 못하면 원본으로 한 번만 되돌린다.
         image.addEventListener('error', () => {

@@ -279,6 +279,8 @@
         imageWrap.className = 'random-destination-image-wrap';
         const image = document.createElement('img');
         image.className = 'random-destination-image';
+        // 공공누리 제3유형(변경금지)은 잘라 보이지 않게 원본 비율 전체를 담는다.
+        if (destination.imageNoDerivatives) image.classList.add('is-no-derivatives');
         image.src = normalizedText(destination.imageUrl) || defaultImageUrl;
         image.alt = formatMessage(
                 randomI18n.cardImageAlt, destination.destinationName);

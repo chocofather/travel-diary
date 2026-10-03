@@ -166,6 +166,7 @@
              th:href="@{/destinations/{id}(id=${stop.destinationId})}">
             <div class="course-stop-image-wrap">
               <img class="course-stop-image"
+                   th:classappend="${stop.imageNoDerivatives} ? 'is-no-derivatives'"
                    th:src="${stop.imageUrl != null and !#strings.isEmpty(stop.imageUrl) ? stop.imageUrl : '/images/default.png'}"
                    th:alt="#{course.detail.stop.imageAlt(${stop.name})}"
                    loading="lazy" />

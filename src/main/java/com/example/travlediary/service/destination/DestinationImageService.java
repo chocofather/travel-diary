@@ -1,6 +1,7 @@
 package com.example.travlediary.service.destination;
 
 import com.example.travlediary.model.DestinationImage;
+import com.example.travlediary.model.DestinationImageLicenseType;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
@@ -14,14 +15,18 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Map;
 import java.net.URI;
 import java.util.Locale;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @RequiredArgsConstructor
 @Service
@@ -648,6 +653,57 @@ public class DestinationImageService {
             } catch (RuntimeException cleanupFailure) {
                 log.warn("여행지 이미지 파일을 정리하지 못했습니다. (원인: {})",
                         cleanupFailure.getClass().getSimpleName());
+            }
+        }
+    }
+
+    /**
+     * 주어진 이미지 주소 중 공공누리 제3유형(변경금지) 사진의 주소. 비어 있는 주소는 무시한다.
+     *
+     * <p>변경금지 사진은 목록·카드에서도 잘라 보이지 않게 원본 비율로 그리고(contain),
+     * 카드용으로 줄이고 잘라 만든 썸네일 파일 대신 원본을 쓴다.
+     * 화면에 실제로 그리는 이미지 주소를 기준으로 목록마다 한 번만 조회한다.</p>
+     */
+    public Set<String> noDerivativeImageUrls(Collection<String> imageUrls) {
+        if (imageUrls == null) {
+            return Set.of();
+        }
+        Set<String> candidates = new LinkedHashSet<>();
+        for (String imageUrl : imageUrls) {
+            if (imageUrl != null && !imageUrl.isBlank()) {
+                candidates.add(imageUrl);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(destinationMapper.findImageUrlsByLicenseType(
+                candidates, DestinationImageLicenseType.KOGL_TYPE_3.name()));
+    }
+
+    /**
+     * 목록의 변경금지 사진에 표시를 남긴다. 카드 썸네일을 채우기 전에 불러야 원본을 쓸 수 있다.
+     *
+     * @param imageUrl 카드가 그리는 원본 이미지 주소를 꺼내는 함수
+     * @param mark     변경금지 사진일 때만 불린다
+     */
+    public <T> void markNoDerivatives(List<T> items, Function<T, String> imageUrl,
+                                      BiConsumer<T, Boolean> mark) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        Set<String> noDerivatives = noDerivativeImageUrls(items.stream()
+                .filter(Objects::nonNull)
+                .map(imageUrl)
+                .toList());
+        if (noDerivatives.isEmpty()) {
+            return;
+        }
+        for (T item : items) {
+            // 불변 Set 은 null 을 물으면 예외를 낸다. 사진 없는 카드는 그냥 넘긴다.
+            String url = item == null ? null : imageUrl.apply(item);
+            if (url != null && noDerivatives.contains(url)) {
+                mark.accept(item, true);
             }
         }
     }

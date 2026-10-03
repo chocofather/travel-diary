@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
             parentRegionName: element.dataset.parentRegionName,
             countryId: element.dataset.countryId,
             countryName: element.dataset.countryName,
-            thumbnailUrl: element.dataset.thumbnailUrl
+            thumbnailUrl: element.dataset.thumbnailUrl,
+            imageNoDerivatives: element.dataset.imageNoDerivatives === 'true'
         }))
         .filter(destination => Number.isSafeInteger(destination.id) && destination.id > 0);
     let latestResults = [];
@@ -117,6 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         message.classList.toggle('is-error', isError);
     }
 
+    // 공공누리 제3유형(변경금지)은 잘라 보이지 않게 원본 비율 전체를 담는다.
+    function markNoDerivatives(image, destination) {
+        if (destination.imageNoDerivatives) image.classList.add('is-no-derivatives');
+    }
+
     function createImage(url, alt) {
         const image = document.createElement('img');
         image.src = url || '/images/default.png';
@@ -153,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const image = createImage(destination.thumbnailUrl, `${destination.name || '여행지'} 썸네일`);
             image.className = 'destination-card-image';
+            markNoDerivatives(image, destination);
 
             const info = document.createElement('div');
             info.className = 'destination-card-info';
@@ -209,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const image = createImage(destination.thumbnailUrl, `${destination.name || '여행지'} 썸네일`);
             image.className = 'selected-card-image';
+            markNoDerivatives(image, destination);
 
             const info = document.createElement('div');
             info.className = 'selected-card-info';
