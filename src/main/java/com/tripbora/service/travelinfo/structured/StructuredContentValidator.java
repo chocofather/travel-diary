@@ -2,6 +2,8 @@ package com.tripbora.service.travelinfo.structured;
 
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +42,12 @@ public class StructuredContentValidator {
         CAPTION("캡션", "캡션을", "캡션은", 300, false),
         ALT("이미지 설명(alt)", "이미지 설명(alt)을", "이미지 설명(alt)은", 200, false),
         ITEM_TITLE("이미지 제목", "이미지 제목을", "이미지 제목은", 100, false),
-        CALLOUT("강조 문구", "강조 문구를", "강조 문구는", 500, true);
+        CALLOUT("강조 문구", "강조 문구를", "강조 문구는", 500, true),
+        CREDIT_AUTHOR("저작자", "저작자를", "저작자는", 100, false),
+        CREDIT_SOURCE("출처명", "출처명을", "출처명은", 100, false),
+        CREDIT_SOURCE_URL("출처 URL", "출처 URL을", "출처 URL은", 500, false),
+        CREDIT_LICENSE("라이선스", "라이선스를", "라이선스는", 100, false),
+        CREDIT_LICENSE_URL("라이선스 URL", "라이선스 URL을", "라이선스 URL은", 500, false);
 
         private final String label;
         private final String objectLabel;
@@ -203,10 +210,51 @@ public class StructuredContentValidator {
         if (!isValidDimension(image.width()) || !isValidDimension(image.height())) {
             throw invalid(location, "이미지 크기 정보가 올바르지 않습니다.");
         }
+        validateCredit(image.credit(), location);
     }
 
     private boolean isValidDimension(Integer value) {
         return value != null && value >= 1 && value <= MAX_IMAGE_DIMENSION;
+    }
+
+    /**
+     * 이미지 출처표시. 없으면(null) 검사할 것이 없다. 있으면 저작자·출처명 중 하나는 있어야 하고,
+     * 링크로 쓸 URL 은 http / https 주소만 받는다. (javascript:, data:, file: 같은 주소는 저장하지 않는다)
+     */
+    private void validateCredit(StructuredImageCredit credit, String location) {
+        if (credit == null) {
+            return;
+        }
+        if (credit.author() == null && credit.source() == null) {
+            throw invalid(location, "출처표시에는 저작자 또는 출처명을 입력해 주세요.");
+        }
+        optionalText(credit.author(), TextField.CREDIT_AUTHOR, location);
+        optionalText(credit.source(), TextField.CREDIT_SOURCE, location);
+        optionalWebUrl(credit.sourceUrl(), TextField.CREDIT_SOURCE_URL, location);
+        optionalText(credit.license(), TextField.CREDIT_LICENSE, location);
+        optionalWebUrl(credit.licenseUrl(), TextField.CREDIT_LICENSE_URL, location);
+    }
+
+    private void optionalWebUrl(String value, TextField field, String location) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        checkText(value, field, location, StructuredContentValidationException.CONTENT_FIELD);
+        if (!isWebUrl(value)) {
+            throw invalid(location, field.subjectLabel + " http 또는 https 주소로 입력해 주세요.");
+        }
+    }
+
+    /** 호스트가 있는 http / https 절대 주소. 공백 같은 URI 에 쓸 수 없는 문자가 있으면 거부한다. */
+    private boolean isWebUrl(String value) {
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme();
+            return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
+                    && uri.getHost() != null;
+        } catch (URISyntaxException exception) {
+            return false;
+        }
     }
 
     private void requireId(String id, String location, String target) {

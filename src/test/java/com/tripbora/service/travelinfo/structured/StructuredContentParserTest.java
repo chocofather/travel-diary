@@ -331,6 +331,113 @@ class StructuredContentParserTest {
                 "구조화 콘텐츠 형식이 올바르지 않습니다.");
     }
 
+    // ---- 이미지 출처표시(credit) -------------------------------------------------------------
+
+    @Test
+    void imageWithoutCreditStillParsesAndHasNoCredit() {
+        StructuredContent content = parser.parseContent(document(
+                fullImage("legacy", IMAGE, "설명", null),
+                fullImage("explicit-null", creditImage("null"), "설명", null)));
+
+        assertThat(content.blocks()).extracting(block -> ((StructuredBlock.FullImage) block).image())
+                .containsExactly(new StructuredImage(URL, 2000, 1333), new StructuredImage(URL, 2000, 1333));
+        assertThat(((StructuredBlock.FullImage) content.blocks().get(0)).image().credit()).isNull();
+    }
+
+    @Test
+    void creditIsAcceptedOnEveryImageBlockWithOnlySomeFields() {
+        String full = "{\"author\":\"John Doe\",\"source\":\"Wikimedia Commons\","
+                + "\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:Gyeongbokgung.jpg\","
+                + "\"license\":\"CC BY-SA 4.0\",\"licenseUrl\":\"http://creativecommons.org/licenses/by-sa/4.0/\"}";
+        StructuredContent content = parser.parseContent(document(
+                fullImage("full", creditImage(full), "설명", null),
+                imageText("split", "LEFT", creditImage("{\"author\":\"홍길동\"}"), "설명", null, "본문"),
+                slider("s", null, item("i1", creditImage("{\"source\":\"한국관광공사\",\"license\":\"공공누리 제1유형\"}"),
+                        "설명", null, null)),
+                grid("g", item("c1", creditImage("{\"author\":\" \",\"source\":\"한국관광공사\",\"sourceUrl\":\"\"}"),
+                        "설명", null, null), item("c2", IMAGE, "설명", null, null))));
+
+        assertThat(((StructuredBlock.FullImage) content.blocks().get(0)).image().credit())
+                .isEqualTo(new StructuredImageCredit("John Doe", "Wikimedia Commons",
+                        "https://commons.wikimedia.org/wiki/File:Gyeongbokgung.jpg", "CC BY-SA 4.0",
+                        "http://creativecommons.org/licenses/by-sa/4.0/"));
+        assertThat(((StructuredBlock.ImageText) content.blocks().get(1)).image().credit())
+                .isEqualTo(new StructuredImageCredit("홍길동", null, null, null, null));
+        assertThat(((StructuredBlock.ImageSlider) content.blocks().get(2)).items().get(0).image().credit())
+                .isEqualTo(new StructuredImageCredit(null, "한국관광공사", null, "공공누리 제1유형", null));
+        // 공백뿐인 값은 값이 없는 것으로 본다.
+        StructuredBlock.ImageGrid grid = (StructuredBlock.ImageGrid) content.blocks().get(3);
+        assertThat(grid.items().get(0).image().credit())
+                .isEqualTo(new StructuredImageCredit(null, "한국관광공사", null, null, null));
+        assertThat(grid.items().get(1).image().credit()).isNull();
+    }
+
+    @Test
+    void creditNeedsAuthorOrSourceOnEveryImageBlock() {
+        for (String credit : List.of("{}", "{\"author\":\" \",\"source\":\"\"}",
+                "{\"license\":\"CC BY 4.0\",\"licenseUrl\":\"https://creativecommons.org/licenses/by/4.0/\"}")) {
+            assertInvalid(document(fullImage("a", creditImage(credit), "설명", null)),
+                    "1번째 블록(큰 이미지): 출처표시에는 저작자 또는 출처명을 입력해 주세요.");
+            assertInvalid(document(imageText("a", "LEFT", creditImage(credit), "설명", null, "본문")),
+                    "1번째 블록(이미지 + 글): 출처표시에는 저작자 또는 출처명을 입력해 주세요.");
+            assertInvalid(document(slider("s", null, item("i1", creditImage(credit), "설명", null, null))),
+                    "1번째 블록(이미지 슬라이더) 1번째 이미지: 출처표시에는 저작자 또는 출처명을 입력해 주세요.");
+            assertInvalid(document(grid("g", item("c1", IMAGE, "설명", null, null),
+                            item("c2", creditImage(credit), "설명", null, null))),
+                    "1번째 블록(이미지 배치) 2번째 이미지: 출처표시에는 저작자 또는 출처명을 입력해 주세요.");
+        }
+    }
+
+    @Test
+    void creditTextsAndUrlsAreLengthChecked() {
+        String url500 = "https://example.com/" + "a".repeat(480);
+        assertThat(parser.parseContent(document(fullImage("a", creditImage(credit(
+                "가".repeat(100), "나".repeat(100), url500, "다".repeat(100), url500)), "설명", null)))
+                .blocks()).hasSize(1);
+
+        assertInvalid(document(fullImage("a", creditImage(credit("가".repeat(101), "출처", null, null, null)),
+                "설명", null)), "1번째 블록(큰 이미지): 저작자는 100자 이하로 입력해 주세요.");
+        assertInvalid(document(fullImage("a", creditImage(credit("저작자", "가".repeat(101), null, null, null)),
+                "설명", null)), "출처명은 100자 이하로 입력해 주세요.");
+        assertInvalid(document(fullImage("a", creditImage(credit("저작자", null, null, "가".repeat(101), null)),
+                "설명", null)), "라이선스는 100자 이하로 입력해 주세요.");
+        assertInvalid(document(fullImage("a", creditImage(credit("저작자", null, url500 + "a", null, null)),
+                "설명", null)), "출처 URL은 500자 이하로 입력해 주세요.");
+        assertInvalid(document(fullImage("a", creditImage(credit("저작자", null, null, null, url500 + "a")),
+                "설명", null)), "라이선스 URL은 500자 이하로 입력해 주세요.");
+        assertInvalid(document(fullImage("a", creditImage(credit("저작자\\n둘째 줄", null, null, null, null)),
+                "설명", null)), "저작자는 한 줄로 입력해 주세요.");
+    }
+
+    @Test
+    void creditUrlsAcceptOnlyHttpAndHttpsAddresses() {
+        for (String url : List.of("http://example.com", "https://commons.wikimedia.org/wiki/File:A.jpg?x=1#top",
+                "HTTPS://CREATIVECOMMONS.ORG/licenses/by/4.0/")) {
+            assertThat(parser.parseContent(document(
+                    fullImage("a", creditImage(credit("저작자", null, url, null, url)), "설명", null))).blocks())
+                    .hasSize(1);
+        }
+        for (String url : List.of("javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,<b>x</b>",
+                "file:///etc/passwd", "ftp://example.com/a.jpg", "commons.wikimedia.org/wiki/File:A.jpg",
+                "//example.com/a", "/uploads/a.jpg", "https://", "https:example.com", "not a url",
+                " https://example.com")) {
+            assertInvalid(document(fullImage("a", creditImage(credit("저작자", null, url, null, null)), "설명", null)),
+                    "1번째 블록(큰 이미지): 출처 URL은 http 또는 https 주소로 입력해 주세요.");
+            assertInvalid(document(slider("s", null, item("i1",
+                            creditImage(credit(null, "출처", null, null, url)), "설명", null, null))),
+                    "1번째 블록(이미지 슬라이더) 1번째 이미지: 라이선스 URL은 http 또는 https 주소로 입력해 주세요.");
+        }
+    }
+
+    @Test
+    void creditRejectsUnknownFields() {
+        assertInvalid(document(fullImage("a", creditImage("{\"author\":\"저작자\",\"attributionRequired\":true}"),
+                        "설명", null)),
+                "허용하지 않는 항목이 있습니다: attributionRequired (위치: blocks[0].image.credit.attributionRequired)");
+        assertInvalid(document(fullImage("a", creditImage("\"John Doe\""), "설명", null)),
+                "구조화 콘텐츠 형식이 올바르지 않습니다.");
+    }
+
     // ---- 필수 글 / 길이 --------------------------------------------------------------------
 
     @Test
@@ -514,6 +621,23 @@ class StructuredContentParserTest {
 
     private static String image(String url, String width, String height) {
         return "{\"url\":\"" + url + "\",\"width\":" + width + ",\"height\":" + height + "}";
+    }
+
+    /** 기본 이미지(IMAGE)에 credit JSON 을 붙인다. */
+    private static String creditImage(String credit) {
+        return "{\"url\":\"" + URL + "\",\"width\":2000,\"height\":1333,\"credit\":" + credit + "}";
+    }
+
+    private static String credit(String author, String source, String sourceUrl, String license,
+                                 String licenseUrl) {
+        return "{\"author\":" + quoted(author) + ",\"source\":" + quoted(source)
+                + ",\"sourceUrl\":" + quoted(sourceUrl) + ",\"license\":" + quoted(license)
+                + ",\"licenseUrl\":" + quoted(licenseUrl) + "}";
+    }
+
+    private static String grid(String id, String... items) {
+        return "{\"id\":\"" + id + "\",\"type\":\"IMAGE_GRID\",\"columns\":" + items.length
+                + ",\"items\":[" + String.join(",", items) + "]}";
     }
 
     private static String sectionTitle(String id, String title) {

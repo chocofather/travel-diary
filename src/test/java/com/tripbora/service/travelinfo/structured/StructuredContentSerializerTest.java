@@ -40,6 +40,45 @@ class StructuredContentSerializerTest {
     }
 
     @Test
+    void imageCreditRoundTripsAndMissingCreditIsNotWritten() {
+        StructuredImage credited = new StructuredImage(IMAGE.url(), 1200, 800, new StructuredImageCredit(
+                "John Doe", "Wikimedia Commons", "https://commons.wikimedia.org/wiki/File:A.jpg",
+                "CC BY-SA 4.0", "https://creativecommons.org/licenses/by-sa/4.0/"));
+        StructuredImage sourceOnly = new StructuredImage(IMAGE.url(), 1200, 800,
+                new StructuredImageCredit(null, "한국관광공사", null, "공공누리 제1유형", null));
+        StructuredContent content = new StructuredContent(1, List.of(
+                new StructuredBlock.FullImage("full", credited, "설명", null),
+                new StructuredBlock.ImageGrid("grid", 2, List.of(
+                        new StructuredBlock.SliderItem("c1", sourceOnly, "설명", null, null),
+                        new StructuredBlock.SliderItem("c2", IMAGE, "설명", null, null)))));
+
+        String json = serializer.write(content);
+
+        assertThat(json).contains(
+                "\"image\":{\"url\":\"" + IMAGE.url() + "\",\"width\":1200,\"height\":800,\"credit\":{"
+                        + "\"author\":\"John Doe\",\"source\":\"Wikimedia Commons\","
+                        + "\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:A.jpg\","
+                        + "\"license\":\"CC BY-SA 4.0\","
+                        + "\"licenseUrl\":\"https://creativecommons.org/licenses/by-sa/4.0/\"}}",
+                "\"credit\":{\"source\":\"한국관광공사\",\"license\":\"공공누리 제1유형\"}",
+                "{\"id\":\"c2\",\"image\":{\"url\":\"" + IMAGE.url() + "\",\"width\":1200,\"height\":800},");
+        assertThat(json).doesNotContain("null");
+        assertThat(parser.parseContent(json)).isEqualTo(content);
+        assertThat(serializer.write(parser.parseContent(json))).isEqualTo(json);
+    }
+
+    @Test
+    void storedJsonWithoutCreditIsRewrittenUnchanged() {
+        String stored = "{\"version\":1,\"blocks\":["
+                + "{\"type\":\"FULL_IMAGE\",\"id\":\"full\",\"image\":{\"url\":\"" + IMAGE.url()
+                + "\",\"width\":1200,\"height\":800},\"alt\":\"설명\",\"caption\":\"캡션\"},"
+                + "{\"type\":\"IMAGE_SLIDER\",\"id\":\"slider\",\"items\":[{\"id\":\"i1\",\"image\":{\"url\":\""
+                + IMAGE.url() + "\",\"width\":1200,\"height\":800},\"title\":\"제목\"}]}]}";
+
+        assertThat(serializer.write(parser.parseContent(stored))).isEqualTo(stored);
+    }
+
+    @Test
     void canonicalTextJsonSortsKeysOmitsEmptyValuesAndRoundTrips() {
         StructuredText text = new StructuredText(Map.of(
                 "zeta", new StructuredText.BlockText(null, "Z", null, null, Map.of()),

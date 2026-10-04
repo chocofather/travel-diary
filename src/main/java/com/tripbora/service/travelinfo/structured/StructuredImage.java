@@ -8,9 +8,17 @@ import java.util.regex.Pattern;
  * <p>width / height 는 업로드 때 서버가 읽어 둔 실제 크기다. 공개 화면이 자리를 미리 잡아
  * 화면이 밀리지 않게 하는 데 쓴다.
  *
+ * <p>credit 은 출처표시가 필요한 이미지에만 있는 선택 값이다. 없으면 JSON 에 쓰지 않으므로
+ * credit 이 생기기 전에 저장된 JSON 도 그대로 읽고 같은 모양으로 다시 쓴다.
+ *
  * @param url {@value #URL_PREFIX} 아래 서버가 만든 파일 경로만 받는다
  */
-public record StructuredImage(String url, Integer width, Integer height) {
+public record StructuredImage(String url, Integer width, Integer height, StructuredImageCredit credit) {
+
+    /** 출처표시가 없는 이미지. */
+    public StructuredImage(String url, Integer width, Integer height) {
+        this(url, width, height, null);
+    }
 
     /** 구조화 콘텐츠 이미지 전용 업로드 경로. */
     public static final String URL_PREFIX = "/uploads/travel-info/content/";
