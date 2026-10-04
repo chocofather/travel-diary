@@ -16,7 +16,9 @@
 (function (global) {
     "use strict";
 
-    const STORAGE_KEY = "travelDiary.guestDiaryDraft.v1";
+    const STORAGE_KEY = "tripbora.guestDiaryDraft.v1";
+    /** Travel Diary 시절 키. 처음 읽을 때 STORAGE_KEY 로 옮긴다. (P10b 에서 migrateLegacyKey 와 함께 제거) */
+    const LEGACY_STORAGE_KEY = "travelDiary.guestDiaryDraft.v1";
     const SCHEMA_VERSION = 2;
     /** 기존 41:38 내지의 세로 픽셀 위치/크기를 A5 상대값으로 옮기는 정확한 계수. */
     const LEGACY_VERTICAL_SCALE = 2812 / 4305;
@@ -44,12 +46,41 @@
     const DEFAULT_NOTEBOOK_TYPE = "CLASSIC";
     const ELEMENT_TYPES = ["TEXT", "PHOTO", "STICKER", "NOTE"];
 
+    /** 옛 키를 옮기지 못한 화면(저장 실패)에서는 옛 키를 대신 읽는다. null 이면 아직 확인 전이다. */
+    let legacyKeyPending = null;
+
     function storage() {
+        let store;
         try {
-            return global.localStorage || null;
+            store = global.localStorage || null;
         } catch (error) {
             // 시크릿 모드나 저장소 차단. 체험을 못 할 뿐 화면이 죽지는 않는다.
             return null;
+        }
+        if (store && legacyKeyPending === null) {
+            legacyKeyPending = !migrateLegacyKey(store, LEGACY_STORAGE_KEY, STORAGE_KEY);
+        }
+        return store;
+    }
+
+    /*
+      옛 키(LEGACY_*)의 값을 새 키로 옮긴다. P10b 에서 이 함수와 LEGACY_* 를 함께 지운다.
+      값은 문자열 그대로 옮기고, 새 키가 이미 있으면 새 키가 이긴다(덮어쓰지 않는다).
+      새 키 저장이 성공한 뒤에만 옛 키를 지운다. 실패하면 옛 키를 남기고 false 를 준다. (다음 방문에 다시 옮긴다)
+    */
+    function migrateLegacyKey(store, legacyKey, key) {
+        try {
+            const legacyValue = store.getItem(legacyKey);
+            if (legacyValue === null) {
+                return true;
+            }
+            if (store.getItem(key) === null) {
+                store.setItem(key, legacyValue);
+            }
+            store.removeItem(legacyKey);
+            return true;
+        } catch (error) {
+            return false;
         }
     }
 
@@ -294,6 +325,9 @@
         let saved;
         try {
             saved = store.getItem(STORAGE_KEY);
+            if (saved === null && legacyKeyPending) {
+                saved = store.getItem(LEGACY_STORAGE_KEY);
+            }
         } catch (error) {
             return null;
         }
@@ -338,6 +372,8 @@
         }
         try {
             store.removeItem(STORAGE_KEY);
+            // 옮기지 못하고 남은 옛 값이 다음 방문에 되살아나지 않도록 함께 지운다.
+            store.removeItem(LEGACY_STORAGE_KEY);
         } catch (error) {
             return false;
         }

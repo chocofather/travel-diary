@@ -24,7 +24,7 @@ class GuestDiaryDraftStoreContractTest {
         String store = store();
 
         assertThat(store)
-                .contains("const STORAGE_KEY = \"travelDiary.guestDiaryDraft.v1\";")
+                .contains("const STORAGE_KEY = \"tripbora.guestDiaryDraft.v1\";")
                 .contains("const SCHEMA_VERSION = 2;");
         // 목록/배열로 여러 draft 를 들고 있지 않다. 새로 만들면 이전 것을 덮어쓴다.
         assertThat(store)

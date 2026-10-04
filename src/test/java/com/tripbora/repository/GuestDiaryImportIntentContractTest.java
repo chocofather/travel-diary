@@ -26,7 +26,7 @@ class GuestDiaryImportIntentContractTest {
 
         String intent = script("guest-diary-import-intent.js");
         assertThat(intent)
-                .contains("const KEY = 'travelDiary.guestDiaryImportIntent.v1';")
+                .contains("const KEY = 'tripbora.guestDiaryImportIntent.v1';")
                 .contains("const IMPORT_PATH = '/diaries/import';")
                 .contains("startLogin(draftId)")
                 .contains("remember(draftId);")

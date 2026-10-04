@@ -54,7 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 이모지 목록은 diary-emoji-data.js 가 제공한다. */
     const EMOJI_CATEGORIES = window.DIARY_EMOJI_CATEGORIES || [];
     /** 최근 사용 이모지는 이 브라우저에만 남긴다. (서버 저장 없음) */
-    const RECENT_EMOJI_KEY = 'travelDiaryRecentEmojis';
+    const RECENT_EMOJI_KEY = 'tripbora.recentEmojis';
+    /** Travel Diary 시절 키. 처음 읽을 때 RECENT_EMOJI_KEY 로 옮긴다. (P10b 에서 migrateLegacyKey 와 함께 제거) */
+    const LEGACY_RECENT_EMOJI_KEY = 'travelDiaryRecentEmojis';
+    /** 옛 키를 옮기지 못한 화면(저장 실패)에서는 옛 키를 대신 읽는다. null 이면 아직 확인 전이다. */
+    let recentEmojiLegacyPending = null;
     const RECENT_EMOJI_LIMIT = 30;
     const RECENT_EMOJI_CATEGORY = {id: 'recent', name: '최근', icon: '🕘'};
 
@@ -1058,10 +1062,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /** 최근 이모지 저장소. 처음 쓸 때 한 번 옛 키를 옮긴다. 막혀 있으면 예외가 나므로 부르는 쪽이 감싼다. */
+    function recentEmojiStorage() {
+        const store = window.localStorage;
+        if (recentEmojiLegacyPending === null) {
+            recentEmojiLegacyPending = !migrateLegacyKey(store, LEGACY_RECENT_EMOJI_KEY, RECENT_EMOJI_KEY);
+        }
+        return store;
+    }
+
+    /*
+      옛 키(LEGACY_*)의 값을 새 키로 옮긴다. P10b 에서 이 함수와 LEGACY_* 를 함께 지운다.
+      값은 문자열 그대로 옮기고, 새 키가 이미 있으면 새 키가 이긴다(덮어쓰지 않는다).
+      새 키 저장이 성공한 뒤에만 옛 키를 지운다. 실패하면 옛 키를 남기고 false 를 준다. (다음 방문에 다시 옮긴다)
+    */
+    function migrateLegacyKey(store, legacyKey, key) {
+        try {
+            const legacyValue = store.getItem(legacyKey);
+            if (legacyValue === null) {
+                return true;
+            }
+            if (store.getItem(key) === null) {
+                store.setItem(key, legacyValue);
+            }
+            store.removeItem(legacyKey);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
     /** 최근 사용 이모지 읽기. localStorage 를 못 쓰면 빈 목록으로 조용히 넘어간다. */
     function readRecentEmojis() {
         try {
-            const stored = JSON.parse(window.localStorage.getItem(RECENT_EMOJI_KEY) || '[]');
+            const store = recentEmojiStorage();
+            const saved = store.getItem(RECENT_EMOJI_KEY)
+                ?? (recentEmojiLegacyPending ? store.getItem(LEGACY_RECENT_EMOJI_KEY) : null);
+            const stored = JSON.parse(saved || '[]');
             return Array.isArray(stored)
                 ? stored.filter(emoji => typeof emoji === 'string').slice(0, RECENT_EMOJI_LIMIT)
                 : [];
@@ -1075,7 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const next = [emoji, ...readRecentEmojis().filter(item => item !== emoji)]
             .slice(0, RECENT_EMOJI_LIMIT);
         try {
-            window.localStorage.setItem(RECENT_EMOJI_KEY, JSON.stringify(next));
+            recentEmojiStorage().setItem(RECENT_EMOJI_KEY, JSON.stringify(next));
         } catch (error) {
             // 저장이 막혀 있어도 이모지 넣기 자체는 그대로 동작한다.
         }

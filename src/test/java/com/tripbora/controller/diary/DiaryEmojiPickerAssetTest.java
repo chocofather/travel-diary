@@ -57,7 +57,7 @@ class DiaryEmojiPickerAssetTest {
     void recentTabIsKeptInLocalStorageWithoutDuplicates() throws IOException {
         String script = Files.readString(EDITOR_SCRIPT);
 
-        assertThat(script).contains("const RECENT_EMOJI_KEY = 'travelDiaryRecentEmojis';");
+        assertThat(script).contains("const RECENT_EMOJI_KEY = 'tripbora.recentEmojis';");
         assertThat(script).contains("const RECENT_EMOJI_LIMIT = 30;");
         assertThat(script).contains("name: '최근', icon: '🕘'");
         // 고른 이모지를 맨 앞으로 올리고 같은 값은 한 번만 남긴다

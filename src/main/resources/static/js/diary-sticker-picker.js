@@ -28,7 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!createUrl || !canvas) return;
 
     /** 최근 쓴 스티커는 이 브라우저에만 남긴다. (이모지 최근 목록과 같은 방식, 서버 저장 없음) */
-    const RECENT_KEY = 'travelDiaryRecentStickers';
+    const RECENT_KEY = 'tripbora.recentStickers';
+    /** Travel Diary 시절 키. 처음 읽을 때 RECENT_KEY 로 옮긴다. (P10b 에서 migrateLegacyKey 와 함께 제거) */
+    const LEGACY_RECENT_KEY = 'travelDiaryRecentStickers';
+    /** 옛 키를 옮기지 못한 화면(저장 실패)에서는 옛 키를 대신 읽는다. null 이면 아직 확인 전이다. */
+    let recentLegacyPending = null;
     const RECENT_LIMIT = 30;
     const RECENT_CATEGORY = 'recent';
 
@@ -163,7 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function readRecent() {
         let stored = [];
         try {
-            const raw = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]');
+            const store = recentStorage();
+            const saved = store.getItem(RECENT_KEY)
+                ?? (recentLegacyPending ? store.getItem(LEGACY_RECENT_KEY) : null);
+            const raw = JSON.parse(saved || '[]');
             if (Array.isArray(raw)) stored = raw.filter((id) => typeof id === 'string');
         } catch (error) {
             return [];
@@ -188,9 +195,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function save(ids) {
         try {
-            window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids));
+            recentStorage().setItem(RECENT_KEY, JSON.stringify(ids));
         } catch (error) {
             // 저장이 막혀 있어도 스티커 붙이기 자체는 그대로 동작한다.
+        }
+    }
+
+    /** 최근 스티커 저장소. 처음 쓸 때 한 번 옛 키를 옮긴다. 막혀 있으면 예외가 나므로 부르는 쪽이 감싼다. */
+    function recentStorage() {
+        const store = window.localStorage;
+        if (recentLegacyPending === null) {
+            recentLegacyPending = !migrateLegacyKey(store, LEGACY_RECENT_KEY, RECENT_KEY);
+        }
+        return store;
+    }
+
+    /*
+      옛 키(LEGACY_*)의 값을 새 키로 옮긴다. P10b 에서 이 함수와 LEGACY_* 를 함께 지운다.
+      값은 문자열 그대로 옮기고, 새 키가 이미 있으면 새 키가 이긴다(덮어쓰지 않는다).
+      새 키 저장이 성공한 뒤에만 옛 키를 지운다. 실패하면 옛 키를 남기고 false 를 준다. (다음 방문에 다시 옮긴다)
+    */
+    function migrateLegacyKey(store, legacyKey, key) {
+        try {
+            const legacyValue = store.getItem(legacyKey);
+            if (legacyValue === null) {
+                return true;
+            }
+            if (store.getItem(key) === null) {
+                store.setItem(key, legacyValue);
+            }
+            store.removeItem(legacyKey);
+            return true;
+        } catch (error) {
+            return false;
         }
     }
 

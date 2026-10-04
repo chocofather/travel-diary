@@ -13,11 +13,22 @@
 (function (global) {
     'use strict';
 
-    const DB_NAME = 'travelDiaryGuest';
+    const DB_NAME = 'tripboraGuest';
     const DB_VERSION = 1;
     const STORE = 'photos';
     /** 체험 다이어리 한 권의 사진을 한 번에 지우기 위한 색인. */
     const DRAFT_INDEX = 'byDraft';
+
+    /*
+      Travel Diary 시절 보관소. 처음 열 때 사진을 DB_NAME 으로 옮긴다.
+      P10b 에서 LEGACY_* 와 아래 "옛 보관소 옮기기" 묶음을 함께 지운다.
+    */
+    const LEGACY_DB_NAME = 'travelDiaryGuest';
+    /** 옛 보관소의 사진을 새 보관소에 다 옮겼다는 표식(localStorage). 이 값이 있으면 옛 보관소를 다시 읽지 않는다. */
+    const LEGACY_MIGRATED_MARKER = 'tripbora.guestPhotoDb.migrated.v1';
+    /** 여러 탭이 동시에 옮기지 않도록 거는 잠금 이름. (Web Locks 를 지원할 때만) */
+    const LEGACY_MIGRATION_LOCK = 'tripbora.guestPhotoDb.migration';
+    const COPY = {DONE: 'DONE', MISSING: 'MISSING', FAILED: 'FAILED'};
 
     /** 호출한 쪽이 안내 문구를 고를 수 있도록 실패 사유를 문자열로 돌려준다. */
     const REASON = {
@@ -50,10 +61,18 @@
     /**
      * 보관소 열기. 시크릿 모드처럼 IndexedDB 를 쓸 수 없는 환경에서는 예외를 밖으로 던지지 않고
      * 비어 있는 값을 준다. 사진만 못 쓰고 나머지 체험은 그대로 이어진다.
+     *
+     * 모든 읽기·쓰기가 이 한 곳을 거치므로, 옛 보관소 사진을 옮기는 일은 여기서 한 번만 하고 끝난 뒤에 연다.
+     * 그래야 draft 가 가리키는 photoRef 를 읽기 전에 사진이 새 보관소에 들어와 있다.
      */
     function open() {
         if (opening) return opening;
-        opening = new Promise((resolve) => {
+        opening = migrateLegacyDatabase().then(openDatabase, openDatabase);
+        return opening;
+    }
+
+    function openDatabase() {
+        return new Promise((resolve) => {
             let request;
             try {
                 request = global.indexedDB.open(DB_NAME, DB_VERSION);
@@ -78,8 +97,196 @@
             request.onerror = () => resolve(null);
             request.onblocked = () => resolve(null);
         });
-        return opening;
     }
+
+    /* ---- 옛 보관소 옮기기 (P10b 에서 이 묶음 전체를 지운다) ---- */
+
+    /**
+     * 옛 보관소(LEGACY_DB_NAME)의 사진을 새 보관소로 옮긴다. 어떤 경우에도 예외를 밖으로 던지지 않는다.
+     *
+     * 1) 표식이 없으면: 옛 보관소가 실제로 있을 때만 열어 사진을 모두 읽고 새 보관소에 put 한다.
+     *    새 보관소 트랜잭션이 commit 된 뒤에만 표식을 남긴다. 실패하면 표식도 남기지 않고 옛 보관소도 지우지 않는다.
+     * 2) 표식이 있으면: 옛 보관소를 다시 읽지 않는다. (새 보관소에서 지운 사진이 되살아나지 않게)
+     *    옛 보관소가 남아 있으면 지우기만 다시 시도한다. 다른 탭 때문에 막히면 다음 방문에 다시 시도한다.
+     *
+     * 표식은 localStorage 에 둔다. 표식을 읽거나 남길 수 없는 환경이면 옮기지 않는다. (옛 사진은 그대로 남는다)
+     */
+    async function migrateLegacyDatabase() {
+        const indexedDb = global.indexedDB;
+        const markers = markerStorage();
+        if (!indexedDb || !markers) return;
+        await withMigrationLock(async () => {
+            try {
+                const migrated = hasMigrationMarker(markers);
+                if (migrated === null) return;
+                if (!migrated) {
+                    const copied = await copyLegacyPhotos(indexedDb);
+                    if (copied !== COPY.DONE) return;
+                    if (!writeMigrationMarker(markers)) return;
+                }
+                await deleteLegacyDatabase(indexedDb);
+            } catch (error) {
+                // 표식을 남기기 전에 실패했다면 옛 보관소는 그대로다. 다음 방문에 다시 시도한다.
+            }
+        });
+    }
+
+    /**
+     * 다른 탭과 겹치지 않게 한 번에 하나만 옮긴다. 먼저 잠금을 잡은 탭이 표식을 남기면 뒤 탭은 다시 읽지 않는다.
+     * Web Locks 를 못 쓰는 브라우저에서는 잠금 없이 실행한다. (task 는 예외를 던지지 않는다)
+     */
+    async function withMigrationLock(task) {
+        const locks = global.navigator && global.navigator.locks;
+        if (locks && typeof locks.request === 'function') {
+            try {
+                await locks.request(LEGACY_MIGRATION_LOCK, task);
+                return;
+            } catch (error) {
+                // 잠금 자체를 쓸 수 없는 환경이다. 아래에서 잠금 없이 실행한다.
+            }
+        }
+        await task();
+    }
+
+    function markerStorage() {
+        try {
+            return global.localStorage || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /** true/false. 표식을 읽을 수 없으면 null — 그때는 옮기지도 지우지도 않는다. */
+    function hasMigrationMarker(store) {
+        try {
+            return store.getItem(LEGACY_MIGRATED_MARKER) !== null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeMigrationMarker(store) {
+        try {
+            store.setItem(LEGACY_MIGRATED_MARKER, new Date().toISOString());
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /** indexedDB.databases() 로 옛 보관소가 있는지 본다. 지원하지 않거나 알 수 없으면 null. */
+    async function legacyDatabaseExists(indexedDb) {
+        if (typeof indexedDb.databases !== 'function') return null;
+        try {
+            const databases = await indexedDb.databases();
+            return databases.some((database) => database.name === LEGACY_DB_NAME);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /** 옛 보관소의 사진을 새 보관소로 복사한다. 새 보관소 트랜잭션이 commit 되었을 때만 DONE 이다. */
+    async function copyLegacyPhotos(indexedDb) {
+        if (await legacyDatabaseExists(indexedDb) === false) return COPY.MISSING;
+        const legacy = await openLegacyDatabase(indexedDb);
+        if (legacy.status !== COPY.DONE) return legacy.status;
+        const records = await readAllPhotos(legacy.db);
+        legacy.db.close();
+        if (!records) return COPY.FAILED;
+
+        const target = await openDatabase();
+        if (!target) return COPY.FAILED;
+        const committed = await putAllPhotos(target, records);
+        target.close();
+        return committed ? COPY.DONE : COPY.FAILED;
+    }
+
+    /**
+     * 옛 보관소를 연다. 버전을 주지 않고 열어 기존 구조를 건드리지 않는다.
+     * 원래 없던 보관소라면(oldVersion 0) 이 open 때문에 빈 보관소가 생기지 않도록 되돌린다.
+     */
+    function openLegacyDatabase(indexedDb) {
+        return new Promise((resolve) => {
+            let request;
+            let missing = false;
+            try {
+                request = indexedDb.open(LEGACY_DB_NAME);
+            } catch (error) {
+                resolve({status: COPY.FAILED});
+                return;
+            }
+            request.onupgradeneeded = (event) => {
+                if (event.oldVersion === 0) {
+                    missing = true;
+                    request.transaction.abort();
+                }
+            };
+            request.onsuccess = () => resolve({status: COPY.DONE, db: request.result});
+            request.onerror = () => resolve({status: missing ? COPY.MISSING : COPY.FAILED});
+            request.onblocked = () => resolve({status: COPY.FAILED});
+        });
+    }
+
+    /** 옛 보관소의 사진 레코드를 그대로 읽는다. photoRef 와 레코드 모양은 바꾸지 않는다. 실패하면 null. */
+    function readAllPhotos(db) {
+        if (!db.objectStoreNames.contains(STORE)) {
+            return Promise.resolve([]);
+        }
+        return new Promise((resolve) => {
+            try {
+                const transaction = db.transaction(STORE, 'readonly');
+                const request = transaction.objectStore(STORE).getAll();
+                transaction.oncomplete = () => resolve(request.result || []);
+                transaction.onerror = () => resolve(null);
+                transaction.onabort = () => resolve(null);
+            } catch (error) {
+                resolve(null);
+            }
+        });
+    }
+
+    /** 새 보관소에 한 트랜잭션으로 넣는다. 같은 photoRef 는 덮어써서 여러 번 실행돼도 결과가 같다. */
+    function putAllPhotos(db, records) {
+        return new Promise((resolve) => {
+            let transaction;
+            try {
+                transaction = db.transaction(STORE, 'readwrite');
+                transaction.oncomplete = () => resolve(true);
+                transaction.onerror = () => resolve(false);
+                transaction.onabort = () => resolve(false);
+                const store = transaction.objectStore(STORE);
+                records.forEach((record) => store.put(record));
+            } catch (error) {
+                try {
+                    if (transaction) transaction.abort();
+                } catch (ignored) {
+                    // 이미 끝난 트랜잭션이면 그대로 둔다.
+                }
+                resolve(false);
+            }
+        });
+    }
+
+    /**
+     * 옛 보관소를 지운다. 표식을 남긴 뒤에만 부른다.
+     * 다른 탭이 옛 보관소를 열고 있으면 blocked 가 되는데, 기다리지 않는다. 요청은 그 탭이 닫히면 이어지고,
+     * 그 전에 이 화면이 닫혀도 다음 방문에 다시 시도한다. 사진은 이미 새 보관소에 있다.
+     */
+    async function deleteLegacyDatabase(indexedDb) {
+        if (await legacyDatabaseExists(indexedDb) === false) return;
+        await new Promise((resolve) => {
+            try {
+                const request = indexedDb.deleteDatabase(LEGACY_DB_NAME);
+                request.onsuccess = () => resolve();
+                request.onerror = () => resolve();
+                request.onblocked = () => resolve();
+            } catch (error) {
+                resolve();
+            }
+        });
+    }
+
+    /* ---- 옛 보관소 옮기기 끝 ---- */
 
     /** 트랜잭션 하나를 열어 실행한다. 실패는 예외가 아니라 사유로 돌려준다. */
     async function run(mode, work) {

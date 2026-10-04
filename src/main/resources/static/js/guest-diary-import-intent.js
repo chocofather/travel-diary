@@ -15,7 +15,9 @@
 (function (global) {
     'use strict';
 
-    const KEY = 'travelDiary.guestDiaryImportIntent.v1';
+    const KEY = 'tripbora.guestDiaryImportIntent.v1';
+    /** Travel Diary 시절 키. 처음 읽을 때 KEY 로 옮긴다. (P10b 에서 migrateLegacyKey 와 함께 제거) */
+    const LEGACY_KEY = 'travelDiary.guestDiaryImportIntent.v1';
     /** 인증을 마치고 돌아올 자리. 고정 내부 경로다. */
     const IMPORT_PATH = '/diaries/import';
     /**
@@ -28,11 +30,40 @@
     /** 쪽지를 자동 이동에 쓸 수 있는 시간. 로그인·가입·이메일 인증을 마칠 만큼만 둔다. */
     const MAX_AGE_MS = 60 * 60 * 1000;
 
+    /** 옛 키를 옮기지 못한 화면(저장 실패)에서는 옛 키를 대신 읽는다. null 이면 아직 확인 전이다. */
+    let legacyKeyPending = null;
+
     function storage() {
+        let store;
         try {
-            return global.localStorage || null;
+            store = global.localStorage || null;
         } catch (error) {
             return null;
+        }
+        if (store && legacyKeyPending === null) {
+            legacyKeyPending = !migrateLegacyKey(store, LEGACY_KEY, KEY);
+        }
+        return store;
+    }
+
+    /*
+      옛 키(LEGACY_*)의 값을 새 키로 옮긴다. P10b 에서 이 함수와 LEGACY_* 를 함께 지운다.
+      값은 문자열 그대로 옮기고, 새 키가 이미 있으면 새 키가 이긴다(덮어쓰지 않는다).
+      새 키 저장이 성공한 뒤에만 옛 키를 지운다. 실패하면 옛 키를 남기고 false 를 준다. (다음 방문에 다시 옮긴다)
+    */
+    function migrateLegacyKey(store, legacyKey, key) {
+        try {
+            const legacyValue = store.getItem(legacyKey);
+            if (legacyValue === null) {
+                return true;
+            }
+            if (store.getItem(key) === null) {
+                store.setItem(key, legacyValue);
+            }
+            store.removeItem(legacyKey);
+            return true;
+        } catch (error) {
+            return false;
         }
     }
 
@@ -44,6 +75,9 @@
         let saved;
         try {
             saved = store.getItem(KEY);
+            if (saved === null && legacyKeyPending) {
+                saved = store.getItem(LEGACY_KEY);
+            }
         } catch (error) {
             return null;
         }
@@ -101,6 +135,8 @@
         if (!store) return;
         try {
             store.removeItem(KEY);
+            // 옮기지 못하고 남은 옛 쪽지가 다음 방문에 되살아나지 않도록 함께 지운다.
+            store.removeItem(LEGACY_KEY);
         } catch (error) {
             // 지우지 못해도 시간이 지나면 자동 이동에는 쓰이지 않는다.
         }

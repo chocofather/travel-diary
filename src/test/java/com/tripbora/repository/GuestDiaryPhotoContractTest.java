@@ -25,7 +25,7 @@ class GuestDiaryPhotoContractTest {
         String store = script("guest-diary-photo-store.js");
 
         assertThat(store)
-                .contains("const DB_NAME = 'travelDiaryGuest';")
+                .contains("const DB_NAME = 'tripboraGuest';")
                 .contains("const STORE = 'photos';")
                 .contains("global.indexedDB.open(DB_NAME, DB_VERSION)")
                 .contains("db.createObjectStore(STORE, {keyPath: 'photoRef'})")

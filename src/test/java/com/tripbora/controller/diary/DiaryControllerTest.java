@@ -3975,7 +3975,7 @@ class DiaryControllerTest {
                 .doesNotContain("decor");
         // 라벨 쪽도 스티커의 최근 목록·테이프 처리를 건드리지 않는다
         assertThat(noteJs)
-                .doesNotContain("RecentStickers")
+                .doesNotContain("RecentStickers", "recentStickers")
                 .doesNotContain("diaryTape")
                 .doesNotContain("maskingTape");
         // 팝오버 열고 닫기는 스티커 쪽 하나만 갖는다 (두 번 붙지 않는다)
