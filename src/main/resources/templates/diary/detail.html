@@ -446,8 +446,11 @@
       <p class="diary-save-status" id="diary-save-status" role="status">저장됨</p>
     </div>
 
-    <!-- 편집 모드: 한 장만 크게 펼쳐 놓고 집중해서 쓴다. (읽기 모드 2페이지 구조는 그대로 둔다) -->
-    <div class="diary-book-single" th:if="${editMode}" th:classappend="${notebookClass}">
+    <!-- 편집 모드: 한 장만 크게 펼쳐 놓고 집중해서 쓴다. (읽기 모드 2페이지 구조는 그대로 둔다)
+         스프링 노트의 종이 구멍은 펼친 책의 제본 쪽에 둔다. 홀짝은 읽기 펼침과 같은 기준(다이어리 안 순서 editPageNumber)이다.
+         홀수 = 왼쪽 장 → 오른쪽 가장자리, 짝수 = 오른쪽 장 → 왼쪽 가장자리. -->
+    <div class="diary-book-single" th:if="${editMode}"
+         th:classappend="|${notebookClass} ${editPageNumber % 2 == 1 ? 'is-holes-right' : 'is-holes-left'}|">
       <div class="diary-sheet-viewport" data-diary-sheet-viewport>
       <!-- 종이색은 --diary-paper-color 변수만 덮어써서 무늬/질감 위에 그대로 얹는다.
            (서버가 #RRGGBB 만 저장하므로 임의 CSS 가 들어올 수 없다) -->
@@ -474,7 +477,7 @@
           <p class="diary-sheet-empty-text">여행의 첫 장을 남겨보세요.</p>
         </div>
 
-        <!-- 스프링 노트의 코일. 종이 왼쪽 가장자리에 걸치는 장식이라 본문 영역을 밀지 않는다. -->
+        <!-- 스프링 노트의 코일. 편집 화면에서는 CSS 가 감추고 종이 구멍만 남긴다. (읽기 화면 코일은 그대로) -->
         <span class="diary-sheet-spring" th:if="${spiralNotebook}" aria-hidden="true"></span>
       </article>
       </div>

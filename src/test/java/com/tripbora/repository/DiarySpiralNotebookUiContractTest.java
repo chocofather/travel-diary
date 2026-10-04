@@ -31,8 +31,8 @@ class DiarySpiralNotebookUiContractTest {
 
         // 읽기의 펼침과 편집의 한 장이 같은 값을 쓴다
         assertThat(template).contains("class=\"diary-book-spread\" th:classappend=\"${notebookClass}\"");
-        assertThat(template).contains("class=\"diary-book-single\" th:if=\"${editMode}\""
-                + " th:classappend=\"${notebookClass}\"");
+        assertThat(template).contains("class=\"diary-book-single\" th:if=\"${editMode}\"\n"
+                + "         th:classappend=\"|${notebookClass} ${editPageNumber % 2 == 1 ? 'is-holes-right' : 'is-holes-left'}|\"");
     }
 
     /** 펼침 조각(readBoard)이 통째로 갈려도 모양과 코일이 그대로 따라온다. */
@@ -125,6 +125,11 @@ class DiarySpiralNotebookUiContractTest {
                 .contains("left: -2.84%;");
         assertThat(rule(css, ".diary-book-single.diary-book-spiral .diary-sheet::after"))
                 .contains("left: -2.84%;");
+        // 편집 화면의 홀수 페이지(펼침의 왼쪽 장)는 제본 쪽인 오른쪽 가장자리에 같은 값으로 둔다.
+        assertThat(rule(css, ".diary-book-single.diary-book-spiral.is-holes-right .diary-sheet::after"))
+                .contains("right: -2.84%;", "left: auto;");
+        // 편집 화면은 금속 코일을 그리지 않고 구멍만 남긴다. (읽기 화면 코일 규칙은 그대로)
+        assertThat(rule(css, ".diary-book-single .diary-sheet-spring")).contains("display: none;");
     }
 
     /**

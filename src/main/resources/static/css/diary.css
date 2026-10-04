@@ -4633,9 +4633,15 @@
     left: -2.84%;
 }
 
-/* 한 장만 보는 화면은 코일이 왼쪽에 있으므로 구멍도 왼쪽 가장자리에 */
+/* 한 장만 보는 화면(편집)의 구멍은 기본 왼쪽 가장자리. (짝수 페이지 = 펼침의 오른쪽 장) */
 .diary-book-single.diary-book-spiral .diary-sheet::after {
     left: -2.84%;
+}
+
+/* 홀수 페이지는 펼침의 왼쪽 장이라 제본 쪽인 오른쪽 가장자리에 구멍이 있다. (템플릿이 is-holes-right 를 붙인다) */
+.diary-book-single.diary-book-spiral.is-holes-right .diary-sheet::after {
+    right: -2.84%;
+    left: auto;
 }
 
 /* 제본 자리를 지나는 코일. 고리 하나짜리 그림을 세로로 되풀이한다.
@@ -4687,6 +4693,11 @@
     display: none;
 }
 
+/* 편집(쓰기) 화면은 한 장 집중 화면이라 금속 코일을 그리지 않고 종이 구멍만 남긴다. (읽기 화면은 그대로) */
+.diary-book-single .diary-sheet-spring {
+    display: none;
+}
+
 /*
   날짜 + 한 줄 메모 한 줄 바로 아래에 구분선이 붙는다.
 
@@ -4727,6 +4738,12 @@
 
 .diary-sheet:hover .diary-page-actions,
 .diary-page-actions:focus-within {
+    opacity: 1;
+}
+
+/* 설정이 열려 있는 동안은 마우스·포커스가 밖에 있어도 흐려지지 않는다. (닫기는 바깥 클릭이 맡는다)
+   :has 를 모르는 브라우저에서 위 규칙까지 무효가 되지 않게 따로 둔다. */
+.diary-page-actions:has(.diary-page-settings[open]) {
     opacity: 1;
 }
 

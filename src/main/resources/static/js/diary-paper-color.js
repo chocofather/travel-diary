@@ -3,9 +3,26 @@
  * 고른 값은 hidden(paperColor)에만 담고 저장은 기존 페이지 설정 폼이 그대로 한다.
  * 고르는 동안에는 지금 편집 중인 종이에 바로 비춰 보여 주고,
  * 저장하지 않고 설정을 닫으면 원래 색으로 되돌린다.
+ *
+ * 페이지 설정(details)은 바깥을 누르면 닫는다. 브라우저는 details 를 바깥 클릭으로 닫아 주지 않아서,
+ * 열린 채 포커스만 빠지면 패널이 부모(.diary-page-actions)의 옅은 투명도를 물려받아 반투명하게 남았다.
  */
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.diary-paper-color').forEach(setupPaperColor);
+
+    /*
+      설정 바깥을 누르면 open 을 끈다. (toggle 이벤트가 나서 미리 본 종이색도 원래대로 돌아간다)
+      설정 안(토글 버튼, 날짜·배경·색 견본·직접 선택)을 누른 것은 그대로 둔다. 토글 버튼은 브라우저가 열고 닫는다.
+      다른 패널이 click 전파를 막아도 닫히도록 capture 단계에서 보되, 이 리스너는 전파를 막지 않는다.
+    */
+    const pageSettings = Array.from(document.querySelectorAll('.diary-page-settings'));
+    if (pageSettings.length > 0) {
+        document.addEventListener('click', (event) => {
+            pageSettings.forEach((settings) => {
+                if (settings.open && !settings.contains(event.target)) settings.open = false;
+            });
+        }, true);
+    }
 
     function setupPaperColor(root) {
         const value = root.querySelector('.diary-paper-color-value');

@@ -1514,6 +1514,31 @@ class DiaryControllerTest {
         assertThat(body).doesNotContain("diary-book-spring");
     }
 
+    /**
+     * 편집 화면의 종이 구멍은 펼친 책의 제본 쪽에 있다. 홀짝은 저장된 순서 값(pageOrder)이 아니라
+     * 다이어리 안 위치(editPageNumber)로 정한다. 읽기 펼침도 같은 위치로 왼쪽/오른쪽 장을 나누기 때문이다.
+     */
+    @Test
+    void spiralEditPageHolesFaceTheBindingByThePagePosition() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(spiralDiary());
+        // 순서 값 사이가 비어 있어도(삭제 뒤) 위치로 센다: 1 → 1번째, 4 → 2번째, 7 → 3번째
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(4, "2026-08-02"), page(7, "2026-08-03")));
+
+        java.util.Map<String, String> expected = java.util.Map.of(
+                "1", "is-holes-right", "4", "is-holes-left", "7", "is-holes-right");
+        for (java.util.Map.Entry<String, String> pageCase : expected.entrySet()) {
+            String body = mockMvc.perform(get("/diaries/10").param("edit", "true").param("page", pageCase.getKey())
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(body).as("page " + pageCase.getKey())
+                    .contains("class=\"diary-book-single diary-book-spiral " + pageCase.getValue() + "\"");
+        }
+    }
+
     /** 페이지를 넘겨 판을 갈아 끼워도 공책 모양은 그대로다. */
     @Test
     void theCoilSurvivesAPageTurn() throws Exception {

@@ -138,6 +138,28 @@ class DiaryPaperAssetTest {
         assertThat(hover).doesNotContain("perspective").doesNotContain("rotateY");
     }
 
+    /**
+     * 페이지 설정(details)은 바깥을 누르면 완전히 닫힌다. 브라우저는 details 를 바깥 클릭으로 닫지 않아서,
+     * 열린 채 포커스만 빠지면 옅은 액션 줄(opacity 0.55)을 물려받아 반투명하게 남았다.
+     */
+    @Test
+    void pageSettingsClosesOnAnOutsideClickAndIsNeverLeftHalfTransparent() throws IOException {
+        String script = Files.readString(Path.of("src/main/resources/static/js/diary-paper-color.js"));
+        String css = Files.readString(DIARY_CSS);
+
+        // 바깥 클릭이면 open 을 끈다. 다른 패널의 stopPropagation 에 막히지 않게 capture 로 보고, 전파는 막지 않는다.
+        assertThat(script)
+                .contains("document.querySelectorAll('.diary-page-settings')")
+                .contains("if (settings.open && !settings.contains(event.target)) settings.open = false;")
+                .contains("}, true);")
+                .doesNotContain("stopPropagation");
+        // 닫히면 저장 안 한 종이색 미리보기도 되돌린다 (toggle 이벤트)
+        assertThat(script).contains("if (!settings.open) select(savedColor);");
+        // 열려 있는 동안에는 흐려지지 않는다. (:has 를 모르는 브라우저에서 기존 규칙이 깨지지 않게 따로 둔다)
+        assertThat(rule(css, ".diary-page-actions:has(.diary-page-settings[open])")).contains("opacity: 1;");
+        assertThat(css).contains(".diary-sheet:hover .diary-page-actions,\n.diary-page-actions:focus-within {");
+    }
+
     /** 선택자가 줄 맨 앞에 오는 규칙 하나만 잘라 읽는다. (같은 이름이 들어간 다른 규칙과 섞이지 않게) */
     private String rule(String css, String selector) {
         int start = css.indexOf("\n" + selector + " {");
