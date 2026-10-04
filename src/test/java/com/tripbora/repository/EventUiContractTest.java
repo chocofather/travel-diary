@@ -172,7 +172,7 @@ class EventUiContractTest {
                 .doesNotContain("eventType", "is-infographic", "posterImg");
         // 슬라이더 스크립트는 글자도 언어도 정하지 않는다.
         assertThat(script)
-                .doesNotContain("TRAVEL_DIARY_LOCALE")
+                .doesNotContain("TRIPBORA_LOCALE")
                 .doesNotContain("navigator.language")
                 .doesNotContain("SupportedLanguage")
                 .doesNotContain("'zh-CN'")

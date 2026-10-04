@@ -11,7 +11,8 @@ import java.util.Locale;
 
 public class TripBoraLocaleResolver extends CookieLocaleResolver {
 
-    public static final String COOKIE_NAME = "TRAVEL_DIARY_LOCALE";
+    /** 이전 이름의 쿠키는 {@link LegacyLocaleCookieMigrationFilter} 가 이 이름으로 옮긴다. */
+    public static final String COOKIE_NAME = "TRIPBORA_LOCALE";
 
     public TripBoraLocaleResolver() {
         super(COOKIE_NAME);

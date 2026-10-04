@@ -105,7 +105,7 @@ class PostCommentSecurityTest {
                         "美しい場所です。", "ko", "ja", false));
 
         mockMvc.perform(get("/post-comments/35/translation")
-                        .cookie(new Cookie("TRAVEL_DIARY_LOCALE", "ja"))
+                        .cookie(new Cookie("TRIPBORA_LOCALE", "ja"))
                         .header("X-Forwarded-For", "198.51.100.77")
                         .with(request -> {
                             request.setRemoteAddr("203.0.113.9");

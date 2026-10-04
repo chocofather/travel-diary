@@ -4,8 +4,10 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
+import com.tripbora.config.i18n.LegacyLocaleCookieMigrationFilter;
 import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.repository.user.UserMapper;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -13,9 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -109,6 +115,30 @@ class LocaleControllerTest {
                         .param("returnTo", unsafe))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"));
+    }
+
+    /** 이전 이름의 쿠키를 가진 채 언어를 바꿔도 새 쿠키에만 저장되고 이전 쿠키는 지워진다. */
+    @Test
+    void localeChangeExpiresTheLegacyCookie() throws Exception {
+        MockHttpServletResponse response = mockMvc.perform(post("/locale")
+                        .with(csrf())
+                        .cookie(new Cookie(LegacyLocaleCookieMigrationFilter.LEGACY_COOKIE_NAME, "en"))
+                        .param("languageTag", "ja")
+                        .param("returnTo", "/"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getResponse();
+
+        List<String> setCookies = response.getHeaders(HttpHeaders.SET_COOKIE);
+        assertThat(setCookies)
+                .filteredOn(cookie -> cookie.startsWith(TripBoraLocaleResolver.COOKIE_NAME + "="))
+                .last()
+                .satisfies(cookie -> assertThat(cookie)
+                        .startsWith(TripBoraLocaleResolver.COOKIE_NAME + "=ja;"));
+        assertThat(setCookies)
+                .filteredOn(cookie -> cookie.startsWith(
+                        LegacyLocaleCookieMigrationFilter.LEGACY_COOKIE_NAME + "="))
+                .singleElement()
+                .satisfies(cookie -> assertThat(cookie).contains("Max-Age=0", "Path=/"));
     }
 
     @Test
