@@ -41,7 +41,7 @@ public class WikidataSparqlClient {
         this.restClient = builder.baseUrl("https://query.wikidata.org")
                 .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.USER_AGENT,
-                        "TripBoraWikidataPreview/1.0 (https://github.com/chocofather/travel-diary)")
+                        "TripBoraWikidataPreview/1.0 (https://github.com/chocofather/tripbora)")
                 .build();
         this.objectMapper = objectMapper;
         this.rateLimiter = rateLimiter;

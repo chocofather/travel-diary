@@ -39,7 +39,7 @@ public class KtoPhotoDownloadService {
             Pattern.CASE_INSENSITIVE);
 
     private static final String COMMONS_USER_AGENT =
-            "TripBoraCommonsImport/1.0 (https://github.com/chocofather/travel-diary)";
+            "TripBoraCommonsImport/1.0 (https://github.com/chocofather/tripbora)";
 
     private final KtoPhotoUrlValidator urlValidator;
     private final KtoPhotoHttpTransport httpTransport;

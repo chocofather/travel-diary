@@ -39,7 +39,7 @@ public class WikidataApiClient {
         this.restClient = builder.baseUrl(baseUrl)
                 .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.USER_AGENT,
-                        "TripBoraWikidataPreview/1.0 (https://github.com/chocofather/travel-diary)")
+                        "TripBoraWikidataPreview/1.0 (https://github.com/chocofather/tripbora)")
                 .build();
         this.rateLimiter = rateLimiter;
     }

@@ -41,7 +41,7 @@ public class CommonsApiClient {
         this.restClient = builder.baseUrl("https://commons.wikimedia.org")
                 .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.USER_AGENT,
-                        "TripBoraCommonsPreview/1.0 (https://github.com/chocofather/travel-diary)")
+                        "TripBoraCommonsPreview/1.0 (https://github.com/chocofather/tripbora)")
                 .build();
         this.objectMapper = objectMapper;
         this.rateLimiter = rateLimiter;

@@ -59,7 +59,7 @@ public class WikipediaApiClient {
         return builder.clone().baseUrl("https://" + language + ".wikipedia.org")
                 .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.USER_AGENT,
-                        "TripBoraWikipediaPreview/1.0 (https://github.com/chocofather/travel-diary)")
+                        "TripBoraWikipediaPreview/1.0 (https://github.com/chocofather/tripbora)")
                 .build();
     }
 
