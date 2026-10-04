@@ -175,7 +175,7 @@ class KtoPhotoGalleryServiceTest {
         assertPath(uri, "/PhotoGalleryService1/gallerySearchList1");
         assertQueryValue(uri, "keyword", expectedKeyword);
         assertQueryValue(uri, "MobileOS", "ETC");
-        assertQueryValue(uri, "MobileApp", "TravelDiary");
+        assertQueryValue(uri, "MobileApp", "TripBora");
         assertQueryValue(uri, "pageNo", "1");
         assertQueryValue(uri, "numOfRows", "12");
         assertQueryValue(uri, "_type", "json");

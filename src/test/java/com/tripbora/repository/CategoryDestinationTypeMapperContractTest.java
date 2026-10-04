@@ -68,7 +68,7 @@ class CategoryDestinationTypeMapperContractTest {
     @Test
     void categoryWriteStatementsMatchTheSchema() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String mapper = mapperXml();
 
         assertThat(between(schema, "CREATE TABLE `categories`", ") ENGINE=InnoDB"))

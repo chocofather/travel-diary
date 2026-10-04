@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 방 채팅 조회/등록 계약.
- * 컬럼명은 docs/db/travel_diary_schema_reference.md 의 실제 구조와 일치해야 한다.
+ * 컬럼명은 docs/db/tripbora_schema_reference.md 의 실제 구조와 일치해야 한다.
  * 이번 단계에서 표를 새로 만들거나 컬럼을 더하지 않는다.
  */
 class TravelPlanChatMapperContractTest {
@@ -167,7 +167,7 @@ class TravelPlanChatMapperContractTest {
 
     private String schemaReference() throws IOException {
         return Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
     }
 
     // ── 볼 수 있는 범위 ─────────────────────────────────────
@@ -279,7 +279,7 @@ class TravelPlanChatMapperContractTest {
     void onePersonKeepsAtMostOneReactionPerMessage() throws IOException {
         String mapper = reactionMapperXml();
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         // 한 사람 한 메시지에 행은 늘 하나다. 종류는 그 행 안에서만 바뀐다
         assertThat(schema).contains(
@@ -302,7 +302,7 @@ class TravelPlanChatMapperContractTest {
                 Path.of("src/main/java/com/tripbora/model/"
                         + "TravelPlanChatReactionType.java"), StandardCharsets.UTF_8);
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         for (String name : new String[]{"LIKE", "HEART", "LAUGH", "WOW", "SAD", "PARTY"}) {
             assertThat(type).as("enum has %s", name).contains(name + "(");

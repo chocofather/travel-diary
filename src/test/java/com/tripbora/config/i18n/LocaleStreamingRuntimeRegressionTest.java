@@ -121,7 +121,7 @@ class LocaleStreamingRuntimeRegressionTest {
                 .timeout(Duration.ofSeconds(10))
                 .GET();
         if (languageTag != null) {
-            request.header("Cookie", TravelDiaryLocaleResolver.COOKIE_NAME + "=" + languageTag);
+            request.header("Cookie", TripBoraLocaleResolver.COOKIE_NAME + "=" + languageTag);
         }
 
         try {

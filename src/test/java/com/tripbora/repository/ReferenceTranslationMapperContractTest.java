@@ -54,7 +54,7 @@ class ReferenceTranslationMapperContractTest {
 
     @Test
     void schemaReferenceContainsBothTranslationTables() throws IOException {
-        String schema = read("docs/db/travel_diary_schema_reference.md");
+        String schema = read("docs/db/tripbora_schema_reference.md");
 
         assertTranslationTable(schema, "country_category_translations", "country_category_id",
                 "country_categories");

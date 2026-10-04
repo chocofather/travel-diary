@@ -98,7 +98,7 @@ class EmailDispatchServiceTest {
     void dedicatedMailExecutorIsBoundedAndNamed() {
         assertThat(mailExecutor.getCorePoolSize()).isEqualTo(2);
         assertThat(mailExecutor.getMaxPoolSize()).isEqualTo(4);
-        assertThat(mailExecutor.getThreadNamePrefix()).isEqualTo("travel-diary-mail-");
+        assertThat(mailExecutor.getThreadNamePrefix()).isEqualTo("tripbora-mail-");
         assertThat(mailExecutor.getThreadPoolExecutor().getQueue().remainingCapacity())
                 .isEqualTo(100);
     }

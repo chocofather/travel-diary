@@ -61,7 +61,7 @@ class AmenityDestinationTypeMapperContractTest {
     @Test
     void destinationTypeColumnMatchesTheEnumNameContractInTheSchema() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String table = between(schema,
                 "CREATE TABLE `amenity_destination_types`", ") ENGINE=InnoDB");
 

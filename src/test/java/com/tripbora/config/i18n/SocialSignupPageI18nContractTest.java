@@ -356,7 +356,7 @@ class SocialSignupPageI18nContractTest {
     }
 
     private Cookie localeCookie(String languageTag) {
-        return new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag);
+        return new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag);
     }
 
     private String read(String path) throws Exception {

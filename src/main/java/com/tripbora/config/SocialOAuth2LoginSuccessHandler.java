@@ -79,7 +79,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private final WithdrawalGraceService withdrawalGraceService;
     private final SocialWithdrawalService socialWithdrawalService;
     private final OAuth2AuthorizedClientService authorizedClientService;
-    private final TravelDiaryAuthenticationRestorer authenticationRestorer;
+    private final TripBoraAuthenticationRestorer authenticationRestorer;
     private final SocialEmailAccountResolver socialEmailAccountResolver;
     private final EmailCorrectionService emailCorrectionService;
     private final SecurityContextRepository securityContextRepository =
@@ -94,7 +94,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             WithdrawalGraceService withdrawalGraceService,
             SocialWithdrawalService socialWithdrawalService,
             OAuth2AuthorizedClientService authorizedClientService,
-            TravelDiaryAuthenticationRestorer authenticationRestorer,
+            TripBoraAuthenticationRestorer authenticationRestorer,
             SocialEmailAccountResolver socialEmailAccountResolver,
             EmailCorrectionService emailCorrectionService) {
         this.socialAccountService = socialAccountService;

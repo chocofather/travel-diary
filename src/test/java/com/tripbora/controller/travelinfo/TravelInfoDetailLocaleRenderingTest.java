@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.FestivalDetailDto;
 import com.tripbora.dto.TravelInfoDetailDto;
 import com.tripbora.dto.TravelInfoPeriodDto;
@@ -213,7 +213,7 @@ class TravelInfoDetailLocaleRenderingTest {
 
     private Document render(String path, String languageTag) throws Exception {
         String html = mockMvc.perform(get(path)
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return Jsoup.parse(html);

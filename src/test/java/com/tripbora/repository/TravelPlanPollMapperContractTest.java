@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 방 투표 등록/조회 계약.
- * 컬럼명은 docs/db/travel_diary_schema_reference.md 의 실제 구조와 일치해야 한다.
+ * 컬럼명은 docs/db/tripbora_schema_reference.md 의 실제 구조와 일치해야 한다.
  * 이번 단계에서 표를 새로 만들거나 컬럼을 더하지 않는다.
  */
 class TravelPlanPollMapperContractTest {
@@ -306,7 +306,7 @@ class TravelPlanPollMapperContractTest {
 
     private String schemaReference() throws IOException {
         return Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
     }
 
     private String mapperXml() throws IOException {

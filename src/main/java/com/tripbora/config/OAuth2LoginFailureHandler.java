@@ -15,14 +15,14 @@ import java.io.IOException;
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
 
     public static final String FAILURE_REDIRECT = "/login?oauthError=true";
-    private final TravelDiaryAuthenticationRestorer authenticationRestorer;
+    private final TripBoraAuthenticationRestorer authenticationRestorer;
 
     public OAuth2LoginFailureHandler() {
         this(null);
     }
 
     public OAuth2LoginFailureHandler(
-            TravelDiaryAuthenticationRestorer authenticationRestorer) {
+            TripBoraAuthenticationRestorer authenticationRestorer) {
         this.authenticationRestorer = authenticationRestorer;
     }
 

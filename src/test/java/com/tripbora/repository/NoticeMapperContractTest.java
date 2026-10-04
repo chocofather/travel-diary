@@ -104,7 +104,7 @@ class NoticeMapperContractTest {
     @Test
     void schemaReferenceMatchesTheNoticeTranslationTable() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String translations = between(schema, "CREATE TABLE `notice_translations`", ") ENGINE=InnoDB");
 
         assertThat(translations)
@@ -122,7 +122,7 @@ class NoticeMapperContractTest {
     @Test
     void schemaReferenceMatchesCompletedNoticeTable() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String notices = between(schema, "CREATE TABLE `notices`", ") ENGINE=InnoDB");
 
         assertThat(notices)

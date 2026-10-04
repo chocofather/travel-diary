@@ -37,7 +37,7 @@ class TravelPlanInvitationContractTest {
     @Test
     void invitationColumnsExistInTheSchemaReference() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String table = between(schema,
                 "CREATE TABLE `travel_plan_invitations`", ") ENGINE=InnoDB");
 
@@ -588,7 +588,7 @@ class TravelPlanInvitationContractTest {
 
         // DB UNIQUE 가 최종 방어선이다
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         assertThat(between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB"))
                 .contains("uk_travel_plan_members_plan_display_name")
                 .contains("uk_travel_plan_members_plan_user");

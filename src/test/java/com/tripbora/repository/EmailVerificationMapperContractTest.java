@@ -30,7 +30,7 @@ class EmailVerificationMapperContractTest {
 
     @Test
     void schemaReferenceDocumentsVerificationExpirationAndCooldownColumns() throws IOException {
-        String schema = workspaceFile("docs/db/travel_diary_schema_reference.md");
+        String schema = workspaceFile("docs/db/tripbora_schema_reference.md");
         String obsoleteColumn = "verification_" + "sent_at";
         String obsoleteProperty = "verification" + "SentAt";
 
@@ -204,7 +204,7 @@ class EmailVerificationMapperContractTest {
     /** 문서의 users DDL 이 실제 컬럼과 같아야 한다. */
     @Test
     void theSchemaReferenceDocumentsTheVerificationPurposeColumn() throws IOException {
-        String users = between(workspaceFile("docs/db/travel_diary_schema_reference.md"),
+        String users = between(workspaceFile("docs/db/tripbora_schema_reference.md"),
                 "CREATE TABLE `users`", ") ENGINE=InnoDB");
 
         assertThat(users).contains("`email_verification_purpose` varchar(30) DEFAULT NULL");

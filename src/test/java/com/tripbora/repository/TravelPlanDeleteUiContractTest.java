@@ -205,7 +205,7 @@ class TravelPlanDeleteUiContractTest {
     void theChildTablesAreLeftToTheDatabase() throws IOException {
         String service = source("service/travelplan/TravelPlanDeleteService.java");
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         // 자식 테이블을 하나씩 지우지 않는다. 방 row 하나만 지운다
         assertThat(service).contains("deletePlanByIdAndStatus");

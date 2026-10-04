@@ -203,7 +203,7 @@ class FestivalInfoTranslationMapperContractTest {
 
     private String schema() throws IOException {
         return Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
     }
 
     private String between(String source, String start, String end) {

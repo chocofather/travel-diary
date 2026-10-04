@@ -14,13 +14,13 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TravelDiaryAuthenticationRestorer {
+public class TripBoraAuthenticationRestorer {
 
     private final UserMapper userMapper;
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
-    public TravelDiaryAuthenticationRestorer(UserMapper userMapper) {
+    public TripBoraAuthenticationRestorer(UserMapper userMapper) {
         this.userMapper = userMapper;
     }
 

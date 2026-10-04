@@ -1,7 +1,7 @@
 package com.tripbora.controller.recommend;
 
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.RandomDestinationDto;
 import com.tripbora.dto.RandomTravelResultDto;
 import com.tripbora.service.recommend.RandomRecommendService;
@@ -30,7 +30,7 @@ class RandomRecommendControllerTest {
     void setUp() {
         service = mock(RandomRecommendService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new RandomRecommendController(service))
-                .setLocaleResolver(new TravelDiaryLocaleResolver())
+                .setLocaleResolver(new TripBoraLocaleResolver())
                 .build();
     }
 
@@ -108,7 +108,7 @@ class RandomRecommendControllerTest {
 
         mockMvc.perform(get("/api/random-recommend")
                         .param("scope", "domestic")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.countryName").value("South Korea"))
                 .andExpect(jsonPath("$.regionName").value("Seoul"))

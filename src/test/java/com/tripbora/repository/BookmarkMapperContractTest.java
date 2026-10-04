@@ -55,7 +55,7 @@ class BookmarkMapperContractTest {
             assertThat(transactional).isNotNull();
         }
 
-        assertThat(resourceText("docs/db/travel_diary_schema_reference.md"))
+        assertThat(resourceText("docs/db/tripbora_schema_reference.md"))
                 .contains("uq_bookmarks_user_type_target")
                 .contains("(`user_id`,`target_type`,`target_id`)");
     }

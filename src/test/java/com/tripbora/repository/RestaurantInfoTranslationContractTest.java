@@ -65,7 +65,7 @@ class RestaurantInfoTranslationContractTest {
     }
 
     /**
-     * 스키마 기준 문서는 {@code docs/db/travel_diary_schema_reference.md} 하나뿐이다.
+     * 스키마 기준 문서는 {@code docs/db/tripbora_schema_reference.md} 하나뿐이다.
      * 매퍼가 읽고 쓰는 컬럼이 실제 DB 정의(SHOW CREATE TABLE 을 옮긴 것)와 어긋나지 않는지 본다.
      */
     @Test
@@ -105,7 +105,7 @@ class RestaurantInfoTranslationContractTest {
     /** 기준 문서에서 해당 테이블의 CREATE TABLE 정의만 떼어 낸다. */
     private String createTableBlock(String tableName) throws IOException {
         String reference = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         return between(reference, "CREATE TABLE `" + tableName + "` (", ";");
     }
 

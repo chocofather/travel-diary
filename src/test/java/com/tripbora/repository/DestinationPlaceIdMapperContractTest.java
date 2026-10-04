@@ -18,7 +18,7 @@ class DestinationPlaceIdMapperContractTest {
 
     @Test
     void schemaDocumentMatchesTheRealColumnPosition() throws IOException {
-        String destinations = between(readFile("docs/db/travel_diary_schema_reference.md"),
+        String destinations = between(readFile("docs/db/tripbora_schema_reference.md"),
                 "CREATE TABLE `destinations`", "ENGINE=InnoDB");
 
         assertThat(destinations).contains("`google_place_id` varchar(255) DEFAULT NULL");

@@ -20,10 +20,10 @@ import static org.mockito.Mockito.when;
 class OAuth2LoginFailureHandlerTest {
 
     @Test
-    void connectionOauthFailureConsumesIntentAndRestoresExistingTravelDiaryLogin()
+    void connectionOauthFailureConsumesIntentAndRestoresExistingTripBoraLogin()
             throws Exception {
-        TravelDiaryAuthenticationRestorer restorer =
-                mock(TravelDiaryAuthenticationRestorer.class);
+        TripBoraAuthenticationRestorer restorer =
+                mock(TripBoraAuthenticationRestorer.class);
         MockHttpServletRequest request = new MockHttpServletRequest();
         Instant now = Instant.now();
         PendingSocialConnection pending = new PendingSocialConnection(
@@ -57,8 +57,8 @@ class OAuth2LoginFailureHandlerTest {
 
     @Test
     void unrelatedOauthFailureDoesNotConsumeAConnectionIntent() throws Exception {
-        TravelDiaryAuthenticationRestorer restorer =
-                mock(TravelDiaryAuthenticationRestorer.class);
+        TripBoraAuthenticationRestorer restorer =
+                mock(TripBoraAuthenticationRestorer.class);
         MockHttpServletRequest request = new MockHttpServletRequest();
         Instant now = Instant.now();
         PendingSocialConnection pending = new PendingSocialConnection(
@@ -96,10 +96,10 @@ class OAuth2LoginFailureHandlerTest {
     }
 
     @Test
-    void withdrawalOauthFailureConsumesIntentAndRestoresExistingTravelDiaryLogin()
+    void withdrawalOauthFailureConsumesIntentAndRestoresExistingTripBoraLogin()
             throws Exception {
-        TravelDiaryAuthenticationRestorer restorer =
-                mock(TravelDiaryAuthenticationRestorer.class);
+        TripBoraAuthenticationRestorer restorer =
+                mock(TripBoraAuthenticationRestorer.class);
         MockHttpServletRequest request = new MockHttpServletRequest();
         PendingSocialWithdrawal pending = new PendingSocialWithdrawal(
                 "flow-id",

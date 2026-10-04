@@ -178,7 +178,7 @@ class AccountEmailRequiredI18nContractTest {
                         now.minusSeconds(10), now.plusSeconds(590)));
         return Jsoup.parse(mockMvc.perform(get("/account/email-required/change/password")
                         .session(session)
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, cookie)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, cookie)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }
@@ -192,7 +192,7 @@ class AccountEmailRequiredI18nContractTest {
                         now.minusSeconds(10), now.plusSeconds(590)));
         return Jsoup.parse(mockMvc.perform(get("/account/email-required/change")
                         .session(session)
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, cookie)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, cookie)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }
@@ -248,7 +248,7 @@ class AccountEmailRequiredI18nContractTest {
         SecurityContextHolder.setContext(context);
         try {
             return Jsoup.parse(mockMvc.perform(get("/account/email-required")
-                            .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, cookie)))
+                            .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, cookie)))
                     .andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString());
         } finally {

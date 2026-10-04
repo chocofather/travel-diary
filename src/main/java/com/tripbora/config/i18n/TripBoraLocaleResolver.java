@@ -9,14 +9,14 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import java.time.Duration;
 import java.util.Locale;
 
-public class TravelDiaryLocaleResolver extends CookieLocaleResolver {
+public class TripBoraLocaleResolver extends CookieLocaleResolver {
 
     public static final String COOKIE_NAME = "TRAVEL_DIARY_LOCALE";
 
-    public TravelDiaryLocaleResolver() {
+    public TripBoraLocaleResolver() {
         super(COOKIE_NAME);
         // 기본 언어를 고정하지 않는다. 저장된 선택(쿠키)이 없으면 브라우저 Accept-Language 로 정한다.
-        setDefaultLocaleFunction(TravelDiaryLocaleResolver::detectBrowserLanguage);
+        setDefaultLocaleFunction(TripBoraLocaleResolver::detectBrowserLanguage);
         setCookiePath("/");
         setCookieMaxAge(Duration.ofDays(365));
         setCookieHttpOnly(true);

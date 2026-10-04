@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class TravelDiaryAuthenticationRestorerTest {
+class TripBoraAuthenticationRestorerTest {
 
     @Mock private UserMapper userMapper;
 
@@ -32,7 +32,7 @@ class TravelDiaryAuthenticationRestorerTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        boolean restored = new TravelDiaryAuthenticationRestorer(userMapper)
+        boolean restored = new TripBoraAuthenticationRestorer(userMapper)
                 .restore(request, response, 7L);
 
         SecurityContext context = (SecurityContext) request.getSession().getAttribute(
@@ -55,7 +55,7 @@ class TravelDiaryAuthenticationRestorerTest {
         user.setStatus(UserStatus.DEACTIVATED);
         when(userMapper.findById(7L)).thenReturn(user);
 
-        boolean restored = new TravelDiaryAuthenticationRestorer(userMapper).restore(
+        boolean restored = new TripBoraAuthenticationRestorer(userMapper).restore(
                 new MockHttpServletRequest(), new MockHttpServletResponse(), 7L);
 
         assertThat(restored).isFalse();

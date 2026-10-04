@@ -525,10 +525,10 @@ class EventPageControllerTest {
         return org.jsoup.Jsoup.parse(result.getResponse().getContentAsString());
     }
 
-    /** 공개 화면의 언어는 쿠키로 정해진다. (TravelDiaryLocaleResolver) */
+    /** 공개 화면의 언어는 쿠키로 정해진다. (TripBoraLocaleResolver) */
     private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
         return new jakarta.servlet.http.Cookie(
-                com.tripbora.config.i18n.TravelDiaryLocaleResolver.COOKIE_NAME,
+                com.tripbora.config.i18n.TripBoraLocaleResolver.COOKIE_NAME,
                 languageTag);
     }
 

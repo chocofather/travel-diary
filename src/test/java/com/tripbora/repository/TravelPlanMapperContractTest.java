@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 공동 여행계획 방 생성에 필요한 3개 INSERT 계약.
- * 컬럼명은 docs/db/travel_diary_schema_reference.md 의 실제 구조와 일치해야 한다.
+ * 컬럼명은 docs/db/tripbora_schema_reference.md 의 실제 구조와 일치해야 한다.
  */
 class TravelPlanMapperContractTest {
 
@@ -147,7 +147,7 @@ class TravelPlanMapperContractTest {
     @Test
     void selectColumnsExistInTheSchemaReference() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String mapper = mapperXml();
 
         String plans = between(schema, "CREATE TABLE `travel_plans`", ") ENGINE=InnoDB");
@@ -173,7 +173,7 @@ class TravelPlanMapperContractTest {
     @Test
     void insertColumnsExistInTheSchemaReference() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         String plans = between(schema, "CREATE TABLE `travel_plans`", ") ENGINE=InnoDB");
         for (String column : new String[]{
@@ -197,7 +197,7 @@ class TravelPlanMapperContractTest {
     @Test
     void enumsMatchTheDefaultsRecordedInTheSchema() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         // DB 는 varchar + enum 이름 저장 방식이므로 이름이 DEFAULT 와 맞아야 한다
         assertThat(between(schema, "CREATE TABLE `travel_plans`", ") ENGINE=InnoDB"))

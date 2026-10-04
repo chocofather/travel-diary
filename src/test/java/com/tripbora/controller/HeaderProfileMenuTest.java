@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.controller.recommend.RandomTravelController;
 import com.tripbora.model.User;
 import com.tripbora.model.UserRole;
@@ -428,7 +428,7 @@ class HeaderProfileMenuTest {
 
         var request = get("/random-travel").with(authentication(authentication));
         if (languageTag != null) {
-            request = request.cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag));
+            request = request.cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag));
         }
         return Jsoup.parse(mockMvc.perform(request)
                 .andExpect(status().isOk())
@@ -463,7 +463,7 @@ class HeaderProfileMenuTest {
 
     private org.jsoup.nodes.Document pageWithLocale(String languageTag) throws Exception {
         return Jsoup.parse(mockMvc.perform(get("/random-travel")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }

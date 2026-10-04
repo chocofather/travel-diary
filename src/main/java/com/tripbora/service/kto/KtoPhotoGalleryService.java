@@ -62,7 +62,7 @@ public class KtoPhotoGalleryService {
                         var requestUri = uriBuilder
                                 .path("/gallerySearchList1")
                                 .queryParam("MobileOS", "ETC")
-                                .queryParam("MobileApp", "TravelDiary")
+                                .queryParam("MobileApp", "TripBora")
                                 .queryParam("keyword", keyword)
                                 .queryParam("pageNo", pageNo)
                                 .queryParam("numOfRows", numOfRows)

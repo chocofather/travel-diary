@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.TravelInfoListItemDto;
 import jakarta.servlet.http.Cookie;
 import com.tripbora.model.InfoCategory;
@@ -183,7 +183,7 @@ class TravelInfoListLocaleRenderingTest {
     /** 실제 화면과 같은 방식으로 언어를 고른다 (언어 선택 쿠키). */
     private Document render(String path, String languageTag) throws Exception {
         String html = mockMvc.perform(get(path)
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return Jsoup.parse(html);

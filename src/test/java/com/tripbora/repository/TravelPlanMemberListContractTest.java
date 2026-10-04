@@ -47,7 +47,7 @@ class TravelPlanMemberListContractTest {
                 .contains("id ASC");
 
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         assertThat(between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB"))
                 .contains("`joined_at`");
     }
@@ -540,7 +540,7 @@ class TravelPlanMemberListContractTest {
 
         // OWNER 유일성을 보장하는 DB 제약은 없으므로 Service 가 지킨다
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         assertThat(between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB"))
                 .doesNotContain("UNIQUE KEY `uk_travel_plan_members_plan_role`");
 

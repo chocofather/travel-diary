@@ -399,7 +399,7 @@ class InquiryControllerTest {
 
     private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
         return new jakarta.servlet.http.Cookie(
-                com.tripbora.config.i18n.TravelDiaryLocaleResolver.COOKIE_NAME,
+                com.tripbora.config.i18n.TripBoraLocaleResolver.COOKIE_NAME,
                 languageTag);
     }
 

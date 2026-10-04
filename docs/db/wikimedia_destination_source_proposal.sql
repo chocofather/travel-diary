@@ -1,6 +1,6 @@
 -- Wikidata 해외 여행지 5단계 + 이미지 출처 분리 6-A: 향후 적용할 제안 DDL.
--- 현재 DB에 적용하지 않았으며, travel_diary_schema_reference.md에도 반영하지 않았다.
--- 기준: docs/db/travel_diary_schema_reference.md의 destinations,
+-- 현재 DB에 적용하지 않았으며, tripbora_schema_reference.md에도 반영하지 않았다.
+-- 기준: docs/db/tripbora_schema_reference.md의 destinations,
 -- destination_translations, destination_images 정의. 운영 DB와 다르면 이 파일을 그대로 실행하지 않는다.
 -- 제공된 개발 DB SHOW CREATE TABLE 결과: destination_translations.short_description은
 -- 레퍼런스의 VARCHAR(100)과 달리 VARCHAR(255) NULL이다.

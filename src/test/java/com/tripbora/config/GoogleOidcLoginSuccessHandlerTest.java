@@ -85,7 +85,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
     @Mock
     private OAuth2AuthorizedClientService authorizedClientService;
     @Mock
-    private TravelDiaryAuthenticationRestorer authenticationRestorer;
+    private TripBoraAuthenticationRestorer authenticationRestorer;
     @Mock
     private WithdrawalGraceService withdrawalGraceService;
     @Mock

@@ -1,7 +1,7 @@
 package com.tripbora.controller.recommend;
 
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.RecommendDestinationDto;
 import com.tripbora.dto.SeasonDestinationDto;
 import com.tripbora.service.file.DestinationCardThumbnailService;
@@ -48,7 +48,7 @@ class HomeDestinationApiLocaleTest {
                         destinationImageService);
         MockMvc mockMvc = MockMvcBuilders
                 .standaloneSetup(popularController, seasonController)
-                .setLocaleResolver(new TravelDiaryLocaleResolver())
+                .setLocaleResolver(new TripBoraLocaleResolver())
                 .build();
         RecommendDestinationDto popular = new RecommendDestinationDto();
         popular.setId(15L);
@@ -62,7 +62,7 @@ class HomeDestinationApiLocaleTest {
                 "SPRING", 7L, 5, language)).thenReturn(List.of(seasonal));
 
         Cookie localeCookie = new Cookie(
-                TravelDiaryLocaleResolver.COOKIE_NAME, language.getLanguageTag());
+                TripBoraLocaleResolver.COOKIE_NAME, language.getLanguageTag());
         mockMvc.perform(get("/api/popular-destinations/domestic")
                         .param("limit", "5")
                         .cookie(localeCookie))

@@ -83,16 +83,16 @@ custom:
   invite-token-encryption-key: ${TRAVEL_PLAN_INVITE_ENCRYPTION_KEY:}
   # 업로드 저장소. 특정 개발자의 절대경로를 고정하지 않는다.
   # 운영은 UPLOAD_PATH 환경변수로 실제 저장 경로를 지정한다.
-  upload-path: ${UPLOAD_PATH:${user.home}/travlediary-uploads/}
+  upload-path: ${UPLOAD_PATH:${user.home}/tripbora-uploads/}
   thumbnails:
     # 서버가 뜬 뒤 기존 여행지 사진의 관리용 썸네일(작은 크기)을 뒤에서 한 장씩 미리 만든다.
     # 이미 만든 썸네일은 파일 확인만 하므로 두 번째 기동부터는 거의 비용이 없다.
     prewarm-on-startup: ${THUMBNAIL_PREWARM_ON_STARTUP:true}
   # /uploads/** 정적 매핑 바깥의 표지 라이브러리 공유 사진 전용 저장소.
-  cover-library-private-path: ${COVER_LIBRARY_PRIVATE_PATH:${custom.upload-path}../traveldiary-cover-library-private}
+  cover-library-private-path: ${COVER_LIBRARY_PRIVATE_PATH:${custom.upload-path}../tripbora-cover-library-private}
   # /uploads/** 정적 매핑 바깥의 회원 개인 다이어리 사진 전용 저장소.
   # 대표 이미지·페이지 사진·적용 표지 사진·내 표지 디자인 사진이 여기에 들어간다.
-  diary-private-path: ${DIARY_PRIVATE_PATH:${custom.upload-path}../traveldiary-diary-private}
+  diary-private-path: ${DIARY_PRIVATE_PATH:${custom.upload-path}../tripbora-diary-private}
   # 로그인 제한과 요청 제한이 함께 쓰는 클라이언트 주소 판별 정책.
   client-ip:
     # DIRECT           : 전달 머리말을 전혀 믿지 않는다. 늘 실제 접속 주소를 쓴다. (기본값)

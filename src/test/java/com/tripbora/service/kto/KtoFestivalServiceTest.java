@@ -383,7 +383,7 @@ class KtoFestivalServiceTest {
         assertDecodedQuery(uri, "pageNo", "2");
         assertDecodedQuery(uri, "numOfRows", "10");
         assertDecodedQuery(uri, "MobileOS", "ETC");
-        assertDecodedQuery(uri, "MobileApp", "TravelDiary");
+        assertDecodedQuery(uri, "MobileApp", "TripBora");
         assertDecodedQuery(uri, "_type", "json");
         assertThat(rawQueryValue(uri, "serviceKey")).isEqualTo("sample-key");
         assertThat(uri.getQuery()).doesNotContain("contentTypeId");

@@ -383,7 +383,7 @@ class TravelInfoMapperContractTest {
     @Test
     void schemaReferenceDocumentsThumbnailRoleAndInfoImageCascade() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String infoImages = between(schema, "CREATE TABLE `info_images`", ") ENGINE=InnoDB");
 
         assertThat(infoImages)
@@ -396,7 +396,7 @@ class TravelInfoMapperContractTest {
     @Test
     void schemaReferenceAllowsFestivalRootDeleteToCascadeEveryFestivalChild() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
 
         for (String table : new String[]{"festival_info", "info_periods", "info_images"}) {
             String createTable = between(schema, "CREATE TABLE `" + table + "`", ") ENGINE=InnoDB");

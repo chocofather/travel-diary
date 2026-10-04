@@ -54,7 +54,7 @@ public class SocialLinkController {
     public String linkPage(Authentication authentication,
                            HttpSession session,
                            Model model) {
-        if (isTravelDiaryMember(authentication)) {
+        if (isTripBoraMember(authentication)) {
             return "redirect:/";
         }
 
@@ -73,7 +73,7 @@ public class SocialLinkController {
                               Authentication authentication,
                               HttpServletRequest request,
                               HttpServletResponse response) throws IOException {
-        if (isTravelDiaryMember(authentication)) {
+        if (isTripBoraMember(authentication)) {
             return "redirect:/";
         }
 
@@ -167,7 +167,7 @@ public class SocialLinkController {
         return pending;
     }
 
-    private boolean isTravelDiaryMember(Authentication authentication) {
+    private boolean isTripBoraMember(Authentication authentication) {
         return authentication != null
                 && authentication.isAuthenticated()
                 && authentication.getPrincipal() instanceof CustomUserDetails;

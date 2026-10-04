@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.repository.user.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,7 +46,7 @@ class LocaleControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/destinations/15?tab=info"))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        containsString(TravelDiaryLocaleResolver.COOKIE_NAME + "=zh-CN")))
+                        containsString(TripBoraLocaleResolver.COOKIE_NAME + "=zh-CN")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("Path=/")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=Lax")));
@@ -70,7 +70,7 @@ class LocaleControllerTest {
                         .param("returnTo", "/"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        containsString(TravelDiaryLocaleResolver.COOKIE_NAME + "=ko")));
+                        containsString(TripBoraLocaleResolver.COOKIE_NAME + "=ko")));
     }
 
     /**
@@ -91,7 +91,7 @@ class LocaleControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl(loginUrl))
                 .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        containsString(TravelDiaryLocaleResolver.COOKIE_NAME + "=ja")));
+                        containsString(TripBoraLocaleResolver.COOKIE_NAME + "=ja")));
     }
 
     /** 언어 변경 경로로도 외부 주소로는 나가지 않는다(open redirect 방어 유지). */

@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.FaqCategoryFilterDto;
 import com.tripbora.dto.FaqListItemDto;
 import com.tripbora.repository.user.UserMapper;
@@ -78,7 +78,7 @@ class FaqControllerTest {
 
         mockMvc.perform(get("/support/faq")
                         .cookie(new jakarta.servlet.http.Cookie(
-                                TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                                TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/support/faq"))
                 .andExpect(status().isOk());
@@ -131,7 +131,7 @@ class FaqControllerTest {
 
         var english = Jsoup.parse(mockMvc.perform(get("/support/faq")
                         .cookie(new jakarta.servlet.http.Cookie(
-                                TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                                TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         assertThat(english.select("#support-faq-title").text()).isEqualTo("FAQ");
         assertThat(english.select(".support-navigation-title").text()).isEqualTo("Support");

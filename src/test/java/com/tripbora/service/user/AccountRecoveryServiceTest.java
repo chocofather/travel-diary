@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AccountRecoveryServiceTest {
 
-    private static final String SERVER_URL = "https://travel-diary.example";
+    private static final String SERVER_URL = "https://tripbora.example";
     private static final String RECOVERY_PATH = "/users/recover-account/confirm?token=";
     private static final ZoneId ZONE = ZoneId.systemDefault();
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 9, 11, 10, 0, 0);

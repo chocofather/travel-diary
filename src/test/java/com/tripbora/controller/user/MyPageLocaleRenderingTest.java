@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.MyPageProfileDto;
 import com.tripbora.model.User;
 import com.tripbora.model.UserRole;
@@ -60,7 +60,7 @@ class MyPageLocaleRenderingTest {
         when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
 
         mockMvc.perform(get("/mypage").with(user(principal(7L)))
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
@@ -86,7 +86,7 @@ class MyPageLocaleRenderingTest {
         when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
 
         mockMvc.perform(get("/mypage/profile").with(user(principal(7L)))
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "ja")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "ja")))
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());

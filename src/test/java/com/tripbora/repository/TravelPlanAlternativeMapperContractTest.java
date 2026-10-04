@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A 일정에 붙는 대안(B/C) 조회/등록 계약.
- * 컬럼명은 docs/db/travel_diary_schema_reference.md 의 실제 구조와 일치해야 한다.
+ * 컬럼명은 docs/db/tripbora_schema_reference.md 의 실제 구조와 일치해야 한다.
  */
 class TravelPlanAlternativeMapperContractTest {
 
@@ -38,7 +38,7 @@ class TravelPlanAlternativeMapperContractTest {
     @Test
     void alternativeColumnsExistInTheSchemaReference() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String table = between(schema,
                 "CREATE TABLE `travel_plan_item_alternatives`", ") ENGINE=InnoDB");
 

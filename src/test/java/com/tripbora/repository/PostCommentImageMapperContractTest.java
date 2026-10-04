@@ -65,7 +65,7 @@ class PostCommentImageMapperContractTest {
 
     @Test
     void schemaDocumentKeepsCommentImagesInTheirOwnTable() throws IOException {
-        String schema = readFile("docs/db/travel_diary_schema_reference.md");
+        String schema = readFile("docs/db/tripbora_schema_reference.md");
 
         assertThat(schema)
                 .contains("CREATE TABLE `post_comment_images`")

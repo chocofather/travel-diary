@@ -408,7 +408,7 @@ public class KtoTourService {
                         UriBuilder requestBuilder = uriBuilder
                                 .path(path)
                                 .queryParam("MobileOS", "ETC")
-                                .queryParam("MobileApp", "TravelDiary")
+                                .queryParam("MobileApp", "TripBora")
                                 .queryParam("_type", "json");
                         specificParameters.accept(requestBuilder);
                         URI requestUri = requestBuilder.build();

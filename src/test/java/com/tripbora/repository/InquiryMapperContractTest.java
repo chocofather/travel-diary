@@ -107,7 +107,7 @@ class InquiryMapperContractTest {
                         InquiryStatus.ANSWERED, InquiryStatus.CANCELLED);
 
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String answers = between(schema, "CREATE TABLE `inquiry_answers`", ") ENGINE=InnoDB");
         assertThat(answers)
                 .contains("UNIQUE KEY `uq_inquiry_answers_inquiry_id` (`inquiry_id`)")

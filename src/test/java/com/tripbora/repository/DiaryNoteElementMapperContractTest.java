@@ -135,7 +135,7 @@ class DiaryNoteElementMapperContractTest {
     @Test
     void theColoursTheCodeAllowsAreTheOnesTheSchemaDescribes() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String manifest = Files.readString(
                 Path.of("src/main/resources/json/diary_notes.json"), StandardCharsets.UTF_8);
 
@@ -200,7 +200,7 @@ class DiaryNoteElementMapperContractTest {
     /** 문서에 옮겨 적어 둔 실제 DB 구조. (스키마 기준은 언제나 이 파일이다) */
     private String diaryElementsTable() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         return between(schema, "CREATE TABLE `diary_elements`", "ENGINE=");
     }
 

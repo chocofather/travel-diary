@@ -5,7 +5,7 @@ import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.GlobalSearchPage;
 import com.tripbora.dto.GlobalSearchResultDto;
 import com.tripbora.repository.user.UserMapper;
@@ -159,7 +159,7 @@ class GlobalSearchLocaleRenderingTest {
     private String renderSearch(SupportedLanguage language, String query, String type, String page)
             throws Exception {
         var request = get("/search")
-                .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, language.getLanguageTag()));
+                .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, language.getLanguageTag()));
         if (query != null) {
             request = request.param("q", query);
         }

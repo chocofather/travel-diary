@@ -73,7 +73,7 @@ class DiaryNotebookTypeMapperContractTest {
     @Test
     void theSchemaDocumentDescribesTheColumnTheCodeUses() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String table = between(schema, "CREATE TABLE `diaries`", "ENGINE=");
 
         assertThat(table).contains("`notebook_type` varchar(20) NOT NULL DEFAULT 'CLASSIC'");

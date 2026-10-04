@@ -68,7 +68,7 @@ public class SocialSignupController {
     public String signupPage(Authentication authentication,
                              HttpSession session,
                              Model model) {
-        if (isTravelDiaryMember(authentication)) {
+        if (isTripBoraMember(authentication)) {
             return "redirect:/";
         }
 
@@ -117,7 +117,7 @@ public class SocialSignupController {
             Authentication authentication,
             HttpServletRequest request,
             Model model) {
-        if (isTravelDiaryMember(authentication)) {
+        if (isTripBoraMember(authentication)) {
             return "redirect:/";
         }
 
@@ -163,7 +163,7 @@ public class SocialSignupController {
             HttpServletResponse response,
             RedirectAttributes redirectAttributes,
             Model model) throws IOException {
-        if (isTravelDiaryMember(authentication)) {
+        if (isTripBoraMember(authentication)) {
             return "redirect:/";
         }
 
@@ -313,7 +313,7 @@ public class SocialSignupController {
                 || provider == SocialProvider.NAVER;
     }
 
-    private boolean isTravelDiaryMember(Authentication authentication) {
+    private boolean isTripBoraMember(Authentication authentication) {
         return authentication != null
                 && authentication.isAuthenticated()
                 && authentication.getPrincipal() instanceof CustomUserDetails;

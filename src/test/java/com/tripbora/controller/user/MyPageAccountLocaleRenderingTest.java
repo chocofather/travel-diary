@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.AccountDetailsDto;
 import com.tripbora.model.PendingSocialWithdrawal;
 import com.tripbora.model.SocialAccount;
@@ -112,7 +112,7 @@ class MyPageAccountLocaleRenderingTest {
                 .thenReturn(List.of(socialAccount(SocialProvider.KAKAO, "social@example.com")));
 
         mockMvc.perform(get("/mypage/account").with(user(principal(77L, UserRole.USER)))
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "ja")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "ja")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "アカウント情報とログイン方法を安全に管理します。")))
@@ -181,7 +181,7 @@ class MyPageAccountLocaleRenderingTest {
     }
 
     private Cookie english() {
-        return new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en");
+        return new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en");
     }
 
     private AccountDetailsDto details(String email) {

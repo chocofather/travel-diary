@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.repository.user.UserMapper;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -90,7 +90,7 @@ class RandomTravelControllerTest {
     void englishRandomTravelRendersFixedUiAndJavascriptMessagesWithoutKoreanFallback()
             throws Exception {
         mockMvc.perform(get("/random-travel")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());

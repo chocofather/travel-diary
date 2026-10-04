@@ -22,9 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-class TravelDiaryLocaleResolverTest {
+class TripBoraLocaleResolverTest {
 
-    private final TravelDiaryLocaleResolver resolver = new TravelDiaryLocaleResolver();
+    private final TripBoraLocaleResolver resolver = new TripBoraLocaleResolver();
 
     /** 첫 방문(쿠키 없음)은 브라우저 Accept-Language 로 결정한다. */
     @ParameterizedTest
@@ -135,7 +135,7 @@ class TravelDiaryLocaleResolverTest {
 
         resolver.setLocale(firstVisit, response, SupportedLanguage.JAPANESE.getLocale());
 
-        Cookie stored = response.getCookie(TravelDiaryLocaleResolver.COOKIE_NAME);
+        Cookie stored = response.getCookie(TripBoraLocaleResolver.COOKIE_NAME);
         assertThat(stored).isNotNull();
         assertThat(stored.getValue()).isEqualTo("ja");
         assertThat(resolver.resolveLocale(publicRequest(stored.getValue(), "en-US")))
@@ -147,7 +147,7 @@ class TravelDiaryLocaleResolverTest {
         resolver.setLocale(laterVisit, secondResponse,
                 SupportedLanguage.CHINESE_TRADITIONAL.getLocale());
 
-        assertThat(secondResponse.getCookie(TravelDiaryLocaleResolver.COOKIE_NAME).getValue())
+        assertThat(secondResponse.getCookie(TripBoraLocaleResolver.COOKIE_NAME).getValue())
                 .isEqualTo("zh-TW");
     }
 
@@ -165,7 +165,7 @@ class TravelDiaryLocaleResolverTest {
         MockMvc mockMvc = standaloneSetup(new LocaleProbeController())
                 .setLocaleResolver(resolver)
                 .build();
-        Cookie englishCookie = new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en");
+        Cookie englishCookie = new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en");
         mockMvc.perform(get("/admin/locale-probe").cookie(englishCookie))
                 .andExpect(status().isOk())
                 .andExpect(content().string("ko"))
@@ -190,7 +190,7 @@ class TravelDiaryLocaleResolverTest {
     private MockHttpServletRequest request(String requestUri, String languageTag) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", requestUri);
         if (languageTag != null) {
-            request.setCookies(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag));
+            request.setCookies(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag));
         }
         return request;
     }

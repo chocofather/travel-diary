@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.TravelInfoDetailDto;
 import com.tripbora.model.TravelInfoContentFormat;
 import com.tripbora.model.TravelInfoContentType;
@@ -415,7 +415,7 @@ class TravelInfoStructuredDetailRenderingTest {
         when(festivalDetailService.isPublicFestival(10L)).thenReturn(false);
         when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
         return mockMvc.perform(get("/travel-info/10")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
     }

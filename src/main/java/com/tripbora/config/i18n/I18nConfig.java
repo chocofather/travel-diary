@@ -19,7 +19,7 @@ public class I18nConfig implements WebMvcConfigurer {
 
     @Bean
     public LocaleResolver localeResolver() {
-        return new TravelDiaryLocaleResolver();
+        return new TripBoraLocaleResolver();
     }
 
     /**

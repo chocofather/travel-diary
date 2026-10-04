@@ -4,7 +4,7 @@ import com.tripbora.config.CustomLoginSuccessHandler;
 import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.NoticeDetailDto;
 import com.tripbora.dto.NoticeListItemDto;
 import com.tripbora.repository.user.UserMapper;
@@ -170,7 +170,7 @@ class NoticeControllerTest {
 
     private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
         return new jakarta.servlet.http.Cookie(
-                TravelDiaryLocaleResolver.COOKIE_NAME, languageTag);
+                TripBoraLocaleResolver.COOKIE_NAME, languageTag);
     }
 
     private NoticeListItemDto listItem(Long id, boolean pinned) {

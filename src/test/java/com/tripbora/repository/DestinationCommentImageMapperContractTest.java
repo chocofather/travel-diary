@@ -119,7 +119,7 @@ class DestinationCommentImageMapperContractTest {
 
     @Test
     void schemaDocumentKeepsCommentImagesInTheirOwnTable() throws IOException {
-        String schema = readFile("docs/db/travel_diary_schema_reference.md");
+        String schema = readFile("docs/db/tripbora_schema_reference.md");
 
         // 댓글 사진 저장소는 destination_comment_images 하나뿐이다
         assertThat(schema)

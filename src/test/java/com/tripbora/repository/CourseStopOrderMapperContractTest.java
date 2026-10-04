@@ -67,7 +67,7 @@ class CourseStopOrderMapperContractTest {
     @Test
     void thereIsNoUniqueNumberPerCourseSoNoShufflingIsNeeded() throws IOException {
         String schema = Files.readString(
-                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+                Path.of("docs/db/tripbora_schema_reference.md"), StandardCharsets.UTF_8);
         String table = between(schema, "CREATE TABLE `course_destinations`", "ENGINE=");
 
         /*

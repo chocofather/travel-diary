@@ -67,7 +67,7 @@ public class SecurityConfig {
             LoginThrottle loginThrottle,
             ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
-            ObjectProvider<TravelDiaryAuthenticationRestorer> authenticationRestorer)
+            ObjectProvider<TripBoraAuthenticationRestorer> authenticationRestorer)
             throws Exception {
 
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.

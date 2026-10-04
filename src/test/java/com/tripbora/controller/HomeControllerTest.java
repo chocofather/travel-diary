@@ -5,7 +5,7 @@ import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.HomeFestivalDto;
 import com.tripbora.dto.RecommendDestinationDto;
 import com.tripbora.dto.SeasonDestinationDto;
@@ -395,7 +395,7 @@ class HomeControllerTest {
 
         mockMvc.perform(get("/")
                         .queryParam("withdrawn", "true")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     String html = result.getResponse().getContentAsString();
@@ -523,7 +523,7 @@ class HomeControllerTest {
                 .thenReturn(List.of(heroItem(10L, "Seoul Palace Walk", "Seasonal travel")));
 
         mockMvc.perform(get("/")
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, "en")))
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
@@ -767,7 +767,7 @@ class HomeControllerTest {
                 landmark(1L, "경복궁", "/images/travel8.jpg", "서울", "종로구"),
                 landmark(2L, "랜드마크", "/images/travel9.jpg", "도시", "지역"),
                 landmark(3L, "세계의 명소", "/images/default.png", "도시", "지역")));
-        mockMvc.perform(get("/").cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+        mockMvc.perform(get("/").cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk()).andExpect(result -> {
                     String html = result.getResponse().getContentAsString();
                     var document = Jsoup.parse(html);

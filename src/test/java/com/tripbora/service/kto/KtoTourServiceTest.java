@@ -554,7 +554,7 @@ class KtoTourServiceTest {
         assertThat(uri.getPath()).isEqualTo("/KorService2/searchKeyword2");
         assertDecodedQuery(uri, "keyword", keyword);
         assertDecodedQuery(uri, "MobileOS", "ETC");
-        assertDecodedQuery(uri, "MobileApp", "TravelDiary");
+        assertDecodedQuery(uri, "MobileApp", "TripBora");
         assertDecodedQuery(uri, "_type", "json");
         assertDecodedQuery(uri, "pageNo", "1");
         assertDecodedQuery(uri, "numOfRows", "10");

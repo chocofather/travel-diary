@@ -19,7 +19,7 @@ public class MailAsyncConfig {
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("travel-diary-mail-");
+        executor.setThreadNamePrefix("tripbora-mail-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(10);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());

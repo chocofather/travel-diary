@@ -5,7 +5,7 @@ import com.tripbora.config.CustomLogoutSuccessHandler;
 import com.tripbora.config.SecurityConfig;
 import com.tripbora.config.i18n.I18nConfig;
 import com.tripbora.config.i18n.SupportedLanguage;
-import com.tripbora.config.i18n.TravelDiaryLocaleResolver;
+import com.tripbora.config.i18n.TripBoraLocaleResolver;
 import com.tripbora.dto.CourseDetailDto;
 import com.tripbora.dto.CourseStopDto;
 import com.tripbora.repository.user.UserMapper;
@@ -98,7 +98,7 @@ class CourseDetailWithdrawnWriterRenderingTest {
         when(courseService.getCourseDetail(7L, null, language)).thenReturn(course);
 
         return mockMvc.perform(get("/course/{id}", 7L)
-                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME,
+                        .cookie(new Cookie(TripBoraLocaleResolver.COOKIE_NAME,
                                 language.getLanguageTag())))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
