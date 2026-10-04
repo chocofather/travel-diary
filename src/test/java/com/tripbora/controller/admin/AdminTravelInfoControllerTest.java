@@ -581,6 +581,38 @@ class AdminTravelInfoControllerTest {
     }
 
     @Test
+    void structuredAdminDetailPreviewShowsImageCreditsThroughThePublicFragment() throws Exception {
+        var image = com.tripbora.service.travelinfo.structured.StructuredContentSamples.image(1, 1600, 1000);
+        var credited = new com.tripbora.service.travelinfo.structured.StructuredImage(
+                image.url(), image.width(), image.height(),
+                new com.tripbora.service.travelinfo.structured.StructuredImageCredit("John Doe", "Wikimedia Commons",
+                        "https://commons.wikimedia.org/wiki/File:A.jpg", "CC BY-SA 4.0", null));
+        AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL, List.of());
+        detail.setContentFormat(com.tripbora.model.TravelInfoContentFormat.STRUCTURED);
+        detail.setStructuredContent(new com.tripbora.service.travelinfo.structured.StructuredContent(1, List.of(
+                new com.tripbora.service.travelinfo.structured.StructuredBlock.FullImage("full", credited, null, "가을의 경복궁"),
+                new com.tripbora.service.travelinfo.structured.StructuredBlock.FullImage("plain", image, null, "광화문"))));
+        when(travelInfoService.getAdminDetail(10L)).thenReturn(detail);
+
+        String html = mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        // 관리자 미리보기도 공개 상세와 같은 fragment 라 같은 자리(사진 틀 안 오버레이)에 같은 출처가 나온다.
+        assertThat(document.select(".structured-figure figcaption").eachText()).containsExactly("가을의 경복궁", "광화문");
+        assertThat(document.select(".structured-figure > img + .structured-media-credit").eachText())
+                .containsExactly("사진: John Doe · Wikimedia Commons · CC BY-SA 4.0");
+        assertThat(document.select(".structured-media-credit a").eachAttr("href"))
+                .containsExactly("https://commons.wikimedia.org/wiki/File:A.jpg");
+        assertThat(document.select(".structured-media-credit a").attr("rel")).isEqualTo("noopener noreferrer nofollow");
+        assertThat(document.select("link[href='/css/travel-info-structured.css?v=20261006-gallery']")).hasSize(1);
+        // 확대 모달은 공개 상세 전용이다. 관리자 미리보기에는 모달·스크립트를 두지 않는다.
+        assertThat(document.select("[data-structured-gallery]")).isEmpty();
+        assertThat(document.select("script[src^=/js/structured-gallery.js]")).isEmpty();
+    }
+
+    @Test
     void quillAdminDetailDoesNotLoadStructuredAssets() throws Exception {
         when(travelInfoService.getAdminDetail(10L)).thenReturn(detail(TravelInfoContentType.GENERAL, List.of()));
 

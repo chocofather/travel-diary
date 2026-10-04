@@ -10,7 +10,7 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css?v=20261003-image-layout">
   <link rel="stylesheet" href="/css/travel-info-detail.css">
-  <link rel="stylesheet" href="/css/travel-info-structured.css?v=20261006-media-caption"
+  <link rel="stylesheet" href="/css/travel-info-structured.css?v=20261006-gallery"
         th:if="${travelInfo.contentFormat.name() == 'STRUCTURED'}">
 </th:block>
 <th:block th:fragment="body">
@@ -106,8 +106,34 @@
          th:text="#{travelInfo.detail.backToList}">목록으로</a>
     </footer>
   </article>
+  <!--
+    STRUCTURED 본문 사진 확대 모달. 페이지에 하나만 두고, /js/structured-gallery.js 가 본문 사진을 그려진 순서대로 모아 쓴다.
+    큰 사진 아래에 그 사진의 제목·설명·출처를 보여 준다. 출처는 본문에 그려진 출처 줄을 그대로 복사한다. (링크 규칙 그대로)
+    이전/다음 버튼 이름은 슬라이더 버튼과 같은 문구를 쓴다.
+  -->
+  <dialog class="structured-gallery" id="structured-gallery" data-structured-gallery role="dialog" aria-modal="true"
+          th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"
+          th:attr="aria-label=#{travelInfo.structured.gallery.dialog},
+                   data-open-label=#{travelInfo.structured.gallery.open}">
+    <button type="button" class="structured-gallery-close" data-gallery-close
+            th:attr="aria-label=#{travelInfo.structured.gallery.close}"><span aria-hidden="true">&times;</span></button>
+    <button type="button" class="structured-gallery-nav is-prev" data-gallery-prev
+            th:attr="aria-label=#{travelInfo.structured.slider.previous}"><span aria-hidden="true">&#8249;</span></button>
+    <figure class="structured-gallery-figure">
+      <img class="structured-gallery-image" data-gallery-current alt="">
+      <figcaption class="structured-gallery-meta" data-gallery-meta hidden>
+        <strong class="structured-gallery-title" data-gallery-slot="title" hidden></strong>
+        <span class="structured-gallery-description" data-gallery-slot="description" hidden></span>
+        <span class="structured-gallery-credit" data-gallery-slot="credit" hidden></span>
+      </figcaption>
+    </figure>
+    <button type="button" class="structured-gallery-nav is-next" data-gallery-next
+            th:attr="aria-label=#{travelInfo.structured.slider.next}"><span aria-hidden="true">&#8250;</span></button>
+  </dialog>
   <script src="/js/travel-info-bookmark.js" defer></script>
   <script src="/js/structured-slider.js?v=20261004-structured" defer
+          th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"></script>
+  <script src="/js/structured-gallery.js?v=20261006-gallery" defer
           th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"></script>
 </th:block>
 </html>

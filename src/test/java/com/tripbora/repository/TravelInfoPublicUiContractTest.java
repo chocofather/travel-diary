@@ -220,6 +220,52 @@ class TravelInfoPublicUiContractTest {
     }
 
     @Test
+    void structuredGalleryModalOpensClosesMovesAndRestoresThePage() throws IOException {
+        String javascript = resource("/static/js/structured-gallery.js");
+        String css = resource("/static/css/travel-info-structured.css");
+
+        // 본문 STRUCTURED 사진만 그려진 순서대로 모은다. 모달은 하나뿐이고 한 번만 초기화한다.
+        assertThat(javascript)
+                .contains("const IMAGE_SELECTOR = '.travel-info-structured [data-structured-gallery-image]';")
+                .contains("Array.from(document.querySelectorAll(IMAGE_SELECTOR))")
+                .contains("modal.dataset.galleryReady === 'true'")
+                .doesNotContain("innerHTML");
+        // 열기: 사진 누르기·Enter·Space (위임). 닫기: 큰 사진 다시 누르기, 바탕(dialog 자신), 닫기 버튼, Esc.
+        assertThat(javascript)
+                .contains("event.target.closest('[data-structured-gallery-image]')")
+                .contains("if (event.key !== 'Enter' && event.key !== ' ') return;")
+                .contains("if (event.target === modalImage || event.target === modal) close();")
+                .contains("button('[data-gallery-close]', close);")
+                .contains("if (event.key === 'Escape') {");
+        // 이동: 버튼은 바탕 닫기로 번지지 않고, ← → 와 함께 처음·끝이 이어진다. 한 장이면 버튼을 숨긴다.
+        assertThat(javascript)
+                .contains("event.stopPropagation();")
+                .contains("button('[data-gallery-prev]', () => move(-1));")
+                .contains("button('[data-gallery-next]', () => move(1));")
+                .contains("currentIndex = (currentIndex + step + images.length) % images.length;")
+                .contains("} else if (event.key === 'ArrowLeft') {", "} else if (event.key === 'ArrowRight') {")
+                .contains("modal.classList.toggle('is-single', images.length <= 1);");
+        // 키 처리는 열려 있는 동안만 걸고, 닫으면 스크롤·포커스를 되돌린다.
+        assertThat(javascript)
+                .contains("document.addEventListener('keydown', onKeydown);")
+                .contains("document.removeEventListener('keydown', onKeydown);")
+                .contains("document.body.style.overflow = 'hidden';")
+                .contains("document.body.style.overflow = previousOverflow;")
+                .contains("if (returnFocus) returnFocus.focus({preventScroll: true});");
+        // 제목·설명은 data, 출처는 본문 출처 줄 복사(링크 target / rel 그대로). alt 는 본문 사진 것.
+        assertThat(javascript)
+                .contains("setText(title, source.dataset.galleryTitle);")
+                .contains("setText(description, source.dataset.galleryDescription);")
+                .contains("sourceCredit.cloneNode(true)")
+                .contains("modalImage.alt = source.getAttribute('alt') || '';");
+        // 사진은 잘리지 않고 비율 그대로 화면 안에서 크게. 누를 수 있는 사진만 zoom-in.
+        assertThat(css)
+                .contains(".structured-content [data-structured-gallery-image][role=\"button\"] {\n    cursor: zoom-in;")
+                .contains("    object-fit: contain;\n    cursor: zoom-out;")
+                .contains(".structured-gallery.is-single .structured-gallery-nav {\n    display: none;");
+    }
+
+    @Test
     void javascriptFetchesFragmentsSynchronizesHistoryCancelsStaleRequestsAndFallsBack()
             throws IOException {
         String javascript = resource("/static/js/travel-info-list.js");

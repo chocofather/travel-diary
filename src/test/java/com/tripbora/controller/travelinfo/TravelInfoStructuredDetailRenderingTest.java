@@ -18,6 +18,7 @@ import com.tripbora.service.travelinfo.structured.StructuredBlock;
 import com.tripbora.service.travelinfo.structured.StructuredContent;
 import com.tripbora.service.travelinfo.structured.StructuredContentSamples;
 import com.tripbora.service.travelinfo.structured.StructuredImage;
+import com.tripbora.service.travelinfo.structured.StructuredImageCredit;
 import jakarta.servlet.http.Cookie;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -372,6 +373,64 @@ class TravelInfoStructuredDetailRenderingTest {
         assertThat(document.select(".structured-content, .travel-info-structured")).isEmpty();
         assertThat(document.select("link[href^=/css/travel-info-structured.css]")).isEmpty();
         assertThat(document.select("script[src^=/js/structured-slider.js]")).isEmpty();
+        // QUILL 본문 사진에는 확대 모달을 붙이지 않는다.
+        assertThat(document.select("[data-structured-gallery], [data-structured-gallery-image]")).isEmpty();
+        assertThat(document.select("script[src^=/js/structured-gallery.js]")).isEmpty();
+    }
+
+    @Test
+    void everyStructuredImageIsAGalleryItemAndThePageHasOneModal() throws Exception {
+        StructuredContent content = new StructuredContent(1, java.util.List.of(
+                new StructuredBlock.FullImage("full",
+                        credited(credit(null, "궁능유적본부", "https://example.org/a", "공공누리 제1유형", null)),
+                        "강녕전", "경복궁 강녕전 내부"),
+                new StructuredBlock.ImageText("split", StructuredBlock.ImagePosition.LEFT,
+                        StructuredContentSamples.image(2, 1600, 1200), "근정전 정면", "근정전", "조선의 법궁"),
+                new StructuredBlock.ImageSlider("slider", null, java.util.List.of(
+                        new StructuredBlock.SliderItem("i1", StructuredContentSamples.image(3, 1600, 1200),
+                                null, "광화문", "경복궁의 정문"),
+                        new StructuredBlock.SliderItem("i2", StructuredContentSamples.image(4, 1600, 1200),
+                                null, null, null))),
+                new StructuredBlock.ImageGrid("grid", 2, java.util.List.of(
+                        new StructuredBlock.SliderItem("c1", StructuredContentSamples.image(5, 1600, 1200),
+                                null, "낙선재", null),
+                        new StructuredBlock.SliderItem("c2", StructuredContentSamples.image(6, 1600, 1200),
+                                null, null, "부용정")))));
+
+        Document document = render(structured(content), "ko");
+
+        // 본문의 모든 사진이 그려진 순서 그대로 갤러리 사진이다. 제목·설명은 있을 때만 data 로 싣는다.
+        Elements images = document.select(".travel-info-structured [data-structured-gallery-image]");
+        assertThat(images).hasSize(6).hasSameSizeAs(document.select(".structured-content img"));
+        assertThat(images.eachAttr("src")).containsExactly(
+                StructuredContentSamples.image(1, 1600, 1000).url(), StructuredContentSamples.image(2, 1600, 1200).url(),
+                StructuredContentSamples.image(3, 1600, 1200).url(), StructuredContentSamples.image(4, 1600, 1200).url(),
+                StructuredContentSamples.image(5, 1600, 1200).url(), StructuredContentSamples.image(6, 1600, 1200).url());
+        assertThat(images.get(0).attr("data-gallery-description")).isEqualTo("경복궁 강녕전 내부");
+        assertThat(images.get(0).hasAttr("data-gallery-title")).isFalse();
+        assertThat(images.get(1).attr("data-gallery-title")).isEqualTo("근정전");
+        assertThat(images.get(2).attr("data-gallery-title")).isEqualTo("광화문");
+        assertThat(images.get(2).attr("data-gallery-description")).isEqualTo("경복궁의 정문");
+        assertThat(images.get(3).hasAttr("data-gallery-title") || images.get(3).hasAttr("data-gallery-description")).isFalse();
+        assertThat(images.get(5).attr("data-gallery-description")).isEqualTo("부용정");
+        // 모달 DOM 은 페이지에 하나뿐이고, 이름·버튼 이름은 현재 언어 문구다.
+        Elements modals = document.select("dialog[data-structured-gallery]");
+        assertThat(modals).hasSize(1);
+        Element modal = modals.first();
+        assertThat(modal.attr("role")).isEqualTo("dialog");
+        assertThat(modal.attr("aria-modal")).isEqualTo("true");
+        assertThat(modal.attr("aria-label")).isEqualTo("사진 확대 보기");
+        assertThat(modal.attr("data-open-label")).isEqualTo("사진 크게 보기");
+        assertThat(modal.select("[data-gallery-close]").attr("aria-label")).isEqualTo("사진 닫기");
+        assertThat(modal.select("[data-gallery-prev]").attr("aria-label")).isEqualTo("이전 사진");
+        assertThat(modal.select("[data-gallery-next]").attr("aria-label")).isEqualTo("다음 사진");
+        assertThat(modal.select("img[data-gallery-current]")).hasSize(1);
+        assertThat(modal.select("[data-gallery-slot]").eachAttr("data-gallery-slot"))
+                .containsExactly("title", "description", "credit");
+        assertThat(document.select("script[src^=/js/structured-gallery.js]")).hasSize(1);
+        // 모달이 복사해 쓸 출처 줄은 본문에 그대로 있다. (링크 규칙 그대로)
+        assertThat(document.select(".structured-figure .structured-media-credit a").attr("rel"))
+                .isEqualTo("noopener noreferrer nofollow");
     }
 
     @Test
@@ -384,6 +443,209 @@ class TravelInfoStructuredDetailRenderingTest {
         assertThat(document.selectFirst(".rich-text-content").text()).isEqualTo("서울 궁 투어 대신 보이는 글");
         assertThat(document.select(".structured-content")).isEmpty();
         assertThat(document.select("script[src^=/js/structured-slider.js]")).isEmpty();
+    }
+
+    // ---- 이미지 출처표시(credit) ------------------------------------------------------------
+
+    @Test
+    void imagesWithoutCreditKeepTheExistingCaptionMarkup() throws Exception {
+        String html = renderHtml(structured(StructuredContentSamples.palaceTour()), "ko");
+        Document document = Jsoup.parse(html);
+
+        assertThat(document.select(".structured-media-credit")).isEmpty();
+        assertThat(document.text()).doesNotContain("사진:");
+        // 출처 기능 전과 같다: 사진 다음 곧바로 캡션이고, 사진 칸 틀 안에는 사진 하나뿐이다. (빈 출처 줄 없음)
+        assertThat(html).contains("<figcaption class=\"structured-media-caption\">북악산 아래 펼쳐진 경복궁</figcaption>");
+        assertThat(classNames(document.selectFirst(".structured-figure").children()))
+                .containsExactly("", "structured-media-caption");
+        Element first = document.selectFirst("[data-slider-slide] figcaption");
+        assertThat(classNames(first.children())).containsExactly("structured-media-title", "");
+        assertThat(first.previousElementSibling().hasClass("structured-slide-media")).isTrue();
+        for (String media : java.util.List.of(".structured-image-text-media",
+                ".structured-slide-media", ".structured-grid-media")) {
+            assertThat(document.select(media)).as(media).isNotEmpty()
+                    .allMatch(element -> element.children().size() == 1 && element.child(0).is("img"));
+        }
+        assertThat(document.select("[data-slider-slide]").get(8).select("figcaption")).isEmpty();
+        assertThat(document.select(".structured-media-caption").stream().map(Element::text))
+                .noneMatch(String::isBlank);
+    }
+
+    @Test
+    void creditLineListsAuthorSourceAndLicenseInOrderAndLeavesOutEmptyParts() throws Exception {
+        StructuredContent content = new StructuredContent(1, java.util.List.of(
+                creditOnly("author", credit("John Doe", null, null, null, null)),
+                creditOnly("source", credit(null, "한국관광공사", null, null, null)),
+                creditOnly("all", credit("John Doe", "Wikimedia Commons", null, "CC BY-SA 4.0", null)),
+                creditOnly("same", credit("한국관광공사", "한국관광공사", null, "공공누리 제1유형", null)),
+                creditOnly("no-author", credit(null, "한국관광공사", null, "공공누리 제1유형", null))));
+
+        Document document = render(structured(content), "ko");
+
+        // 제목·설명이 없으면 figcaption 을 만들지 않고, 사진 바로 아래 출처 한 줄만 있다.
+        assertThat(document.select(".structured-figure figcaption")).isEmpty();
+        assertThat(document.select(".structured-figure > img + .structured-media-credit").eachText()).containsExactly(
+                "사진: John Doe",
+                "사진: 한국관광공사",
+                "사진: John Doe · Wikimedia Commons · CC BY-SA 4.0",
+                "사진: 한국관광공사 · 공공누리 제1유형",
+                "사진: 한국관광공사 · 공공누리 제1유형");
+        assertThat(document.select(".structured-media-credit-separator").eachAttr("aria-hidden")).containsOnly("true");
+        assertThat(document.select(".structured-media-credit a")).isEmpty();
+    }
+
+    @Test
+    void sourceAndLicenseBecomeNewTabLinksOnlyWhenTheirUrlExists() throws Exception {
+        String sourceUrl = "https://commons.wikimedia.org/wiki/File:A.jpg";
+        String licenseUrl = "https://creativecommons.org/licenses/by-sa/4.0/";
+        StructuredContent content = new StructuredContent(1, java.util.List.of(
+                creditOnly("both", credit("John Doe", "Wikimedia Commons", sourceUrl, "CC BY-SA 4.0", licenseUrl)),
+                creditOnly("license", credit("홍길동", "개인 블로그", null, "CC BY 4.0",
+                        "https://creativecommons.org/licenses/by/4.0/")),
+                creditOnly("same", credit("한국관광공사", "한국관광공사", "https://www.visitkorea.or.kr", null, null))));
+
+        Document document = render(structured(content), "ko");
+
+        Elements credits = document.select(".structured-media-credit");
+        Elements both = credits.get(0).select("a");
+        assertThat(both.eachText()).containsExactly("Wikimedia Commons", "CC BY-SA 4.0");
+        assertThat(both.eachAttr("href")).containsExactly(sourceUrl, licenseUrl);
+        assertThat(credits.select("a")).allMatch(link -> link.attr("target").equals("_blank")
+                && link.attr("rel").equals("noopener noreferrer nofollow"));
+        // 저작자는 링크가 아니다. URL 은 링크 주소로만 쓰고 화면 글로 보이지 않는다.
+        assertThat(credits.get(0).select("span").eachText()).contains("John Doe");
+        assertThat(credits.text()).doesNotContain("https://");
+        // 출처 URL 이 없으면 출처명은 글, 라이선스 URL 이 있으면 라이선스만 링크다.
+        assertThat(credits.get(1).select("a").eachText()).containsExactly("CC BY 4.0");
+        // 저작자와 출처명이 같으면 링크를 가질 수 있는 출처명 하나만 남는다.
+        assertThat(credits.get(2).text()).isEqualTo("사진: 한국관광공사");
+        assertThat(credits.get(2).select("a").eachAttr("href")).containsExactly("https://www.visitkorea.or.kr");
+    }
+
+    @Test
+    void everyImageBlockShowsTheCreditOfItsOwnImageRightBelowIt() throws Exception {
+        StructuredImage kto = credited(credit(null, "한국관광공사", null, "공공누리 제1유형", null));
+        StructuredImage commons = credited(credit("John Doe", "Wikimedia Commons", null, "CC BY-SA 4.0", null));
+        StructuredImage plain = StructuredContentSamples.image(2, 1600, 1200);
+        StructuredContent content = new StructuredContent(1, java.util.List.of(
+                new StructuredBlock.FullImage("full", kto, "강녕전", "경복궁 강녕전 내부"),
+                new StructuredBlock.ImageText("split", StructuredBlock.ImagePosition.RIGHT, commons,
+                        "근정전", "근정전", "조선의 법궁"),
+                new StructuredBlock.ImageSlider("slider", "주요 전각", java.util.List.of(
+                        new StructuredBlock.SliderItem("i1", kto, null, "강녕전 내부", "왕의 침전"),
+                        new StructuredBlock.SliderItem("i2", commons, null, null, null),
+                        new StructuredBlock.SliderItem("i3", plain, null, null, null))),
+                new StructuredBlock.ImageGrid("grid", 2, java.util.List.of(
+                        new StructuredBlock.SliderItem("c1", plain, null, "광화문", null),
+                        new StructuredBlock.SliderItem("c2", commons, null, null, "가을의 경복궁")))));
+
+        Document document = render(structured(content), "ko");
+
+        // 출처는 사진(또는 사진 칸 틀) 바로 다음 한 줄이다. 사진 위에 겹치지 않고, 캡션에도 들어가지 않는다.
+        assertThat(document.select("figcaption .structured-media-credit")).isEmpty();
+        Elements credits = document.select(".structured-media-credit");
+        assertThat(credits).hasSize(5);
+        assertThat(credits).allMatch(credit -> credit.previousElementSibling().is(
+                "img, .structured-slide-media, .structured-grid-media"));
+        assertThat(document.select(".structured-slide-media .structured-media-credit, "
+                + ".structured-grid-media .structured-media-credit")).isEmpty();
+        // FULL_IMAGE: 사진 → 출처 → 캡션(마지막 자식)
+        Element full = document.selectFirst(".structured-figure");
+        assertThat(classNames(full.children())).containsExactly("", "structured-media-credit", "structured-media-caption");
+        assertThat(full.child(1).text()).isEqualTo("사진: 한국관광공사 · 공공누리 제1유형");
+        assertThat(full.selectFirst("figcaption").text()).isEqualTo("경복궁 강녕전 내부");
+        // IMAGE_TEXT: 사진 칸 안, 사진 바로 아래. 글 칸은 그대로다.
+        assertThat(document.selectFirst(".structured-image-text-media > img + .structured-media-credit").text())
+                .isEqualTo("사진: John Doe · Wikimedia Commons · CC BY-SA 4.0");
+        assertThat(document.selectFirst(".structured-image-text-body h3").text()).isEqualTo("근정전");
+        // IMAGE_SLIDER: 사진 → 출처 → 제목·설명. 출처만 있는 사진에는 캡션이 없다.
+        Elements slides = document.select("[data-slider-slide]");
+        assertThat(classNames(slides.get(0).selectFirst("figure").children()))
+                .containsExactly("structured-slide-media", "structured-media-credit", "structured-media-caption");
+        assertThat(slides.get(0).select(".structured-media-credit").text()).isEqualTo("사진: 한국관광공사 · 공공누리 제1유형");
+        assertThat(classNames(slides.get(1).selectFirst("figure").children()))
+                .containsExactly("structured-slide-media", "structured-media-credit");
+        assertThat(slides.get(2).select(".structured-media-credit, figcaption")).isEmpty();
+        // IMAGE_GRID: 칸마다 자기 사진 바로 아래
+        Elements cells = document.select(".structured-grid-item");
+        assertThat(cells.get(0).select(".structured-media-credit")).isEmpty();
+        assertThat(cells.get(0).select("figcaption").text()).isEqualTo("광화문");
+        assertThat(classNames(cells.get(1).selectFirst("figure").children()))
+                .containsExactly("structured-grid-media", "structured-media-credit", "structured-media-caption");
+        assertThat(cells.get(1).select(".structured-media-credit").text())
+                .isEqualTo("사진: John Doe · Wikimedia Commons · CC BY-SA 4.0");
+        assertThat(cells.get(1).select(".structured-media-credit").attr("title"))
+                .isEqualTo("사진: John Doe · Wikimedia Commons · CC BY-SA 4.0");
+        assertThat(cells.get(1).select("figcaption").text()).isEqualTo("가을의 경복궁");
+    }
+
+    @Test
+    void creditTextIsEscapedAndNotTranslatedWhileTheLabelFollowsTheLanguage() throws Exception {
+        StructuredContent content = new StructuredContent(1, java.util.List.of(
+                creditOnly("a", credit("<b>홍길동</b>", null, null, "공공누리 제1유형", null))));
+        java.util.Map<String, String> labels = java.util.Map.of(
+                "ko", "사진:", "en", "Photo:", "ja", "写真:", "zh-CN", "图片：", "zh-TW", "圖片：");
+
+        for (java.util.Map.Entry<String, String> label : labels.entrySet()) {
+            String html = renderHtml(structured(content), label.getKey());
+            Element credit = Jsoup.parse(html).selectFirst(".structured-media-credit");
+            assertThat(credit.child(0).text()).as(label.getKey()).isEqualTo(label.getValue());
+            assertThat(credit.text()).as(label.getKey())
+                    .isEqualTo(label.getValue() + " <b>홍길동</b> · 공공누리 제1유형");
+            assertThat(credit.select("b")).isEmpty();
+            assertThat(html).contains("&lt;b&gt;홍길동&lt;/b&gt;");
+        }
+    }
+
+    @Test
+    void creditStyleIsSmallMutedAndWrapsWithoutEllipsis() throws IOException {
+        String css;
+        try (InputStream input = getClass().getResourceAsStream("/static/css/travel-info-structured.css")) {
+            assertThat(input).isNotNull();
+            css = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        // 출처는 사진 아래 작은 한 줄: 오른쪽 정렬, 줄바꿈 없음, 배경·겹침 없음.
+        assertThat(rule(css, ".structured-media-credit"))
+                .contains("display: block;", "margin: 4px 0;", "font-size: 10px;", "line-height: 1.3;",
+                        "text-align: right;", "white-space: nowrap;")
+                .doesNotContain("position", "background", "border", "overflow-wrap");
+        assertThat(rule(css, ".structured-media-credit + .structured-media-caption")).contains("padding-top: 4px;");
+        assertThat(rule(css, ".structured-figure.is-portrait .structured-media-credit"))
+                .contains("width: min(100%, 560px);", "margin-inline: auto;");
+        assertThat(rule(css, ".structured-media-credit a")).contains("color: inherit;", "text-decoration: none;");
+        // 캡션은 출처 기능 전 그대로다. 겹침 틀·첫 줄 grid 는 남아 있지 않다.
+        assertThat(rule(css, ".structured-media-caption"))
+                .contains("flex-direction: column;", "max-width: var(--structured-text-width);", "text-align: center;");
+        assertThat(css).doesNotContain("structured-caption-primary", "has-credit", "structured-media-description",
+                "structured-figure-media", "position: absolute");
+        // 공개 상세와 관리자 상세 미리보기 모두 바뀐 CSS 를 새로 받는다.
+        for (String template : java.util.List.of("/templates/travel-info/detail.html",
+                "/templates/admin/travel-info/detail.html")) {
+            try (InputStream input = getClass().getResourceAsStream(template)) {
+                assertThat(new String(input.readAllBytes(), StandardCharsets.UTF_8)).as(template)
+                        .contains("/css/travel-info-structured.css?v=20261006-gallery");
+            }
+        }
+    }
+
+    /** 자식들의 class. (eachAttr 는 class 가 없는 요소를 건너뛰므로 자리를 맞추려고 className 을 쓴다) */
+    private static java.util.List<String> classNames(Elements elements) {
+        return elements.stream().map(Element::className).toList();
+    }
+
+    private static StructuredBlock.FullImage creditOnly(String id, StructuredImageCredit credit) {
+        return new StructuredBlock.FullImage(id, credited(credit), null, null);
+    }
+
+    private static StructuredImage credited(StructuredImageCredit credit) {
+        StructuredImage image = StructuredContentSamples.image(1, 1600, 1000);
+        return new StructuredImage(image.url(), image.width(), image.height(), credit);
+    }
+
+    private static StructuredImageCredit credit(String author, String source, String sourceUrl,
+                                                String license, String licenseUrl) {
+        return new StructuredImageCredit(author, source, sourceUrl, license, licenseUrl);
     }
 
     private TravelInfoDetailDto structured(StructuredContent content) {

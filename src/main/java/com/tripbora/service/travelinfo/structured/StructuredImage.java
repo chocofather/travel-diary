@@ -1,5 +1,6 @@
 package com.tripbora.service.travelinfo.structured;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -18,6 +19,14 @@ public record StructuredImage(String url, Integer width, Integer height, Structu
     /** 출처표시가 없는 이미지. */
     public StructuredImage(String url, Integer width, Integer height) {
         this(url, width, height, null);
+    }
+
+    /**
+     * 공개 화면에 그릴 출처표시 조각. 출처표시가 없으면 빈 목록이라 화면은 출처 줄을 만들지 않는다.
+     * (Jackson 속성 이름 규칙에 맞지 않아 JSON 에는 쓰이지 않는다)
+     */
+    public List<StructuredImageCredit.Part> creditParts() {
+        return credit == null ? List.of() : credit.displayParts();
     }
 
     /** 구조화 콘텐츠 이미지 전용 업로드 경로. */

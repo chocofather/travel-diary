@@ -28,8 +28,31 @@
         caption: 300,
         alt: 200,
         itemTitle: 100,
-        callout: 500
+        callout: 500,
+        creditAuthor: 100,
+        creditSource: 100,
+        creditSourceUrl: 500,
+        creditLicense: 100,
+        creditLicenseUrl: 500
     });
+
+    /** 이미지 출처표시(credit) 칸. 서버 StructuredImageCredit 과 같은 이름·순서다. */
+    const CREDIT_FIELDS = Object.freeze(['author', 'source', 'sourceUrl', 'license', 'licenseUrl']);
+    const CREDIT_URL_FIELDS = Object.freeze(['sourceUrl', 'licenseUrl']);
+
+    /**
+     * 라이선스 입력 제안값. 저장은 언제나 입력한 글 그대로다. (코드로 바꾸지 않는다)
+     * 제안값과 똑같이 입력하면 라이선스 URL 을 채워 준다. 단, 직접 입력한 URL 은 덮어쓰지 않는다.
+     */
+    const CREDIT_LICENSES = Object.freeze([
+        {name: '공공누리 제1유형', url: 'https://www.kogl.or.kr/info/licenseType1.do'},
+        {name: '공공누리 제2유형', url: 'https://www.kogl.or.kr/info/licenseType2.do'},
+        {name: '공공누리 제3유형', url: 'https://www.kogl.or.kr/info/licenseType3.do'},
+        {name: '공공누리 제4유형', url: 'https://www.kogl.or.kr/info/licenseType4.do'},
+        {name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/'},
+        {name: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/'},
+        {name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/'}
+    ]);
 
     const TYPE_LABELS = Object.freeze({
         SECTION_TITLE: '섹션 제목',
@@ -103,13 +126,77 @@
         return token && header ? {[header]: token} : {};
     }
 
-    /** 서버가 돌려준 값만 이미지로 받는다. 크기는 서버가 잰 값이다. */
+    /**
+     * 서버가 돌려준 값만 이미지로 받는다. 크기는 서버가 잰 값이다.
+     * 저장된 글의 출처표시(credit)도 함께 읽어, 손대지 않고 다시 저장해도 그대로 남게 한다.
+     */
     function readImage(value) {
         if (!value || typeof value.url !== 'string' || !value.url.startsWith(IMAGE_URL_PREFIX)) return null;
         const width = Number(value.width);
         const height = Number(value.height);
         if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) return null;
-        return {url: value.url, width, height};
+        return {url: value.url, width, height, credit: readCredit(value.credit)};
+    }
+
+    /** 출처표시. 객체가 아니면 출처표시가 없는 이미지(null)다. 화면 model 에서는 칸마다 글(빈 글 포함)을 둔다. */
+    function readCredit(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+        return Object.fromEntries(CREDIT_FIELDS.map(name => [name, text(value[name])]));
+    }
+
+    function emptyCredit() {
+        return readCredit({});
+    }
+
+    /** URL 칸은 앞뒤 공백을 떼고 쓴다. 글 칸은 다른 글 칸처럼 입력한 그대로다. */
+    function creditValue(credit, name) {
+        const value = text(credit[name]);
+        return CREDIT_URL_FIELDS.includes(name) ? value.trim() : value;
+    }
+
+    /**
+     * 값이 있는 칸만, 서버 정규 JSON 과 같은 순서(author, source, sourceUrl, license, licenseUrl)로 쓴다.
+     * 출처표시를 켜 두었어도 모두 비었으면 null 이다. (빈 credit({}) 은 서버가 거부하므로 아예 쓰지 않는다)
+     */
+    function writeCredit(credit) {
+        if (!credit) return null;
+        const written = {};
+        CREDIT_FIELDS.forEach(name => {
+            const value = creditValue(credit, name);
+            if (!blank(value)) written[name] = value;
+        });
+        return Object.keys(written).length ? written : null;
+    }
+
+    /** 이미지 한 장. 서버 정규 JSON 과 같은 순서(url, width, height, credit). */
+    function writeImage(image) {
+        const written = {url: image.url, width: image.width, height: image.height};
+        const credit = writeCredit(image.credit);
+        if (credit) written.credit = credit;
+        return written;
+    }
+
+    /**
+     * 서버 StructuredContentValidator 와 같은 기준: host 가 있는 http / https 절대 주소.
+     * 브라우저 URL 은 "https:example.com" 처럼 // 없는 주소도 받으므로 모양을 먼저 본다. 최종 기준은 서버다.
+     */
+    function isWebUrl(value) {
+        if (!/^https?:\/\/[^\s/?#]+/i.test(value) || /[\s<>"{}|\\^`]/.test(value)) return false;
+        try {
+            const url = new URL(value);
+            return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '';
+        } catch {
+            return false;
+        }
+    }
+
+    /** 관리자 미리보기 한 줄. 빈 칸은 빼고, 저작자와 출처명이 같으면 한 번만 쓴다. 값이 없으면 "". */
+    function creditPreview(credit) {
+        if (!credit) return '';
+        const author = text(credit.author).trim();
+        const source = text(credit.source).trim();
+        const parts = [author, source === author ? '' : source, text(credit.license).trim()].filter(Boolean);
+        return parts.length ? `사진: ${parts.join(' · ')}` : '';
     }
 
     async function uploadImage(file) {
@@ -135,7 +222,8 @@
                 ? data.message
                 : '이미지를 올리지 못했습니다. 잠시 후 다시 시도해 주세요.');
         }
-        return image;
+        // 새 파일은 출처표시 없이 시작한다. 교체 전 이미지의 저작권 정보가 새 이미지에 남지 않게 한다.
+        return {...image, credit: null};
     }
 
     /** 블록 카드·확인 창에 쓰는 이름. 이미지 배치는 장수까지 보여 준다. */
@@ -157,7 +245,7 @@
     /** 슬라이더·이미지 배치의 사진 한 장. 서버 정규 JSON 과 같은 순서(id, image, alt, title, caption). */
     function writeImageItem(item) {
         const written = {id: item.id};
-        if (item.image) written.image = {url: item.image.url, width: item.image.width, height: item.image.height};
+        if (item.image) written.image = writeImage(item.image);
         if (!blank(item.alt)) written.alt = item.alt;
         if (!blank(item.title)) written.title = item.title;
         if (!blank(item.caption)) written.caption = item.caption;
@@ -225,7 +313,7 @@
             if (!blank(value)) out[key] = value;
         };
         const putImage = image => {
-            if (image) out.image = {url: image.url, width: image.width, height: image.height};
+            if (image) out.image = writeImage(image);
         };
         switch (block.type) {
             case 'SECTION_TITLE': put('title', block.title); break;
@@ -284,6 +372,21 @@
             if (!byBlock.has(block.id)) byBlock.set(block.id, []);
             byBlock.get(block.id).push(message);
         };
+        // 출처표시: 저장할 값이 있으면 저작자·출처명 중 하나가 있어야 하고, URL 은 http / https 주소만 받는다.
+        // (켜 두고 모두 비웠으면 credit 을 쓰지 않으므로 검사할 것이 없다)
+        const checkCredit = (block, image, imageKey, prefix) => {
+            const credit = writeCredit(image?.credit);
+            if (!credit) return;
+            if (!credit.author && !credit.source) {
+                add(block, `${imageKey}:credit-author`, `${prefix}출처표시에는 저작자 또는 출처명을 입력해 주세요.`);
+            }
+            if (credit.sourceUrl && !isWebUrl(credit.sourceUrl)) {
+                add(block, `${imageKey}:credit-sourceUrl`, `${prefix}출처 URL은 http 또는 https 주소로 입력해 주세요.`);
+            }
+            if (credit.licenseUrl && !isWebUrl(credit.licenseUrl)) {
+                add(block, `${imageKey}:credit-licenseUrl`, `${prefix}라이선스 URL은 http 또는 https 주소로 입력해 주세요.`);
+            }
+        };
         if (pendingUploads > 0) global.push('이미지 업로드가 끝난 뒤 다시 저장해 주세요.');
         if (blocks.length === 0) global.push('블록을 하나 이상 추가해 주세요.');
         if (blocks.length > LIMITS.blocks) global.push(`블록은 ${LIMITS.blocks}개까지 추가할 수 있습니다.`);
@@ -300,9 +403,11 @@
                 // 이미지 설명(alt)은 선택이다. 비우면 공개 화면이 캡션·제목 등으로 대신 채운다.
                 case 'FULL_IMAGE':
                     if (!block.image) add(block, key('image'), '이미지를 올려 주세요.');
+                    checkCredit(block, block.image, key('image'), '');
                     break;
                 case 'IMAGE_TEXT':
                     if (!block.image) add(block, key('image'), '이미지를 올려 주세요.');
+                    checkCredit(block, block.image, key('image'), '');
                     if (blank(block.text)) add(block, key('text'), '본문을 입력해 주세요.');
                     break;
                 case 'IMAGE_SLIDER':
@@ -313,6 +418,7 @@
                     block.items.forEach((item, index) => {
                         const itemKey = name => `${block.id}:${item.id}:${name}`;
                         if (!item.image) add(block, itemKey('image'), `${index + 1}번째 이미지: 이미지를 올려 주세요.`);
+                        checkCredit(block, item.image, itemKey('image'), `${index + 1}번째 이미지: `);
                     });
                     break;
                 case 'IMAGE_GRID':
@@ -321,6 +427,7 @@
                         if (!item.image) {
                             add(block, `${block.id}:${item.id}:image`, `${index + 1}번째 칸: 이미지를 올려 주세요.`);
                         }
+                        checkCredit(block, item.image, `${block.id}:${item.id}:image`, `${index + 1}번째 칸: `);
                     });
                     break;
                 default:
@@ -338,6 +445,7 @@
             collapsed: new Set(),
             uploads: new Set(), // 업로드 중인 이미지 자리 key
             imageErrors: new Map(), // 이미지 자리 key → 서버 메시지
+            openCredits: new Set(), // 출처 정보 입력 칸을 펼친 이미지 자리 key
             errors: null, // 마지막 저장 시도 검사 결과
             menuOpen: false,
             loadError: false,
@@ -497,12 +605,17 @@
             return invalid ? {'aria-invalid': 'true', 'aria-describedby': errorId, className: 'is-invalid'} : {};
         }
 
-        /** 글 칸 하나. 값이 바뀌면 model 만 바꾸고 다시 그리지 않는다. (입력 중 커서를 지킨다) */
+        /**
+         * 글 칸 하나. 값이 바뀌면 model 만 바꾸고 다시 그리지 않는다. (입력 중 커서를 지킨다)
+         * attributes 는 입력 칸에 더 붙일 속성(list, inputmode 등), optionalHint: false 는 "(선택)" 표시를 뺀다.
+         * secondary 는 보조 입력(이미지 설명 alt)이라 제목·설명보다 한 단계 약하게 보인다.
+         */
         function field(block, options, errorId) {
             const key = options.key;
             const id = `sb-${key.replace(/:/g, '-')}`;
             const invalid = invalidAttributes(key, errorId);
             const control = el(options.multiline ? 'textarea' : 'input', {
+                ...options.attributes,
                 id, type: options.multiline ? null : 'text', maxlength: options.max,
                 rows: options.multiline ? options.rows || 4 : null,
                 'aria-required': options.required ? 'true' : null,
@@ -518,10 +631,12 @@
                 }
             });
             control.value = options.value;
-            return el('div', {className: 'admin-form-field'}, [
+            return el('div', {className: `admin-form-field${options.secondary ? ' is-secondary' : ''}`}, [
                 el('label', {for: id}, [options.label, options.required
                     ? el('span', {className: 'admin-structured-required', 'aria-hidden': 'true', text: ' *'})
-                    : el('span', {className: 'admin-structured-optional', text: ' (선택)'})]),
+                    : options.optionalHint === false
+                        ? null
+                        : el('span', {className: 'admin-structured-optional', text: ' (선택)'})]),
                 control,
                 options.help ? el('span', {className: 'admin-help-text', text: options.help}) : null
             ]);
@@ -574,6 +689,159 @@
             ]);
         }
 
+        /**
+         * 이미지 한 장의 편집 카드. 큰 이미지·이미지 + 글·슬라이더 사진·이미지 배치 칸이 모두 이 카드를 쓴다.
+         *   [이미지 미리보기·교체·해상도]
+         *   [기본 정보] 블록이 가진 글 칸(제목·설명) + 한 단계 낮은 접근성 설명(alt)
+         *   [출처 정보] 접힌 토글
+         * 넓은 자리(큰 이미지, 슬라이더 사진)는 [이미지 | 기본 정보] 두 칸에 출처를 아래 한 줄로,
+         * 좁은 자리(stacked: 이미지 배치 칸, 이미지 + 글의 사진 칸)는 모두 한 칸으로 쌓는다.
+         */
+        function imageCard(block, options, errorId) {
+            const fields = options.fields || [];
+            return el('div', {className: `admin-structured-image-card${options.stacked ? ' is-stacked' : ''}`}, [
+                imageControl({key: options.imageKey, image: options.image, label: '이미지',
+                    assign: options.assign, remove: options.remove}, errorId),
+                el('div', {className: 'admin-structured-image-basics', role: 'group',
+                    'aria-label': `${options.name} 기본 정보`}, [
+                    fields.length ? el('p', {className: 'admin-structured-section-label', 'aria-hidden': 'true',
+                        text: '기본 정보'}) : null,
+                    ...fields,
+                    field(block, {key: options.alt.key, label: '접근성 설명(alt)', max: LIMITS.alt, secondary: true,
+                        summary: options.alt.summary, help: '이미지를 설명하는 대체 텍스트입니다.',
+                        value: options.alt.value, set: options.alt.set}, errorId)
+                ]),
+                creditControl(block, options.image, options.imageKey, errorId)
+            ]);
+        }
+
+        /**
+         * 이미지 한 장의 출처 정보. 모든 이미지 카드에 언제나 있다. (이미지를 올리기 전에는 추가 버튼이 비활성이다)
+         * credit 이 없으면 [+ 출처 정보 추가] 버튼 하나뿐이다. 누르면 빈 credit 을 만들고 입력 칸을 펼친다.
+         * credit 이 있으면 [출처 정보 있음 ▾] 토글과 요약 한 줄로 접어 두고, 펼치면 입력 칸·미리보기·[출처 정보 제거]가 보인다.
+         * 제거는 credit 을 지운다. (값이 있으면 먼저 묻는다) 모두 비운 채 저장하면 credit 을 쓰지 않는다.
+         * 출처 글은 번역하지 않으므로 원문 에디터에만 있다.
+         */
+        function creditControl(block, image, imageKey, errorId) {
+            const credit = image ? image.credit : null;
+            const addKey = `${imageKey}:credit`;
+            if (!image) {
+                // credit 은 이미지에 붙는 정보라 이미지가 없으면 넣을 자리가 없다. 자리만 보여 주고 막아 둔다.
+                return el('div', {className: 'admin-structured-credit', role: 'group', 'aria-label': '출처 정보'}, [
+                    el('button', {type: 'button', className: 'admin-structured-credit-add', disabled: true,
+                        'aria-describedby': `sb-${addKey.replace(/:/g, '-')}-help`, text: '+ 출처 정보 추가'}),
+                    el('span', {id: `sb-${addKey.replace(/:/g, '-')}-help`, className: 'admin-help-text',
+                        text: '이미지를 올린 뒤 추가할 수 있습니다.'})
+                ]);
+            }
+            if (!credit) {
+                return el('div', {className: 'admin-structured-credit', role: 'group', 'aria-label': '출처 정보'}, [
+                    el('button', {
+                        type: 'button', className: 'admin-structured-credit-add', 'data-focus-key': addKey,
+                        title: '외부 이미지의 저작자·라이선스를 기록합니다.', text: '+ 출처 정보 추가',
+                        onclick: () => {
+                            image.credit = emptyCredit();
+                            state.openCredits.add(imageKey);
+                            markDirty();
+                            render(`${imageKey}:credit-author`);
+                        }
+                    })
+                ]);
+            }
+
+            const open = state.openCredits.has(imageKey);
+            const toggleKey = `${imageKey}:credit-toggle`;
+            const panelId = `sb-${addKey.replace(/:/g, '-')}`;
+            const invalid = CREDIT_FIELDS.some(name => state.errors?.fields.has(`${imageKey}:credit-${name}`));
+            // 접었을 때는 토글 옆 요약, 펼쳤을 때는 입력 칸 아래 미리보기. 둘 다 입력하는 대로 바뀐다.
+            const summary = el('span', {className: 'admin-structured-credit-summary'});
+            const preview = el('p', {className: 'admin-structured-credit-preview', 'aria-live': 'polite'});
+            const refreshPreview = () => {
+                const line = creditPreview(credit);
+                summary.textContent = line || '아직 입력하지 않았습니다.';
+                summary.classList.toggle('is-empty', !line);
+                preview.textContent = line;
+                preview.hidden = line === '';
+            };
+            refreshPreview();
+            const header = el('div', {className: 'admin-structured-credit-header'}, [
+                el('button', {
+                    type: 'button', className: `admin-structured-credit-toggle${invalid ? ' is-invalid' : ''}`,
+                    'aria-expanded': String(open), 'aria-controls': open ? panelId : null,
+                    'data-focus-key': toggleKey,
+                    onclick: () => {
+                        if (open) state.openCredits.delete(imageKey);
+                        else state.openCredits.add(imageKey);
+                        render(toggleKey);
+                    }
+                }, [
+                    el('span', {text: '출처 정보 있음'}),
+                    el('span', {className: 'admin-structured-credit-chevron', 'aria-hidden': 'true', text: open ? '▴' : '▾'})
+                ]),
+                open ? null : summary
+            ]);
+            if (!open) {
+                return el('div', {className: 'admin-structured-credit', role: 'group', 'aria-label': '출처 정보'}, [header]);
+            }
+
+            const creditField = (name, label, max, extra = {}) => field(block, {
+                key: `${imageKey}:credit-${name}`, label, max, optionalHint: false,
+                attributes: extra.attributes, help: extra.help, value: credit[name],
+                set: value => {
+                    credit[name] = value;
+                    if (extra.after) extra.after(value);
+                    refreshPreview();
+                }
+            }, errorId);
+            const urlAttributes = {inputmode: 'url', autocomplete: 'off', spellcheck: 'false'};
+            const licenseListId = `${panelId}-licenses`;
+            const licenseUrlField = creditField('licenseUrl', '라이선스 URL', LIMITS.creditLicenseUrl,
+                {attributes: urlAttributes});
+            const licenseUrlInput = licenseUrlField.querySelector('input');
+            // 제안 라이선스를 그대로 입력하면 URL 을 채운다. 비었거나 다른 제안값의 URL 일 때만 바꾼다. (직접 쓴 URL 은 둔다)
+            const fillLicenseUrl = value => {
+                const known = CREDIT_LICENSES.find(item => item.name === value.trim());
+                const current = text(credit.licenseUrl).trim();
+                if (!known || (current && !CREDIT_LICENSES.some(item => item.url === current))) return;
+                credit.licenseUrl = known.url;
+                licenseUrlInput.value = known.url;
+            };
+
+            return el('div', {className: 'admin-structured-credit is-open', role: 'group', 'aria-label': '출처 정보'}, [
+                header,
+                el('div', {id: panelId, className: 'admin-structured-credit-fields'}, [
+                    el('div', {className: 'admin-structured-credit-names'}, [
+                        creditField('author', '저작자', LIMITS.creditAuthor),
+                        creditField('source', '출처명', LIMITS.creditSource)
+                    ]),
+                    creditField('sourceUrl', '출처 URL', LIMITS.creditSourceUrl, {attributes: urlAttributes}),
+                    creditField('license', '라이선스', LIMITS.creditLicense, {
+                        attributes: {list: licenseListId, autocomplete: 'off'}, after: fillLicenseUrl,
+                        help: '목록에 없어도 직접 입력할 수 있습니다.'
+                    }),
+                    el('datalist', {id: licenseListId}, CREDIT_LICENSES.map(item => el('option', {value: item.name}))),
+                    licenseUrlField,
+                    el('div', {className: 'admin-structured-credit-footer'}, [
+                        preview,
+                        el('button', {
+                            type: 'button', className: 'admin-btn is-small admin-structured-credit-remove',
+                            'data-focus-key': `${imageKey}:credit-remove`, text: '출처 정보 제거',
+                            onclick: () => {
+                                if (writeCredit(image.credit)
+                                    && !window.confirm('이 이미지의 출처 정보를 지울까요? 입력한 내용이 사라집니다.')) {
+                                    return;
+                                }
+                                image.credit = null;
+                                state.openCredits.delete(imageKey);
+                                markDirty();
+                                render(addKey);
+                            }
+                        })
+                    ])
+                ])
+            ]);
+        }
+
         function renderBlockFields(block, errorId) {
             const key = name => `${block.id}:${name}`;
             switch (block.type) {
@@ -590,14 +858,17 @@
                             value: block.text, set: value => { block.text = value; }}, errorId)
                     ];
                 case 'FULL_IMAGE':
+                    // 큰 이미지에는 제목이 없다. 기본 정보는 설명(캡션)과 접근성 설명(alt)이다.
                     return [
-                        imageControl({key: key('image'), image: block.image, label: '이미지',
-                            assign: image => { block.image = image; }, remove: () => { block.image = null; }}, errorId),
-                        field(block, {key: key('alt'), label: '이미지 설명(alt)', max: LIMITS.alt, summary: true,
-                            help: '사진을 볼 수 없는 사람에게 읽어 주는 설명입니다. 비워 두면 캡션을 대신 씁니다.',
-                            value: block.alt, set: value => { block.alt = value; }}, errorId),
-                        field(block, {key: key('caption'), label: '캡션', max: LIMITS.caption,
-                            value: block.caption, set: value => { block.caption = value; }}, errorId)
+                        imageCard(block, {
+                            name: '큰 이미지', imageKey: key('image'), image: block.image,
+                            assign: image => { block.image = image; }, remove: () => { block.image = null; },
+                            fields: [
+                                field(block, {key: key('caption'), label: '설명', max: LIMITS.caption,
+                                    value: block.caption, set: value => { block.caption = value; }}, errorId)
+                            ],
+                            alt: {key: key('alt'), summary: true, value: block.alt, set: value => { block.alt = value; }}
+                        }, errorId)
                     ];
                 case 'IMAGE_TEXT':
                     return [
@@ -606,11 +877,12 @@
                             help: '휴대폰에서는 언제나 이미지가 위에 옵니다.'}),
                         el('div', {className: 'admin-structured-split'}, [
                             el('div', {}, [
-                                imageControl({key: key('image'), image: block.image, label: '이미지',
-                                    assign: image => { block.image = image; }, remove: () => { block.image = null; }}, errorId),
-                                field(block, {key: key('alt'), label: '이미지 설명(alt)', max: LIMITS.alt,
-                                    help: '비워 두면 제목을 대신 씁니다.',
-                                    value: block.alt, set: value => { block.alt = value; }}, errorId)
+                                // 제목·본문은 글 칸에 있으므로 사진 카드의 기본 정보는 접근성 설명(alt)뿐이다.
+                                imageCard(block, {
+                                    name: '이미지', imageKey: key('image'), image: block.image, stacked: true,
+                                    assign: image => { block.image = image; }, remove: () => { block.image = null; },
+                                    alt: {key: key('alt'), value: block.alt, set: value => { block.alt = value; }}
+                                }, errorId)
                             ]),
                             el('div', {}, [
                                 field(block, {key: key('title'), label: '제목', max: LIMITS.title, summary: true,
@@ -711,19 +983,18 @@
                         itemAction('delete', '삭제', `${position} 삭제`, () => deleteItem(block, item), {danger: true})
                     ])
                 ]),
-                el('div', {className: 'admin-structured-item-body'}, [
-                    imageControl({key: key('image'), image: item.image, label: '이미지',
-                        assign: image => { item.image = image; }}, errorId),
-                    el('div', {className: 'admin-structured-item-fields'}, [
+                // 이미지 배치 칸은 좁으므로 카드 안을 한 칸으로 쌓는다.
+                imageCard(block, {
+                    name: position, imageKey: key('image'), image: item.image, stacked: options.fixed,
+                    assign: image => { item.image = image; },
+                    fields: [
                         field(block, {key: key('title'), label: '제목', max: LIMITS.itemTitle,
                             value: item.title, set: value => { item.title = value; }}, errorId),
                         field(block, {key: key('caption'), label: '설명', max: LIMITS.caption,
-                            value: item.caption, set: value => { item.caption = value; }}, errorId),
-                        field(block, {key: key('alt'), label: '이미지 설명(alt)', max: LIMITS.alt,
-                            help: '비워 두면 제목·설명을 대신 씁니다.',
-                            value: item.alt, set: value => { item.alt = value; }}, errorId)
-                    ])
-                ])
+                            value: item.caption, set: value => { item.caption = value; }}, errorId)
+                    ],
+                    alt: {key: key('alt'), value: item.alt, set: value => { item.alt = value; }}
+                }, errorId)
             ]);
         }
 
@@ -869,8 +1140,12 @@
             if (!result.valid) {
                 event.preventDefault();
                 state.errors = result;
-                // 고칠 곳이 접힌 블록 안에 있으면 펼친다.
+                // 고칠 곳이 접힌 블록·접힌 출처 정보 안에 있으면 펼친다.
                 result.byBlock.forEach((messages, blockId) => state.collapsed.delete(blockId));
+                result.fields.forEach((message, key) => {
+                    const at = key.indexOf(':credit-');
+                    if (at >= 0) state.openCredits.add(key.slice(0, at));
+                });
                 render('error-summary');
                 return;
             }

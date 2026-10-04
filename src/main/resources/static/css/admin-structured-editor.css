@@ -323,19 +323,85 @@
     border-radius: 6px;
 }
 
-.admin-structured-item-body {
+/*
+  ---- 이미지 카드 (큰 이미지 · 이미지 + 글 · 슬라이더 사진 · 이미지 배치 칸 공용) ----
+  넓은 자리는 [이미지 | 기본 정보] 두 칸, 출처 정보는 그 아래 한 줄. 좁은 자리(is-stacked)는 모두 한 칸으로 쌓는다.
+  기본 정보는 제목·설명 + 한 단계 낮은 접근성 설명(alt)을 한 칸씩 쌓는다. (제목 | 설명 | alt 세 칸으로 늘어놓지 않는다)
+  테두리는 슬라이더 사진·배치 칸의 바깥 카드 하나만 두고, 안쪽은 간격과 출처 위 구분선으로만 나눈다.
+*/
+.admin-structured-image-card {
     display: grid;
-    gap: 12px;
-    padding: 12px;
+    grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
+    align-items: start;
+    gap: 12px 18px;
+    min-width: 0;
 }
 
-.admin-structured-item-fields {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+.admin-structured-item > .admin-structured-image-card {
+    padding: 12px 14px 14px;
 }
 
-/* 이미지 배치: 칸을 공개 화면처럼 나란히 두고, 칸 안의 이미지·입력은 세로로 쌓는다 */
+.admin-structured-image-card > .admin-structured-credit {
+    grid-column: 1 / -1;
+}
+
+.admin-structured-image-card .admin-structured-image {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-structured-image-card .admin-structured-image-preview {
+    width: 100%;
+}
+
+.admin-structured-image-basics {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.admin-structured-section-label {
+    margin: 0;
+    color: #8a93ab;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+/* 좁은 자리: 모두 한 칸. 미리보기는 칸 폭 전체로 키우지 않는다. (카드가 너무 길어진다) */
+.admin-structured-image-card.is-stacked {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-structured-image-card.is-stacked .admin-structured-image-preview {
+    width: min(100%, 200px);
+}
+
+/* 이미지 카드 안 입력은 블록 입력보다 조금 낮게. 라벨·도움말도 한 단계 작게 둔다. */
+.admin-structured-editor .admin-structured-image-card .admin-form-field {
+    gap: 5px;
+}
+
+.admin-structured-editor .admin-structured-image-card input[type="text"] {
+    min-height: 38px;
+    padding: 7px 10px;
+}
+
+.admin-structured-editor .admin-structured-image-card .admin-form-field > label {
+    font-size: 0.85rem;
+}
+
+/* 보조 입력(alt): 제목·설명보다 한 단계 약하게 */
+.admin-structured-editor .admin-form-field.is-secondary > label {
+    color: #6b7590;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.admin-structured-editor .admin-form-field .admin-help-text {
+    font-size: 0.8rem;
+}
+
+/* 이미지 배치: 칸을 공개 화면처럼 나란히 두고, 칸 안은 같은 이미지 카드를 한 칸으로 쌓는다(is-stacked) */
 .admin-structured-grid.is-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -344,12 +410,138 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.admin-structured-grid .admin-structured-item-fields {
-    grid-template-columns: minmax(0, 1fr);
+/*
+  ---- 이미지 출처 정보 ----
+  없으면 [+ 출처 정보 추가] 글자 버튼 하나, 있으면 [출처 정보 ▾] 토글과 요약 한 줄로 접어 둔다.
+  펼치면 입력 칸·미리보기·[출처 정보 제거]. 저작자·출처명은 자리가 넉넉하면 두 칸, 좁은 칸(3장 배치 등)이면 한 칸이다.
+*/
+.admin-structured-credit {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding-top: 10px;
+    border-top: 1px solid #edf0f7;
 }
 
-.admin-structured-grid .admin-structured-image {
-    flex-direction: column;
+.admin-structured-credit-add {
+    justify-self: start;
+    min-height: 28px;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: #3853ba;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-structured-credit-add:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* 이미지를 올리기 전: 자리만 보이고 누를 수 없다 */
+.admin-structured-credit-add:disabled {
+    color: #a3abc0;
+    cursor: default;
+}
+
+.admin-structured-credit-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+}
+
+.admin-structured-credit-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 3px 10px;
+    border: 1px solid #dfe5f1;
+    border-radius: 6px;
+    background: #fafbfe;
+    color: #334373;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-structured-credit-toggle:hover {
+    border-color: #b9c5e6;
+}
+
+.admin-structured-credit-toggle.is-invalid {
+    border-color: #e3a5a5;
+    color: #b54747;
+}
+
+.admin-structured-credit-chevron {
+    color: #8a93ab;
+    font-size: 0.75rem;
+}
+
+.admin-structured-credit-add:focus-visible,
+.admin-structured-credit-toggle:focus-visible {
+    outline: 2px solid #3853ba;
+    outline-offset: 2px;
+}
+
+.admin-structured-credit-summary {
+    flex: 1 1 160px;
+    min-width: 0;
+    color: #5f6984;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.admin-structured-credit-summary.is-empty {
+    color: #8a93ab;
+}
+
+.admin-structured-credit-fields {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.admin-structured-credit-names {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 10px 12px;
+}
+
+.admin-structured-credit-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    min-width: 0;
+}
+
+.admin-structured-credit-preview {
+    flex: 1 1 160px;
+    min-width: 0;
+    margin: 0;
+    color: #6b7590;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.admin-structured-credit-preview[hidden] {
+    display: none;
+}
+
+.admin-structured-credit-remove.admin-btn.is-small {
+    margin-left: auto;
 }
 
 /* ---- 블록 추가 ---- */
@@ -399,8 +591,18 @@
 }
 
 @media (max-width: 860px) {
-    .admin-structured-item-fields {
+    /* 이미지 카드는 모두 한 칸. 이미지 자리는 [미리보기 | 버튼] 가로로 두어 카드 길이를 줄인다. */
+    .admin-structured-image-card {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-structured-image-card .admin-structured-image {
+        flex-direction: row;
+    }
+
+    .admin-structured-image-card .admin-structured-image-preview,
+    .admin-structured-image-card.is-stacked .admin-structured-image-preview {
+        width: 132px;
     }
 
     .admin-structured-grid.is-2,
@@ -414,13 +616,21 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .admin-structured-image {
+    .admin-structured-image,
+    .admin-structured-image-card .admin-structured-image {
         flex-direction: column;
     }
 
-    .admin-structured-image-preview {
+    .admin-structured-image-preview,
+    .admin-structured-image-card .admin-structured-image-preview,
+    .admin-structured-image-card.is-stacked .admin-structured-image-preview {
         width: 100%;
         max-width: 320px;
+    }
+
+    /* 좁은 화면에서는 출처 입력도 모두 한 칸씩 */
+    .admin-structured-credit-names {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .admin-structured-block-actions {

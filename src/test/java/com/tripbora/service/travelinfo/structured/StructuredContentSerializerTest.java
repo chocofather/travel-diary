@@ -63,6 +63,11 @@ class StructuredContentSerializerTest {
                 "\"credit\":{\"source\":\"한국관광공사\",\"license\":\"공공누리 제1유형\"}",
                 "{\"id\":\"c2\",\"image\":{\"url\":\"" + IMAGE.url() + "\",\"width\":1200,\"height\":800},");
         assertThat(json).doesNotContain("null");
+        // 공개 화면용 보조 메서드(출처표시 조각)는 JSON 에 남지 않고, JSON 키로 들어와도 받지 않는다.
+        assertThat(json).doesNotContain("displayParts", "creditParts");
+        assertThatThrownBy(() -> parser.parseContent(json.replace("\"credit\":{\"author\"",
+                "\"credit\":{\"displayParts\":[],\"author\"")))
+                .hasMessageContaining("허용하지 않는 항목이 있습니다: displayParts");
         assertThat(parser.parseContent(json)).isEqualTo(content);
         assertThat(serializer.write(parser.parseContent(json))).isEqualTo(json);
     }

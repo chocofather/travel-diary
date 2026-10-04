@@ -20,16 +20,22 @@ class StructuredEditorLimitsContractTest {
     @Test
     void editorLimitsMatchTheServerValidator() throws IOException {
         String script = resource("/static/js/admin-structured-editor.js");
-        Map<String, Integer> expected = Map.of(
-                "blocks", StructuredContentValidator.MAX_BLOCKS,
-                "sliderItems", StructuredContentValidator.MAX_SLIDER_ITEMS,
-                "title", StructuredContentValidator.TextField.TITLE.maxLength(),
-                "richText", StructuredContentValidator.TextField.RICH_TEXT.maxLength(),
-                "imageText", StructuredContentValidator.TextField.IMAGE_TEXT.maxLength(),
-                "caption", StructuredContentValidator.TextField.CAPTION.maxLength(),
-                "alt", StructuredContentValidator.TextField.ALT.maxLength(),
-                "itemTitle", StructuredContentValidator.TextField.ITEM_TITLE.maxLength(),
-                "callout", StructuredContentValidator.TextField.CALLOUT.maxLength());
+        Map<String, Integer> expected = Map.ofEntries(
+                Map.entry("blocks", StructuredContentValidator.MAX_BLOCKS),
+                Map.entry("sliderItems", StructuredContentValidator.MAX_SLIDER_ITEMS),
+                Map.entry("title", StructuredContentValidator.TextField.TITLE.maxLength()),
+                Map.entry("richText", StructuredContentValidator.TextField.RICH_TEXT.maxLength()),
+                Map.entry("imageText", StructuredContentValidator.TextField.IMAGE_TEXT.maxLength()),
+                Map.entry("caption", StructuredContentValidator.TextField.CAPTION.maxLength()),
+                Map.entry("alt", StructuredContentValidator.TextField.ALT.maxLength()),
+                Map.entry("itemTitle", StructuredContentValidator.TextField.ITEM_TITLE.maxLength()),
+                Map.entry("callout", StructuredContentValidator.TextField.CALLOUT.maxLength()),
+                // 이미지 출처표시(credit)
+                Map.entry("creditAuthor", StructuredContentValidator.TextField.CREDIT_AUTHOR.maxLength()),
+                Map.entry("creditSource", StructuredContentValidator.TextField.CREDIT_SOURCE.maxLength()),
+                Map.entry("creditSourceUrl", StructuredContentValidator.TextField.CREDIT_SOURCE_URL.maxLength()),
+                Map.entry("creditLicense", StructuredContentValidator.TextField.CREDIT_LICENSE.maxLength()),
+                Map.entry("creditLicenseUrl", StructuredContentValidator.TextField.CREDIT_LICENSE_URL.maxLength()));
 
         expected.forEach((name, value) -> {
             Matcher matcher = Pattern.compile("\\b" + name + ": (\\d+)").matcher(script);
