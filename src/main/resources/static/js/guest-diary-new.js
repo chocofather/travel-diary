@@ -21,7 +21,7 @@
 (function (global) {
     'use strict';
 
-    const store = global.TravelDiaryGuestDraftStore;
+    const store = global.TripBoraGuestDraftStore || global.TravelDiaryGuestDraftStore; // legacy fallback (P10a 제거)
     const page = document.querySelector('[data-guest-new]');
     if (!store || !page) {
         return;

@@ -77,7 +77,8 @@ $(function () {
     function birthDateStatus() {
         const field = $("#birthDate");
         if (field.length === 0) return "ok";
-        return window.TravelDiaryAgeEligibility.status(field.val(), field.data("today"));
+        return (window.TripBoraAgeEligibility || window.TravelDiaryAgeEligibility) // legacy fallback (P10a 제거)
+            .status(field.val(), field.data("today"));
     }
 
     function renderBirthDateStatus(status) {
@@ -164,7 +165,8 @@ $(function () {
     });
 
     function updateEmailTypoSuggestion(email) {
-        suggestedEmail = window.TravelDiaryEmailDomain?.suggest(email) || "";
+        suggestedEmail = (window.TripBoraEmailDomain || window.TravelDiaryEmailDomain) // legacy fallback (P10a 제거)
+            ?.suggest(email) || "";
         $("#emailSuggestion").prop("hidden", !suggestedEmail);
         if (suggestedEmail) {
             $("#emailSuggestionText").text(
@@ -173,7 +175,8 @@ $(function () {
     }
 
     function renderEmailDomainOptions(email) {
-        emailDomainOptions = window.TravelDiaryEmailDomain?.autocomplete(email) || [];
+        emailDomainOptions = (window.TripBoraEmailDomain || window.TravelDiaryEmailDomain) // legacy fallback (P10a 제거)
+            ?.autocomplete(email) || [];
         activeEmailDomainIndex = -1;
         const list = $("#emailDomainSuggestions").empty();
         emailDomainOptions.forEach(function (option, index) {
@@ -273,7 +276,9 @@ $(function () {
         chooseEmailDomain(suggestedEmail);
     });
 
-    window.TravelDiaryNicknameAvailability.initialize({
+    const nicknameAvailability =
+        window.TripBoraNicknameAvailability || window.TravelDiaryNicknameAvailability; // legacy fallback (P10a 제거)
+    nicknameAvailability.initialize({
         onInput: () => clearServerError("nickname"),
         onAvailabilityChange: isAvailable => {
             availability.nickname = isAvailable;

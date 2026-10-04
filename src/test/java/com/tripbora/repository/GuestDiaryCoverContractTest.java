@@ -236,7 +236,7 @@ class GuestDiaryCoverContractTest {
                 "diary-canvas-drag.js", "diary-sticker-picker.js", "diary-label-picker.js"}) {
             assertThat(script(name)).as(name)
                     .contains("DiarySaveTransport.post")
-                    .doesNotContain("TravelDiaryGuestDraftStore")
+                    .doesNotContain("TripBoraGuestDraftStore", "TravelDiaryGuestDraftStore")
                     .doesNotContain("isGuest")
                     .doesNotContain("guestMode");
         }

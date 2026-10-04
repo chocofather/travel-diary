@@ -483,9 +483,9 @@
             .replace(/\s+/g, ' ')
             .replace(/_+/g, '_')
             .replace(/^[. ]+|[. ]+$/g, '');
-        if (!safe || WINDOWS_RESERVED_NAME.test(safe)) safe = 'travel-diary';
+        if (!safe || WINDOWS_RESERVED_NAME.test(safe)) safe = 'tripbora-diary';
         safe = safe.slice(0, 80).replace(/[. ]+$/g, '');
-        return safe || 'travel-diary';
+        return safe || 'tripbora-diary';
     }
 
     global.diaryPdfExport = {createDiaryPdf, sanitizeFilename};

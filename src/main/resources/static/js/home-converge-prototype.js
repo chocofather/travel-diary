@@ -600,7 +600,8 @@
         logicalIndex,
         initRail
     };
-    root.TravelDiaryHomeConverge = api;
+    root.TripBoraHomeConverge = api;
+    root.TravelDiaryHomeConverge = root.TripBoraHomeConverge; // legacy alias (P10a 제거)
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     if (typeof document !== 'undefined' && typeof window !== 'undefined') init(document, window);
 })(typeof window !== 'undefined' ? window : globalThis);

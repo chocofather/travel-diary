@@ -39,7 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let suggestedEmail = "";
     const updateSuggestion = () => {
-        suggestedEmail = window.TravelDiaryEmailDomain?.suggest(emailInput.value) || "";
+        suggestedEmail = (window.TripBoraEmailDomain || window.TravelDiaryEmailDomain) // legacy fallback (P10a 제거)
+            ?.suggest(emailInput.value) || "";
         suggestion.hidden = !suggestedEmail;
         suggestionText.textContent = suggestedEmail
             ? formatMessage(suggestion.dataset.suggestionFormat, suggestedEmail)

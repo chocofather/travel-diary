@@ -72,5 +72,6 @@
         return plusYears(year, month, day, MINIMUM_AGE) > today ? "underage" : "ok";
     }
 
-    window.TravelDiaryAgeEligibility = Object.freeze({status});
+    window.TripBoraAgeEligibility = Object.freeze({status});
+    window.TravelDiaryAgeEligibility = window.TripBoraAgeEligibility; // legacy alias (P10a 제거)
 })();

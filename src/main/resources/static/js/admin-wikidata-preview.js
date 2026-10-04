@@ -8,15 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const results = root.querySelector('[data-wikidata-results]');
   const detail = root.querySelector('[data-wikidata-detail]');
   const form = document.querySelector('form[data-translation-collapsible]');
-  const applyPlanner = window.TravelDiaryWikidataApplyPlanner;
-  const wikipediaPlanner = window.TravelDiaryWikipediaDescriptionPlanner;
+  const applyPlanner = window.TripBoraWikidataApplyPlanner || window.TravelDiaryWikidataApplyPlanner; // legacy fallback (P10a 제거)
+  const wikipediaPlanner =
+      window.TripBoraWikipediaDescriptionPlanner || window.TravelDiaryWikipediaDescriptionPlanner; // legacy fallback (P10a 제거)
   const pendingWikipedia = new Map();
   const automaticValues = {};
   const responseCache = new Map();
   const wikipediaArea = form?.querySelector('[data-wikidata-wikipedia-area]');
   const commonsArea = form?.querySelector('[data-wikidata-commons-area]');
   const commonsSelectionField = form?.querySelector('[data-commons-selection]');
-  const commonsPicker = window.TravelDiaryCommonsPhotoPicker;
+  const commonsPicker = window.TripBoraCommonsPhotoPicker || window.TravelDiaryCommonsPhotoPicker; // legacy fallback (P10a 제거)
   const commonsSelection = {qid: null, photos: []};
   let restoredCommonsSelection = null;
   let wikipediaSummary = null;
@@ -366,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const name of [...conversionNotes.keys()]) removeConversionNote(name);
     const region = form?.querySelector('#regionIdHidden');
     if (automaticRegionId && region) {
-      window.TravelDiaryRegionSelector?.clearSelection();
+      (window.TripBoraRegionSelector || window.TravelDiaryRegionSelector)?.clearSelection(); // legacy fallback (P10a 제거)
     }
     automaticRegionId = null;
   }
@@ -437,9 +438,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const travelNote = (travelLabels.size ? ` · 상세정보 ${[...travelLabels].join('·')} 자동입력` : '')
       + conversionNote;
     const missing = [];
-    if (plan.regionPath && !regionOccupied() && window.TravelDiaryRegionSelector) {
+    const regionSelector = window.TripBoraRegionSelector || window.TravelDiaryRegionSelector; // legacy fallback (P10a 제거)
+    if (plan.regionPath && !regionOccupied() && regionSelector) {
       automaticRegionId = String(plan.regionPath.at(-1).id);
-      void window.TravelDiaryRegionSelector.applyRegionPath(plan.regionPath).then(applied => {
+      void regionSelector.applyRegionPath(plan.regionPath).then(applied => {
         if (current !== selectionNumber) return;
         if (applied) {
           automaticRegionId = String(plan.regionPath.at(-1).id);

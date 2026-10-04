@@ -302,7 +302,8 @@
     refreshMore();
   }
 
-  root.TravelDiaryCommonsPhotoPicker = {togglePhoto, setMain, serializeSelection, render};
+  root.TripBoraCommonsPhotoPicker = {togglePhoto, setMain, serializeSelection, render};
+  root.TravelDiaryCommonsPhotoPicker = root.TripBoraCommonsPhotoPicker; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {togglePhoto, setMain, serializeSelection, render};
   }

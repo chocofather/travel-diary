@@ -58,7 +58,7 @@ class GuestDiaryEditorContractTest {
         String editor = script("guest-diary-editor.js");
 
         assertThat(editor)
-                .contains("global.TravelDiaryGuestDraftStore")
+                .contains("global.TripBoraGuestDraftStore")
                 .contains("store.addPage")
                 .contains("store.removePage")
                 .contains("store.updatePage")
@@ -202,7 +202,7 @@ class GuestDiaryEditorContractTest {
             assertThat(script(name)).as(name)
                     .contains("DiarySaveTransport.post")
                     .doesNotContain("fetch(")
-                    .doesNotContain("TravelDiaryGuestDraftStore")
+                    .doesNotContain("TripBoraGuestDraftStore", "TravelDiaryGuestDraftStore")
                     .doesNotContain("isGuest")
                     .doesNotContain("guestMode");
         }

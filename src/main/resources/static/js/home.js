@@ -50,7 +50,7 @@ for (const [key, value] of Object.entries(seasonMeta)) {
     }
 }
 // 개발환경(localhost)에서만 ?season= 으로 계절을 미리 본다. 그 밖에는 null 이라 위 월별 판별을 그대로 쓴다.
-const previewSeason = window.TravelDiarySeasonPreview
+const previewSeason = (window.TripBoraSeasonPreview || window.TravelDiarySeasonPreview) // legacy fallback (P10a 제거)
     ?.previewSeasonKey(location.hostname, location.search);
 if (previewSeason) currentSeason = previewSeason;
 const meta = seasonMeta[currentSeason];

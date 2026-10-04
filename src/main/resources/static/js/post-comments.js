@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lengthOutput = document.getElementById('post-comment-length');
     const sortButtons = section.querySelectorAll('[data-comment-sort]');
     const moreButton = document.getElementById('post-comment-more');
-    const deepLink = window.TravelDiaryCommentDeepLink;
+    const deepLink = window.TripBoraCommentDeepLink || window.TravelDiaryCommentDeepLink; // legacy fallback (P10a 제거)
     const targetCommentId = deepLink?.readTargetCommentId() ?? null;
 
     const pageSize = 5;

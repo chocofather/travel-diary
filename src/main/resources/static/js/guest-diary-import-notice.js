@@ -8,7 +8,7 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     const notice = document.querySelector('[data-guest-import-notice]');
-    const store = window.TravelDiaryGuestDraftStore;
+    const store = window.TripBoraGuestDraftStore || window.TravelDiaryGuestDraftStore; // legacy fallback (P10a 제거)
     if (!notice || !store) return;
 
     // 남은 것이 없으면 아무것도 보여 주지 않는다.

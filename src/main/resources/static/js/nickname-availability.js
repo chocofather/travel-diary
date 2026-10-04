@@ -88,5 +88,6 @@
         };
     }
 
-    window.TravelDiaryNicknameAvailability = Object.freeze({initialize});
+    window.TripBoraNicknameAvailability = Object.freeze({initialize});
+    window.TravelDiaryNicknameAvailability = window.TripBoraNicknameAvailability; // legacy alias (P10a 제거)
 })(window.jQuery);

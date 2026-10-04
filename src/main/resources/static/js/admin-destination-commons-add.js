@@ -1,8 +1,8 @@
 // 기존 Wikidata 여행지의 이미지 관리 화면에서 Commons 사진을 골라 한 번에 추가한다.
-// 후보 표시는 등록폼과 같은 카드(TravelDiaryCommonsPhotoPicker)를 쓰고, 서버로는 QID·파일명·대표 여부만 보낸다.
+// 후보 표시는 등록폼과 같은 카드(TripBoraCommonsPhotoPicker)를 쓰고, 서버로는 QID·파일명·대표 여부만 보낸다.
 document.addEventListener('DOMContentLoaded', () => {
   const root = document.querySelector('[data-commons-add]');
-  const picker = window.TravelDiaryCommonsPhotoPicker;
+  const picker = window.TripBoraCommonsPhotoPicker || window.TravelDiaryCommonsPhotoPicker; // legacy fallback (P10a 제거)
   if (!root || !picker) return;
 
   const qid = root.dataset.qid;

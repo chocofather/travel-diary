@@ -2,7 +2,8 @@
 let socialSignupStep = 1;
 
 $(function () {
-    window.TravelDiaryNicknameAvailability?.initialize();
+    (window.TripBoraNicknameAvailability || window.TravelDiaryNicknameAvailability) // legacy fallback (P10a 제거)
+        ?.initialize();
     initializeAgeCheck();
     initializePolicyConsents();
     initializeEmailStatus();
@@ -78,7 +79,8 @@ function formatSocialSignupMessage(template, ...values) {
 function socialSignupBirthDateStatus() {
     const $input = $("#birthDate");
     if ($input.length === 0) return "ok";
-    return window.TravelDiaryAgeEligibility.status($input.val(), $input.data("today"));
+    return (window.TripBoraAgeEligibility || window.TravelDiaryAgeEligibility) // legacy fallback (P10a 제거)
+        .status($input.val(), $input.data("today"));
 }
 
 /** 1단계 통과 조건은 만 14세 이상 + 필수 정책 동의 두 가지뿐이다. 선택 항목은 조건이 아니다. */

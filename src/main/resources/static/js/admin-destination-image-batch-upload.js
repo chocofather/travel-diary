@@ -106,7 +106,8 @@
     }
 
     const api = {planUpload, summarize, describeResponse, runUploadQueue, markRetry, formatBytes};
-    root.TravelDiaryImageBatchUpload = api;
+    root.TripBoraImageBatchUpload = api;
+    root.TravelDiaryImageBatchUpload = root.TripBoraImageBatchUpload; // legacy alias (P10a 제거)
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     if (typeof document === "undefined") return;
 

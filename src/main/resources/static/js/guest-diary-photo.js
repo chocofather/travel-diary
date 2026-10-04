@@ -16,7 +16,7 @@
 (function (global) {
     'use strict';
 
-    const store = global.TravelDiaryGuestPhotoStore;
+    const store = global.TripBoraGuestPhotoStore || global.TravelDiaryGuestPhotoStore; // legacy fallback (P10a 제거)
 
     /*
      * 받아들일 사진. 회원 화면과 같은 한도(Spring max-file-size 10MB)를 쓴다.

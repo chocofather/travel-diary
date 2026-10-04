@@ -126,7 +126,8 @@
     }
   }
 
-  root.TravelDiaryWikidataBulkPlanner = {rowState, summarize, registerPayload, runRegistrationQueue};
+  root.TripBoraWikidataBulkPlanner = {rowState, summarize, registerPayload, runRegistrationQueue};
+  root.TravelDiaryWikidataBulkPlanner = root.TripBoraWikidataBulkPlanner; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {rowState, summarize, registerPayload, runRegistrationQueue, AUTO_RETRY_LIMIT};
   }
@@ -137,7 +138,7 @@
     if (!page) return;
     const apiBase = '/admin/api/wikidata/bulk';
     const domesticRootId = page.dataset.domesticRootId || '';
-    const picker = window.TravelDiaryCommonsPhotoPicker;
+    const picker = window.TripBoraCommonsPhotoPicker || window.TravelDiaryCommonsPhotoPicker; // legacy fallback (P10a 제거)
     const $ = selector => page.querySelector(selector);
     const searchForm = $('[data-bulk-search-form]');
     const keywordInput = $('[data-bulk-keyword]');
@@ -152,7 +153,8 @@
     const pageClearButton = $('[data-bulk-page-clear]');
     const pageToggle = $('[data-bulk-page-toggle]');
     const pageCount = $('[data-bulk-page-count]');
-    const {pageSelection, applyPageSelection} = window.TravelDiaryBulkPageSelection;
+    const {pageSelection, applyPageSelection} =
+        window.TripBoraBulkPageSelection || window.TravelDiaryBulkPageSelection; // legacy fallback (P10a 제거)
     const openReviewButton = $('[data-bulk-open-review]');
     const chips = $('[data-bulk-chips]');
     const review = $('[data-bulk-review]');

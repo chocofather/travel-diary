@@ -38,7 +38,7 @@ export function init() {
     const countEl = document.getElementById('comment-count');
     const moreButton = document.getElementById('load-more-comments');
     const sortButtons = commentSectionEl?.querySelectorAll('[data-comment-sort]') || [];
-    const deepLink = window.TravelDiaryCommentDeepLink;
+    const deepLink = window.TripBoraCommentDeepLink || window.TravelDiaryCommentDeepLink; // legacy fallback (P10a 제거)
     const targetCommentId = deepLink?.readTargetCommentId() ?? null;
 
     const pageSize = 5;

@@ -62,7 +62,8 @@
     }
 
     const api = {moveItem, changedCount, insertionPoint, finalIndex};
-    root.TravelDiaryImageOrder = api;
+    root.TripBoraImageOrder = api;
+    root.TravelDiaryImageOrder = root.TripBoraImageOrder; // legacy alias (P10a 제거)
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     if (typeof document === "undefined") return;
 

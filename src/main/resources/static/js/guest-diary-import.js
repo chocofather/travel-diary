@@ -11,8 +11,8 @@
 (function (global) {
     'use strict';
 
-    const store = global.TravelDiaryGuestDraftStore;
-    const photoStore = global.TravelDiaryGuestPhotoStore;
+    const store = global.TripBoraGuestDraftStore || global.TravelDiaryGuestDraftStore; // legacy fallback (P10a 제거)
+    const photoStore = global.TripBoraGuestPhotoStore || global.TravelDiaryGuestPhotoStore; // legacy fallback (P10a 제거)
     const preview = global.GuestDiaryCoverPreview;
     const intent = global.GuestDiaryImportIntent;
     const page = document.querySelector('[data-guest-import]');

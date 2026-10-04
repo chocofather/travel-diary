@@ -180,8 +180,8 @@ class GuestDiaryImportIntentContractTest {
         String intent = script("guest-diary-import-intent.js");
         assertThat(intent)
                 .contains("store.removeItem(KEY)")
-                .doesNotContain("TravelDiaryGuestDraftStore")
-                .doesNotContain("TravelDiaryGuestPhotoStore")
+                .doesNotContain("TripBoraGuestDraftStore", "TravelDiaryGuestDraftStore")
+                .doesNotContain("TripBoraGuestPhotoStore", "TravelDiaryGuestPhotoStore")
                 .doesNotContain("indexedDB");
 
         /*

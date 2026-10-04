@@ -228,7 +228,7 @@
         return result.ok ? {ok: true, removed: result.value || 0} : result;
     }
 
-    global.TravelDiaryGuestPhotoStore = {
+    global.TripBoraGuestPhotoStore = {
         DB_NAME: DB_NAME,
         STORE_NAME: STORE,
         DRAFT_INDEX: DRAFT_INDEX,
@@ -242,4 +242,5 @@
         deletePhotosForDraft: deletePhotosForDraft,
         cleanupOrphans: cleanupOrphans
     };
+    global.TravelDiaryGuestPhotoStore = global.TripBoraGuestPhotoStore; // legacy alias (P10a 제거)
 })(window);

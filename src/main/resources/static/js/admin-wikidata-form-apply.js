@@ -118,8 +118,9 @@
     });
   }
 
-  root.TravelDiaryWikidataApplyPlanner = {planAutofill, planTravelInfo, stillEmptyChanges, manualConflicts,
+  root.TripBoraWikidataApplyPlanner = {planAutofill, planTravelInfo, stillEmptyChanges, manualConflicts,
     automaticFieldsToClear, mergeSearchDetails};
+  root.TravelDiaryWikidataApplyPlanner = root.TripBoraWikidataApplyPlanner; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {planAutofill, planTravelInfo, stillEmptyChanges, manualConflicts, automaticFieldsToClear,
       mergeSearchDetails};

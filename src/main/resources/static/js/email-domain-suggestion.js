@@ -37,5 +37,6 @@
             .map(domain => parts.localPart + "@" + domain);
     }
 
-    window.TravelDiaryEmailDomain = Object.freeze({suggest, autocomplete});
+    window.TripBoraEmailDomain = Object.freeze({suggest, autocomplete});
+    window.TravelDiaryEmailDomain = window.TripBoraEmailDomain; // legacy alias (P10a 제거)
 })();

@@ -41,7 +41,7 @@ class GuestDiaryPhotoContractTest {
                     .contains("global.GuestDiaryPhoto?.initialize(photoHost(), showPhotoStatus);");
         }
         assertThat(script("guest-diary-photo.js"))
-                .contains("global.TravelDiaryGuestPhotoStore");
+                .contains("global.TripBoraGuestPhotoStore");
     }
 
     /** 2) 15) Blob/base64/data URL 은 localStorage 에 들어가지 않는다. */

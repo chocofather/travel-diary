@@ -32,9 +32,10 @@
         return true;
     }
 
-    global.TravelDiaryCommentDeepLink = Object.freeze({
+    global.TripBoraCommentDeepLink = Object.freeze({
         readTargetCommentId,
         scrollToSection,
         focusTarget
     });
+    global.TravelDiaryCommentDeepLink = global.TripBoraCommentDeepLink; // legacy alias (P10a 제거)
 })(window);

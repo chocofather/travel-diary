@@ -78,10 +78,11 @@
       : 'Wikipedia 상세 설명 자동입력 없음 · 출처 상세 보기에서 언어별 사유를 확인하세요.';
   }
 
-  root.TravelDiaryWikipediaDescriptionPlanner = {
+  root.TripBoraWikipediaDescriptionPlanner = {
     planWikipediaDescriptions, planWikipediaTitleFallback, stagePreviewDescription, discardPreviewDescription,
     summarizeWikipediaApplication
   };
+  root.TravelDiaryWikipediaDescriptionPlanner = root.TripBoraWikipediaDescriptionPlanner; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {planWikipediaDescriptions, planWikipediaTitleFallback, stagePreviewDescription,
       discardPreviewDescription, summarizeWikipediaApplication};

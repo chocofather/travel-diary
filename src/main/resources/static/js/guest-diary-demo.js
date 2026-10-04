@@ -11,7 +11,7 @@
 (function (global) {
     'use strict';
 
-    const store = global.TravelDiaryGuestDraftStore;
+    const store = global.TripBoraGuestDraftStore || global.TravelDiaryGuestDraftStore; // legacy fallback (P10a 제거)
     const preview = global.GuestDiaryCoverPreview;
     const page = document.querySelector('[data-guest-shelf]');
     if (!store || !preview || !page) {
@@ -26,7 +26,7 @@
     const deletePrompt = document.querySelector('[data-guest-delete-prompt]');
     const intent = global.GuestDiaryImportIntent;
 
-    const photoStore = global.TravelDiaryGuestPhotoStore;
+    const photoStore = global.TripBoraGuestPhotoStore || global.TravelDiaryGuestPhotoStore; // legacy fallback (P10a 제거)
 
     render();
     wireActions();

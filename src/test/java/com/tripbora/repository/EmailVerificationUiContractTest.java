@@ -68,7 +68,7 @@ class EmailVerificationUiContractTest {
         assertThat(resend).contains("/js/email-domain-suggestion.js");
         assertThat(suggestion)
                 .contains("[\"gamil.com\", \"gmail.com\"]")
-                .contains("TravelDiaryEmailDomain");
+                .contains("TripBoraEmailDomain");
     }
 
     /** 다른 탭에서 인증을 끝냈을 때 대기 화면이 스스로 알아채도록 polling 이 연결돼 있다. */

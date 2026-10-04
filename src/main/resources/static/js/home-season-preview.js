@@ -25,6 +25,7 @@
     }
 
     const api = { previewSeasonKey };
-    root.TravelDiarySeasonPreview = api;
+    root.TripBoraSeasonPreview = api;
+    root.TravelDiarySeasonPreview = root.TripBoraSeasonPreview; // legacy alias (P10a 제거)
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

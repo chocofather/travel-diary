@@ -15,7 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const pageClearButton = root.querySelector("[data-kto-import-page-clear]");
     const pageToggle = root.querySelector("[data-kto-import-page-toggle]");
     const pageCount = root.querySelector("[data-kto-import-page-count]");
-    const {pageSelection, applyPageSelection} = window.TravelDiaryBulkPageSelection;
+    const {pageSelection, applyPageSelection} =
+        window.TripBoraBulkPageSelection || window.TravelDiaryBulkPageSelection; // legacy fallback (P10a 제거)
     const filterButtons = Array.from(root.querySelectorAll("[data-kto-import-filter]"));
     const previousButton = root.querySelector("[data-kto-import-prev]");
     const nextButton = root.querySelector("[data-kto-import-next]");

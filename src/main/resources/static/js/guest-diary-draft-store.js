@@ -690,7 +690,7 @@
         return result.ok ? {ok: true, draft: result.draft} : result;
     }
 
-    global.TravelDiaryGuestDraftStore = {
+    global.TripBoraGuestDraftStore = {
         STORAGE_KEY: STORAGE_KEY,
         SCHEMA_VERSION: SCHEMA_VERSION,
         MAX_PAGES: MAX_PAGES,
@@ -719,4 +719,5 @@
         removeCoverElement: removeCoverElement,
         clear: clear
     };
+    global.TravelDiaryGuestDraftStore = global.TripBoraGuestDraftStore; // legacy alias (P10a 제거)
 })(window);

@@ -65,9 +65,11 @@ class RegistrationUiContractTest {
                 .contains("email: false")
                 .contains("nickname: false")
                 .contains("invalidate(\"email\")")
-                .contains("TravelDiaryNicknameAvailability.initialize")
-                .contains("TravelDiaryEmailDomain?.suggest(email)")
-                .contains("TravelDiaryEmailDomain?.autocomplete(email)")
+                .contains("window.TripBoraNicknameAvailability")
+                .contains("nicknameAvailability.initialize({")
+                .contains("window.TripBoraEmailDomain")
+                .contains("?.suggest(email)")
+                .contains("?.autocomplete(email)")
                 .contains("event.key === \"ArrowDown\"")
                 .contains("event.key === \"ArrowUp\"")
                 .contains("event.key === \"Enter\"")
@@ -111,13 +113,15 @@ class RegistrationUiContractTest {
         // 이전 버그: checkValidity() 는 required/max 만 보고 나이는 모른다.
         assertThat(registerJs)
                 .contains("function birthDateStatus()")
-                .contains("window.TravelDiaryAgeEligibility.status(")
+                .contains("window.TripBoraAgeEligibility")
+                .contains(".status(field.val(), field.data(\"today\"))")
                 .contains("birthDateStatus() === \"ok\"")
                 .contains("$(\".next-step\").on(\"click\"")
                 .doesNotContain("$(\"#birthDate\")[0].checkValidity()");
         assertThat(socialSignupJs)
                 .contains("function initializeAgeCheck()")
-                .contains("window.TravelDiaryAgeEligibility.status(")
+                .contains("window.TripBoraAgeEligibility")
+                .contains(".status($input.val(), $input.data(\"today\"))")
                 .contains("event.preventDefault()");
         // 두 화면이 각자 계산하면 경계가 갈린다. 판정은 한 파일에만 둔다.
         assertThat(registerJs + socialSignupJs).doesNotContain("year + 14", "+ 14,");
@@ -172,9 +176,9 @@ class RegistrationUiContractTest {
                 .contains("function resolveToday(serverToday)")
                 .contains("const today = resolveToday(serverToday);");
         assertThat(registerJs)
-                .contains("window.TravelDiaryAgeEligibility.status(field.val(), field.data(\"today\"))");
+                .contains(".status(field.val(), field.data(\"today\"))");
         assertThat(socialSignupJs)
-                .contains("window.TravelDiaryAgeEligibility.status($input.val(), $input.data(\"today\"))");
+                .contains(".status($input.val(), $input.data(\"today\"))");
         String serverToday = "th:data-today=\"${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}\"";
         assertThat(registerHtml).as("일반 가입 화면이 서버 기준일을 내려보낸다").contains(serverToday);
         assertThat(socialSignupHtml).as("소셜 가입 화면도 같은 기준일을 쓴다").contains(serverToday);

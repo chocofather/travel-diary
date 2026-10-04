@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // 외부(TourAPI 자동선택)에서 호출하는 경우는 사용자가 지역을 바꾼 것으로 본다.
-    window.TravelDiaryRegionSelector = {
+    window.TripBoraRegionSelector = {
         applyRegionPath: path => {
             regionSelectionChanged = true;
             return applyRegionPath(path);
@@ -334,4 +334,5 @@ document.addEventListener("DOMContentLoaded", function () {
             clearSelection();
         }
     };
+    window.TravelDiaryRegionSelector = window.TripBoraRegionSelector; // legacy alias (P10a 제거)
 });

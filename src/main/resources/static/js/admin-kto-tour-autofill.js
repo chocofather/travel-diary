@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (contentChanged) {
             clearTourApiManagedFields();
             clearEnglishAutofill();
-            window.TravelDiaryRegionSelector?.clearSelection();
+            (window.TripBoraRegionSelector || window.TravelDiaryRegionSelector)?.clearSelection(); // legacy fallback (P10a 제거)
         }
         lastSelectedContentId = item.contentId;
         setLoading(true, `${item.title || "선택한 장소"} 정보를 불러오고 있습니다.`);
@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function applyRegionMatch(regionMatch, requestGeneration) {
         if (requestGeneration !== foreignRequestGeneration) return;
-        const regionSelector = window.TravelDiaryRegionSelector;
+        const regionSelector = window.TripBoraRegionSelector || window.TravelDiaryRegionSelector; // legacy fallback (P10a 제거)
         if (!regionSelector) return;
         if (!regionMatch?.matched || !Array.isArray(regionMatch.path)) {
             setStatus("지역을 자동으로 찾지 못했습니다. 직접 선택해 주세요.");

@@ -49,7 +49,7 @@ class AdminDestinationRegionSelectionUiContractTest {
         String script = resource("/static/js/region-selector.js");
 
         assertThat(script)
-                .contains("window.TravelDiaryRegionSelector")
+                .contains("window.TripBoraRegionSelector")
                 .contains("applyRegionPath")
                 .contains("clearSelection")
                 .contains("handleManualChange")

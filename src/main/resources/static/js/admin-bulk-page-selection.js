@@ -28,7 +28,8 @@
     if (count) count.textContent = `현재 페이지 선택 가능 ${summary.selectable}건 중 ${summary.selected}건 선택`;
   }
 
-  root.TravelDiaryBulkPageSelection = {pageSelection, applyPageSelection};
+  root.TripBoraBulkPageSelection = {pageSelection, applyPageSelection};
+  root.TravelDiaryBulkPageSelection = root.TripBoraBulkPageSelection; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {pageSelection, applyPageSelection};
   }
