@@ -1,0 +1,51 @@
+package com.tripbora.model;
+
+import java.util.Arrays;
+
+/**
+ * 관리자 화면에서 자주 쓰는 여행지 이미지 라이선스 선택지.
+ *
+ * <p>DB 컬럼은 문자열로 유지한다. 따라서 이 목록에 없는 해외 라이선스나 향후 코드도
+ * 조회·표시할 수 있고, 이 enum은 입력 편의를 위한 알려진 값 목록으로만 사용한다.</p>
+ */
+public enum DestinationImageLicenseType {
+    KOGL_TYPE_1("공공누리 제1유형"),
+    KOGL_TYPE_2("공공누리 제2유형"),
+    /** 출처표시·상업적 이용 가능·변경금지. 변경금지 조건이 출처 표시에서 보이도록 라벨에 함께 쓴다. */
+    KOGL_TYPE_3("공공누리 제3유형 · 변경금지"),
+    KOGL_TYPE_4("공공누리 제4유형"),
+    DIRECT("직접 촬영 / 자체 저작권"),
+    CREATIVE_COMMONS("Creative Commons"),
+    PERMISSION("별도 이용허락"),
+    OTHER("기타 라이선스"),
+    UNKNOWN("라이선스 확인 안 됨"),
+    /** 기존 저장값 호환용. 새 입력에서는 별도 표기 없음을 선택하면 된다. */
+    NONE("별도 표기 없음");
+
+    private final String displayName;
+
+    DestinationImageLicenseType(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getCode() {
+        return name();
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public static String displayName(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        String normalized = code.strip();
+        return Arrays.stream(values())
+                .filter(type -> type.name().equals(normalized))
+                .map(DestinationImageLicenseType::getDisplayName)
+                .findFirst()
+                .orElse(normalized);
+    }
+
+}

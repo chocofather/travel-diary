@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.faq.FaqMapper">
+<mapper namespace="com.tripbora.repository.faq.FaqMapper">
 
-    <resultMap id="FaqResultMap" type="com.example.travlediary.model.Faq">
+    <resultMap id="FaqResultMap" type="com.tripbora.model.Faq">
         <id property="id" column="id"/>
         <result property="question" column="question"/>
         <result property="answer" column="answer"/>
@@ -17,7 +17,7 @@
         <result property="userId" column="user_id"/>
     </resultMap>
 
-    <resultMap id="FaqListResultMap" type="com.example.travlediary.dto.FaqListItemDto">
+    <resultMap id="FaqListResultMap" type="com.tripbora.dto.FaqListItemDto">
         <id property="id" column="id"/>
         <result property="question" column="question"/>
         <result property="answer" column="answer"/>
@@ -29,27 +29,27 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="FaqCategoryResultMap" type="com.example.travlediary.model.FaqCategory">
+    <resultMap id="FaqCategoryResultMap" type="com.tripbora.model.FaqCategory">
         <id property="id" column="id"/>
         <result property="categoryName" column="category_name"/>
     </resultMap>
 
     <resultMap id="FaqCategoryListResultMap"
-               type="com.example.travlediary.dto.FaqCategoryListItemDto">
+               type="com.tripbora.dto.FaqCategoryListItemDto">
         <id property="id" column="id"/>
         <result property="categoryName" column="category_name"/>
         <result property="faqCount" column="faq_count"/>
     </resultMap>
 
     <resultMap id="FaqCategoryTranslationResultMap"
-               type="com.example.travlediary.model.FaqCategoryTranslation">
+               type="com.tripbora.model.FaqCategoryTranslation">
         <id property="id" column="id"/>
         <result property="faqCategoryId" column="faq_category_id"/>
         <result property="languageCode" column="language_code"/>
         <result property="categoryName" column="category_name"/>
     </resultMap>
 
-    <resultMap id="FaqTranslationResultMap" type="com.example.travlediary.model.FaqTranslation">
+    <resultMap id="FaqTranslationResultMap" type="com.tripbora.model.FaqTranslation">
         <id property="id" column="id"/>
         <result property="faqId" column="faq_id"/>
         <result property="languageCode" column="language_code"/>
@@ -113,13 +113,13 @@
         FOR UPDATE
     </select>
 
-    <insert id="insertFaq" parameterType="com.example.travlediary.model.Faq"
+    <insert id="insertFaq" parameterType="com.tripbora.model.Faq"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO faqs (question, answer, order_index, is_visible, category_id, user_id)
         VALUES (#{question}, #{answer}, #{orderIndex}, #{isVisible}, #{categoryId}, #{userId})
     </insert>
 
-    <update id="updateFaq" parameterType="com.example.travlediary.model.Faq">
+    <update id="updateFaq" parameterType="com.tripbora.model.Faq">
         UPDATE faqs
         SET question = #{question},
             answer = #{answer},
@@ -164,14 +164,14 @@
     </select>
 
     <insert id="insertTranslation"
-            parameterType="com.example.travlediary.model.FaqTranslation"
+            parameterType="com.tripbora.model.FaqTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO faq_translations (faq_id, language_code, question, answer)
         VALUES (#{faqId}, #{languageCode}, #{question}, #{answer})
     </insert>
 
     <update id="updateTranslation"
-            parameterType="com.example.travlediary.model.FaqTranslation">
+            parameterType="com.tripbora.model.FaqTranslation">
         UPDATE faq_translations
         SET question = #{question},
             answer = #{answer}
@@ -199,13 +199,13 @@
         ORDER BY fc.category_name ASC, fc.id ASC
     </select>
 
-    <insert id="insertCategory" parameterType="com.example.travlediary.model.FaqCategory"
+    <insert id="insertCategory" parameterType="com.tripbora.model.FaqCategory"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO faq_categories (category_name)
         VALUES (#{categoryName})
     </insert>
 
-    <update id="updateCategory" parameterType="com.example.travlediary.model.FaqCategory">
+    <update id="updateCategory" parameterType="com.tripbora.model.FaqCategory">
         UPDATE faq_categories
         SET category_name = #{categoryName}
         WHERE id = #{id}
@@ -262,14 +262,14 @@
     </select>
 
     <insert id="insertCategoryTranslation"
-            parameterType="com.example.travlediary.model.FaqCategoryTranslation"
+            parameterType="com.tripbora.model.FaqCategoryTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO faq_category_translations (faq_category_id, language_code, category_name)
         VALUES (#{faqCategoryId}, #{languageCode}, #{categoryName})
     </insert>
 
     <update id="updateCategoryTranslation"
-            parameterType="com.example.travlediary.model.FaqCategoryTranslation">
+            parameterType="com.tripbora.model.FaqCategoryTranslation">
         UPDATE faq_category_translations
         SET category_name = #{categoryName}
         WHERE faq_category_id = #{faqCategoryId}

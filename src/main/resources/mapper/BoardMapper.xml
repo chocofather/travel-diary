@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.board.BoardMapper">
+<mapper namespace="com.tripbora.repository.board.BoardMapper">
 
     <!--
       최종 탈퇴 회원의 작성자 표시용 플래그.
@@ -199,7 +199,7 @@
         </choose>
     </sql>
 
-    <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
+    <select id="findBoardList" resultType="com.tripbora.dto.BoardListDto">
         SELECT
             board.id,
             board.userId,
@@ -337,7 +337,7 @@
         </if>
     </sql>
 
-    <select id="findBoardListByUserId" resultType="com.example.travlediary.dto.BoardListDto">
+    <select id="findBoardListByUserId" resultType="com.tripbora.dto.BoardListDto">
         SELECT
             board.id,
             board.userId,

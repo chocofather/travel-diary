@@ -3,25 +3,25 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.destination.DestinationMapper">
+<mapper namespace="com.tripbora.repository.destination.DestinationMapper">
 
     <!-- 썸네일용 -->
-    <resultMap id="destinationWithThumbnail" type="com.example.travlediary.model.Destination">
+    <resultMap id="destinationWithThumbnail" type="com.tripbora.model.Destination">
         <id     property="id"            column="id"/>
         <result property="latitude"      column="latitude"/>
         <result property="longitude"     column="longitude"/>
-        <result property="season" column="season" javaType="com.example.travlediary.model.DestinationSeason"/>
+        <result property="season" column="season" javaType="com.tripbora.model.DestinationSeason"/>
         <result property="userID"        column="user_id"/>
         <result property="regionId"      column="region_id"/>
         <result property="regionName"    column="region_name"/>
         <result property="name"          column="name"/>
         <result property="thumbnailPath" column="thumbnail"/>
         <result property="shortDescription" column="short_description"/>
-        <result property="type" column="type" javaType="com.example.travlediary.model.DestinationType"/>
+        <result property="type" column="type" javaType="com.tripbora.model.DestinationType"/>
     </resultMap>
 
     <!-- 이미지 컬렉션용 -->
-    <resultMap id="imageMap" type="com.example.travlediary.model.DestinationImage">
+    <resultMap id="imageMap" type="com.tripbora.model.DestinationImage">
         <id     property="id"         column="img_id"/>
         <result property="imageUrl"   column="img_image_url"/>
         <result property="sourceType" column="img_source_type"/>
@@ -79,7 +79,7 @@
     </sql>
 
     <!-- 상세페이지용 (필요하면 컬럼 더 추가) -->
-    <resultMap id="DestinationDetailMap" type="com.example.travlediary.model.Destination">
+    <resultMap id="DestinationDetailMap" type="com.tripbora.model.Destination">
         <id     property="id"            column="id"/>
         <result property="latitude"      column="latitude"/>
         <result property="longitude"     column="longitude"/>
@@ -93,11 +93,11 @@
         <result property="thumbnailPath" column="thumbnail"/>
         <result column="views" property="views"/>
         <result property="shortDescription" column="short_description"/>
-        <result property="type" column="type" javaType="com.example.travlediary.model.DestinationType"/>
+        <result property="type" column="type" javaType="com.tripbora.model.DestinationType"/>
 
         <!-- 이미지 리스트 -->
         <collection property="images"
-                    ofType="com.example.travlediary.model.DestinationImage"
+                    ofType="com.tripbora.model.DestinationImage"
                     resultMap="imageMap"
                     javaType="java.util.ArrayList"/>
     </resultMap>
@@ -136,7 +136,7 @@
         WHERE source_type = #{sourceType} AND external_content_id = #{externalContentId}
         LIMIT 1
     </select>
-    <select id="findTranslationByDestinationAndLanguage" resultType="com.example.travlediary.model.DestinationTranslation">
+    <select id="findTranslationByDestinationAndLanguage" resultType="com.tripbora.model.DestinationTranslation">
         SELECT id, destination_id AS destinationId, language_code AS languageCode,
                name, description, short_description AS shortDescription
         FROM destination_translations
@@ -153,7 +153,7 @@
         </foreach>
     </select>
 
-    <insert id="insertTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
+    <insert id="insertTranslation" parameterType="com.tripbora.model.DestinationTranslation">
         INSERT INTO destination_translations (destination_id, language_code, name, description, short_description)
         VALUES (#{destinationId}, #{languageCode}, #{name}, #{description}, #{shortDescription})
     </insert>
@@ -215,7 +215,7 @@
     </insert>
 
     <!-- Commons 사진은 새 출처 테이블에만 원문 전체를 저장한다. 구 destination_images 출처 컬럼은 비워 둔다. -->
-    <insert id="insertCommonsImageSource" parameterType="com.example.travlediary.model.DestinationImageCommonsSource">
+    <insert id="insertCommonsImageSource" parameterType="com.tripbora.model.DestinationImageCommonsSource">
         INSERT INTO destination_image_sources (
             destination_image_id, source_name, external_content_id, source_title,
             author_text, work_page_url, original_image_url,
@@ -311,7 +311,7 @@
         ORDER BY di.order_index, di.id
     </select>
 
-    <select id="findAllWithRegion" resultType="com.example.travlediary.model.Destination">
+    <select id="findAllWithRegion" resultType="com.tripbora.model.Destination">
         SELECT d.*, c.region_name, t.name, t.description, t.short_description
         FROM destinations d
                  JOIN country_categories c ON d.region_id = c.id
@@ -422,7 +422,7 @@
             work_page_url = #{workPageUrl}
     </insert>
 
-    <!--<select id="findByCountryCategoryId" resultType="com.example.travlediary.model.Destination">
+    <!--<select id="findByCountryCategoryId" resultType="com.tripbora.model.Destination">
         SELECT
             d.id,
             dt.name AS name,
@@ -449,7 +449,7 @@
             )
     </select>-->
 
-    <select id="findByRegionIds" resultType="com.example.travlediary.model.Destination">
+    <select id="findByRegionIds" resultType="com.tripbora.model.Destination">
         SELECT
         d.id,
         dt.name AS name,
@@ -491,14 +491,14 @@
         WHERE id = #{id}
     </update>
 
-    <select id="findTranslationsByDestinationId" resultType="com.example.travlediary.model.DestinationTranslation">
+    <select id="findTranslationsByDestinationId" resultType="com.tripbora.model.DestinationTranslation">
         SELECT *
         FROM destination_translations
         WHERE destination_id = #{destinationId}
     </select>
 
     <select id="findTranslationsByDestinationIds"
-            resultType="com.example.travlediary.model.DestinationTranslation">
+            resultType="com.tripbora.model.DestinationTranslation">
         SELECT id,
                destination_id AS destinationId,
                language_code AS languageCode,
@@ -562,7 +562,7 @@
         WHERE id = #{commentId}
     </update>
 
-    <update id="updateDestination" parameterType="com.example.travlediary.model.Destination">
+    <update id="updateDestination" parameterType="com.tripbora.model.Destination">
         UPDATE destinations
         SET
             latitude = #{latitude},
@@ -596,7 +596,7 @@
         WHERE destination_id = #{destinationId} AND category_id = #{categoryId}
     </update>
 
-    <update id="updateTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
+    <update id="updateTranslation" parameterType="com.tripbora.model.DestinationTranslation">
         UPDATE destination_translations
         SET name = #{name},
             description = #{description},
@@ -629,7 +629,7 @@
       여기서 함께 읽으면 한 쪽(12건)마다 그만큼을 헛되이 실어 오게 된다.
       DestinationDto 에는 description 자리가 아예 없다.
     -->
-    <select id="findByRegionIdsPaged" resultType="com.example.travlediary.model.Destination">
+    <select id="findByRegionIdsPaged" resultType="com.tripbora.model.Destination">
         SELECT
         d.id,
         dt.name AS name,
@@ -705,7 +705,7 @@
       이 지역 범위의 여행지에 등록된 카테고리 + 고른 카테고리 중 실제로 있는 것(여행지 0곳이어도).
       없는 카테고리 번호는 결과에 나오지 않는다.
     -->
-    <select id="findCategoryFilterCounts" resultType="com.example.travlediary.dto.CategoryDestinationCount">
+    <select id="findCategoryFilterCounts" resultType="com.tripbora.dto.CategoryDestinationCount">
         SELECT c.id AS categoryId, COUNT(DISTINCT d.id) AS destinationCount
         FROM categories c
         LEFT JOIN destination_categories dc ON dc.category_id = c.id
@@ -724,7 +724,7 @@
         </if>
     </select>
 
-    <select id="findDomesticPaged" resultType="com.example.travlediary.model.Destination">
+    <select id="findDomesticPaged" resultType="com.tripbora.model.Destination">
         WITH RECURSIVE region_tree AS (
         SELECT id FROM country_categories WHERE id = 7
         UNION ALL

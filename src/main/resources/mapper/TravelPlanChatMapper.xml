@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanChatMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanChatMapper">
 
     <!--
       보낸 사람 이름은 그 방의 travel_plan_members 에서 가져온다.
@@ -34,7 +34,7 @@
 
     <!-- 최근 것부터 limit 건. (travel_plan_id, id) 인덱스를 그대로 탄다 -->
     <select id="findRecentMessages"
-            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+            resultType="com.tripbora.model.TravelPlanChatMessage">
         SELECT
         <include refid="messageColumns"/>
         FROM travel_plan_chat_messages c
@@ -47,7 +47,7 @@
 
     <!-- [이전 메시지 보기]. OFFSET 으로 앞을 세지 않고 id 로 끊는다 -->
     <select id="findMessagesBefore"
-            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+            resultType="com.tripbora.model.TravelPlanChatMessage">
         SELECT
         <include refid="messageColumns"/>
         FROM travel_plan_chat_messages c
@@ -61,7 +61,7 @@
 
     <!-- 메시지 1건. 방 소속까지 함께 확인한다 -->
     <select id="findByIdAndPlanId"
-            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+            resultType="com.tripbora.model.TravelPlanChatMessage">
         SELECT
         <include refid="messageColumns"/>
         FROM travel_plan_chat_messages c

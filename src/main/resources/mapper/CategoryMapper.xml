@@ -3,23 +3,23 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.category.CategoryMapper">
+<mapper namespace="com.tripbora.repository.category.CategoryMapper">
 
     <resultMap id="CategoryTranslationResultMap"
-               type="com.example.travlediary.model.CategoryTranslation">
+               type="com.tripbora.model.CategoryTranslation">
         <id property="id" column="id"/>
         <result property="categoryId" column="category_id"/>
         <result property="languageCode" column="language_code"/>
         <result property="name" column="name"/>
     </resultMap>
 
-    <select id="findAll" resultType="com.example.travlediary.model.Category">
+    <select id="findAll" resultType="com.tripbora.model.Category">
         SELECT id, name FROM categories
         ORDER BY id
     </select>
 
     <!-- 여행지 유형별 카테고리 마스터 목록 (category_destination_types 기준) -->
-    <select id="findByDestinationType" resultType="com.example.travlediary.model.Category">
+    <select id="findByDestinationType" resultType="com.tripbora.model.Category">
         SELECT c.id, c.name
         FROM category_destination_types cdt
                  JOIN categories c ON c.id = cdt.category_id
@@ -29,7 +29,7 @@
 
     <!-- 카테고리 ↔ 여행지 유형 마스터 매핑 전체 (화면 필터 태그용) -->
     <select id="findCategoryDestinationTypes"
-            resultType="com.example.travlediary.model.CategoryDestinationType">
+            resultType="com.tripbora.model.CategoryDestinationType">
         SELECT category_id, destination_type
         FROM category_destination_types
         ORDER BY category_id, destination_type
@@ -52,11 +52,11 @@
     </delete>
 
     <!-- 단건 카테고리 조회 (수정 화면 복원 / 삭제 대상 확인용) -->
-    <select id="findById" parameterType="long" resultType="com.example.travlediary.model.Category">
+    <select id="findById" parameterType="long" resultType="com.tripbora.model.Category">
         SELECT id, name FROM categories WHERE id = #{id}
     </select>
 
-    <select id="findByIds" resultType="com.example.travlediary.model.Category">
+    <select id="findByIds" resultType="com.tripbora.model.Category">
         SELECT id, name
         FROM categories
         <choose>
@@ -103,14 +103,14 @@
     </select>
 
     <insert id="insertTranslation"
-            parameterType="com.example.travlediary.model.CategoryTranslation"
+            parameterType="com.tripbora.model.CategoryTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO category_translations (category_id, language_code, name)
         VALUES (#{categoryId}, #{languageCode}, #{name})
     </insert>
 
     <update id="updateTranslation"
-            parameterType="com.example.travlediary.model.CategoryTranslation">
+            parameterType="com.tripbora.model.CategoryTranslation">
         UPDATE category_translations
         SET name = #{name}
         WHERE category_id = #{categoryId}
@@ -124,7 +124,7 @@
     </delete>
 
     <!-- 카테고리 이름 변경 -->
-    <update id="update" parameterType="com.example.travlediary.model.Category">
+    <update id="update" parameterType="com.tripbora.model.Category">
         UPDATE categories
         SET name = #{name}
         WHERE id = #{id}
@@ -142,7 +142,7 @@
 
     <!-- 카테고리 1건의 적용 가능한 여행지 유형 (수정 화면 체크 복원용) -->
     <select id="findCategoryDestinationTypesByCategoryId"
-            resultType="com.example.travlediary.model.CategoryDestinationType">
+            resultType="com.tripbora.model.CategoryDestinationType">
         SELECT category_id, destination_type
         FROM category_destination_types
         WHERE category_id = #{categoryId}

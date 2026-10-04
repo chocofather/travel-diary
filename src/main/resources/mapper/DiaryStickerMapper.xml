@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.travlediary.repository.diary.DiaryStickerMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryStickerMapper">
 
-    <resultMap id="CategoryMap" type="com.example.travlediary.model.DiaryStickerCategoryEntity">
+    <resultMap id="CategoryMap" type="com.tripbora.model.DiaryStickerCategoryEntity">
         <id property="id" column="id"/>
         <result property="code" column="code"/>
         <result property="name" column="name"/>
@@ -11,7 +11,7 @@
         <result property="visible" column="is_visible"/>
     </resultMap>
 
-    <resultMap id="StickerMap" type="com.example.travlediary.model.DiaryStickerCatalogItem">
+    <resultMap id="StickerMap" type="com.tripbora.model.DiaryStickerCatalogItem">
         <id property="id" column="id"/>
         <result property="catalogKey" column="catalog_key"/>
         <result property="name" column="name"/>

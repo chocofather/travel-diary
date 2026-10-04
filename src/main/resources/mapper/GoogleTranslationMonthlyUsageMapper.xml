@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.translation.GoogleTranslationMonthlyUsageMapper">
+<mapper namespace="com.tripbora.repository.translation.GoogleTranslationMonthlyUsageMapper">
     <insert id="insertMonthIfAbsent">
         INSERT IGNORE INTO google_translation_monthly_usage (
             month_key, used_characters, provider_calls, created_at, updated_at

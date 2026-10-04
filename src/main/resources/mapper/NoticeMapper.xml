@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.notice.NoticeMapper">
+<mapper namespace="com.tripbora.repository.notice.NoticeMapper">
 
-    <resultMap id="NoticeResultMap" type="com.example.travlediary.model.Notice">
+    <resultMap id="NoticeResultMap" type="com.tripbora.model.Notice">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
@@ -16,7 +16,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="NoticeListResultMap" type="com.example.travlediary.dto.NoticeListItemDto">
+    <resultMap id="NoticeListResultMap" type="com.tripbora.dto.NoticeListItemDto">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="pinned" column="is_pinned"/>
@@ -25,7 +25,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="NoticeDetailResultMap" type="com.example.travlediary.dto.NoticeDetailDto">
+    <resultMap id="NoticeDetailResultMap" type="com.tripbora.dto.NoticeDetailDto">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
@@ -34,7 +34,7 @@
     </resultMap>
 
     <resultMap id="NoticeTranslationResultMap"
-               type="com.example.travlediary.model.NoticeTranslation">
+               type="com.tripbora.model.NoticeTranslation">
         <id property="id" column="id"/>
         <result property="noticeId" column="notice_id"/>
         <result property="languageCode" column="language_code"/>
@@ -87,13 +87,13 @@
         FOR UPDATE
     </select>
 
-    <insert id="insertNotice" parameterType="com.example.travlediary.model.Notice"
+    <insert id="insertNotice" parameterType="com.tripbora.model.Notice"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO notices (title, content, is_pinned, views, user_id)
         VALUES (#{title}, #{content}, #{pinned}, 0, #{userId})
     </insert>
 
-    <update id="updateNotice" parameterType="com.example.travlediary.model.Notice">
+    <update id="updateNotice" parameterType="com.tripbora.model.Notice">
         UPDATE notices
         SET title = #{title},
             content = #{content},
@@ -137,14 +137,14 @@
     </select>
 
     <insert id="insertTranslation"
-            parameterType="com.example.travlediary.model.NoticeTranslation"
+            parameterType="com.tripbora.model.NoticeTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO notice_translations (notice_id, language_code, title, content)
         VALUES (#{noticeId}, #{languageCode}, #{title}, #{content})
     </insert>
 
     <update id="updateTranslation"
-            parameterType="com.example.travlediary.model.NoticeTranslation">
+            parameterType="com.tripbora.model.NoticeTranslation">
         UPDATE notice_translations
         SET title = #{title},
             content = #{content}

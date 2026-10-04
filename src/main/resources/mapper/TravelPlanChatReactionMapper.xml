@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanChatReactionMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanChatReactionMapper">
 
     <!--
       반응 남기기. 한 사람이 한 메시지에 남길 수 있는 것은 하나뿐이다.
@@ -43,7 +43,7 @@
       한 사람은 한 메시지에 하나만 남기므로, 한 메시지 안에서 reacted 가 1 인 줄은
       많아야 하나다. 그것이 지금 보는 사람이 누른 반응이다.
     -->
-    <select id="findSummaries" resultType="com.example.travlediary.dto.TravelPlanChatReactionRow">
+    <select id="findSummaries" resultType="com.tripbora.dto.TravelPlanChatReactionRow">
         SELECT r.message_id                              AS message_id,
                r.reaction_type                           AS reaction_type,
                COUNT(*)                                  AS count,

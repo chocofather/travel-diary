@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.category.InfoCategoryMapper">
+<mapper namespace="com.tripbora.repository.category.InfoCategoryMapper">
 
-    <resultMap id="InfoCategoryResultMap" type="com.example.travlediary.model.InfoCategory">
+    <resultMap id="InfoCategoryResultMap" type="com.tripbora.model.InfoCategory">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="contentType" column="content_type"/>
@@ -14,7 +14,7 @@
     </resultMap>
 
     <resultMap id="InfoCategoryTranslationResultMap"
-               type="com.example.travlediary.model.InfoCategoryTranslation">
+               type="com.tripbora.model.InfoCategoryTranslation">
         <id property="id" column="id"/>
         <result property="infoCategoryId" column="info_category_id"/>
         <result property="languageCode" column="language_code"/>
@@ -48,13 +48,13 @@
         WHERE id = #{id}
     </select>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.InfoCategory"
+    <insert id="insert" parameterType="com.tripbora.model.InfoCategory"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO info_categories (name, content_type, display_order, is_visible)
         VALUES (#{name}, #{contentType}, #{displayOrder}, #{isVisible})
     </insert>
 
-    <update id="update" parameterType="com.example.travlediary.model.InfoCategory">
+    <update id="update" parameterType="com.tripbora.model.InfoCategory">
         UPDATE info_categories
         SET name = #{name},
             content_type = #{contentType},
@@ -114,14 +114,14 @@
     </select>
 
     <insert id="insertTranslation"
-            parameterType="com.example.travlediary.model.InfoCategoryTranslation"
+            parameterType="com.tripbora.model.InfoCategoryTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO info_category_translations (info_category_id, language_code, name)
         VALUES (#{infoCategoryId}, #{languageCode}, #{name})
     </insert>
 
     <update id="updateTranslation"
-            parameterType="com.example.travlediary.model.InfoCategoryTranslation">
+            parameterType="com.tripbora.model.InfoCategoryTranslation">
         UPDATE info_category_translations
         SET name = #{name}
         WHERE info_category_id = #{infoCategoryId}

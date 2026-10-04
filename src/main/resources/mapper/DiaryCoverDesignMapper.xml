@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverDesignMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverDesignMapper">
 
-    <resultMap id="DiaryCoverDesignMap" type="com.example.travlediary.model.DiaryCoverDesign">
+    <resultMap id="DiaryCoverDesignMap" type="com.tripbora.model.DiaryCoverDesign">
         <id     property="id"              column="id"/>
         <result property="userId"          column="user_id"/>
         <result property="sourceLibraryItemId" column="source_library_item_id"/>
@@ -21,7 +21,7 @@
         created_at, updated_at
     </sql>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesign"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCoverDesign"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_designs (
             user_id, source_library_item_id, name, base_cover_style, background_color,
@@ -69,7 +69,7 @@
       소유자는 바뀌지 않는다. 여기서도 user_id 로 한 번 더 막는다.
       출처(source_library_item_id)는 받을 때 한 번 정해지고 편집으로 바뀌지 않으므로 여기서 건드리지 않는다.
     -->
-    <update id="update" parameterType="com.example.travlediary.model.DiaryCoverDesign">
+    <update id="update" parameterType="com.tripbora.model.DiaryCoverDesign">
         UPDATE diary_cover_designs
         SET name = #{name},
             base_cover_style = #{baseCoverStyle},

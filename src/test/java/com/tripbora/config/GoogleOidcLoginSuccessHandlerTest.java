@@ -1,0 +1,1290 @@
+package com.tripbora.config;
+
+import com.tripbora.model.PendingSocialLink;
+import com.tripbora.model.PendingSocialLoginLink;
+import com.tripbora.model.PendingSocialSignup;
+import com.tripbora.model.PendingEmailCorrection;
+import com.tripbora.model.PendingSocialConnection;
+import com.tripbora.model.PendingSocialWithdrawal;
+import com.tripbora.model.SocialConnectionNotice;
+import com.tripbora.model.SocialAccount;
+import com.tripbora.model.SocialProvider;
+import com.tripbora.model.User;
+import com.tripbora.model.UserRole;
+import com.tripbora.model.UserStatus;
+import com.tripbora.repository.user.UserMapper;
+import com.tripbora.security.CustomUserDetails;
+import com.tripbora.security.LoginThrottle;
+import com.tripbora.service.user.MissingEmailRegistrationService;
+import com.tripbora.service.user.EmailCorrectionService;
+import com.tripbora.service.user.SocialAccountService;
+import com.tripbora.service.user.SocialConnectionResult;
+import com.tripbora.service.user.SocialEmailAccountResolver;
+import com.tripbora.service.user.SocialWithdrawalException;
+import com.tripbora.service.user.SocialWithdrawalService;
+import com.tripbora.service.user.UserSanctionService;
+import com.tripbora.service.user.SocialLoginLinkService;
+import com.tripbora.service.user.WithdrawalGraceService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class SocialOAuth2LoginSuccessHandlerTest {
+
+    @Mock
+    private SocialAccountService socialAccountService;
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private UserSanctionService userSanctionService;
+    @Mock
+    private SocialWithdrawalService socialWithdrawalService;
+    @Mock
+    private OAuth2AuthorizedClientService authorizedClientService;
+    @Mock
+    private TravelDiaryAuthenticationRestorer authenticationRestorer;
+    @Mock
+    private WithdrawalGraceService withdrawalGraceService;
+    @Mock
+    private EmailCorrectionService emailCorrectionService;
+
+    private SocialOAuth2LoginSuccessHandler handler;
+
+    @BeforeEach
+    void setUp() {
+        handler = new SocialOAuth2LoginSuccessHandler(
+                socialAccountService,
+                userMapper,
+                userSanctionService,
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
+                        withdrawalGraceService,
+                        socialLoginLinkService(),
+                        missingEmailRegistrationService()),
+                withdrawalGraceService,
+                emailAccountResolver(),
+                emailCorrectionService);
+        SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * 이메일 판정은 mock 이 아니라 실제 resolver 를 태운다.
+     * 같은 이메일 계정 유무는 userMapper.findByEmail stub 으로 정한다.
+     */
+    private SocialEmailAccountResolver emailAccountResolver() {
+        return new SocialEmailAccountResolver(userMapper, withdrawalGraceService);
+    }
+
+    @Test
+    void activeGoogleAccountUsesSubAndBecomesCustomUserDetailsWithDatabaseUserRole()
+            throws Exception {
+        OAuth2AuthenticationToken googleAuthentication = googleAuthentication(
+                "google-sub-123", "same@example.com", true, "ROLE_ADMIN");
+        SocialAccount socialAccount = socialAccount(7L, "google-sub-123");
+        User user = user(7L, UserRole.USER, UserStatus.ACTIVE);
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123")).thenReturn(socialAccount);
+        when(userMapper.findById(7L)).thenReturn(user);
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect", "/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, googleAuthentication);
+
+        Authentication internal = savedAuthentication(request);
+        assertThat(internal).isInstanceOf(UsernamePasswordAuthenticationToken.class);
+        assertThat(internal.getPrincipal()).isInstanceOf(CustomUserDetails.class);
+        assertThat(((CustomUserDetails) internal.getPrincipal()).getId()).isEqualTo(7L);
+        assertThat(internal.getName()).isEqualTo("user:7");
+        assertThat(internal.getAuthorities())
+                .extracting(authority -> authority.getAuthority())
+                .containsExactly("ROLE_USER");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage");
+        verify(socialAccountService).findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123");
+        verify(userMapper).findById(7L);
+        verify(userMapper, never()).findByEmail(anyString());
+    }
+
+    @Test
+    void databaseAdminRoleIsUsedEvenWhenGoogleDoesNotProvideIt() throws Exception {
+        OAuth2AuthenticationToken googleAuthentication = googleAuthentication(
+                "admin-sub", "admin@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "admin-sub"))
+                .thenReturn(socialAccount(99L, "admin-sub"));
+        when(userMapper.findById(99L))
+                .thenReturn(user(99L, UserRole.ADMIN, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(99L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, googleAuthentication);
+
+        assertThat(savedAuthentication(request).getAuthorities())
+                .extracting(authority -> authority.getAuthority())
+                .containsExactly("ROLE_ADMIN");
+    }
+
+    @Test
+    void savedRequestPolicyIsReusedForAnExistingGoogleAccount() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-sub-123", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123"))
+                .thenReturn(socialAccount(7L, "google-sub-123"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest original = new MockHttpServletRequest("GET", "/travel-info");
+        original.setScheme("http");
+        original.setServerName("localhost");
+        original.setServerPort(80);
+        original.setQueryString("sort=views");
+        new HttpSessionRequestCache().saveRequest(original, new MockHttpServletResponse());
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setSession(original.getSession());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/travel-info?sort=views");
+    }
+
+    @Test
+    void restrictedGoogleAccountUsesTheExistingRestrictedRedirect() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "restricted-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "restricted-sub"))
+                .thenReturn(socialAccount(7L, "restricted-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, UserRole.USER, UserStatus.RESTRICTED));
+        when(userSanctionService.releaseIfExpired(7L)).thenReturn(false);
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.RESTRICTED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/restricted");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(savedAuthentication(request).getPrincipal())
+                .isInstanceOf(CustomUserDetails.class);
+    }
+
+    /**
+     * 30일 유예 동안 social_accounts 연결을 그대로 두므로 소셜 인증 자체는 통과한다.
+     * 다만 일반 로그인과 똑같이 탈퇴 유예 전용 화면으로만 간다.
+     */
+    @Test
+    void withdrawalPendingGoogleAccountGoesToTheWithdrawalNoticePage() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "pending-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "pending-sub"))
+                .thenReturn(socialAccount(7L, "pending-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(savedAuthentication(request).getPrincipal())
+                .isInstanceOf(CustomUserDetails.class);
+    }
+
+    /**
+     * 유예가 끝난 계정으로 같은 Kakao 로 다시 로그인한 경우.
+     * provider 인증은 방금 끝났으므로 기존 계정을 즉시 파기하고 그대로 신규 가입으로 이어간다.
+     * 안내 화면으로 보내면 복구도 못 하면서 식별정보만 점유한 채 갇힌다.
+     */
+    @Test
+    void anExpiredKakaoAccountIsFinalizedAndContinuesIntoTheSocialSignupFlow()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "5068008846",
+                "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "5068008846"))
+                .thenReturn(socialAccount(19L, SocialProvider.KAKAO, "5068008846"));
+        when(userMapper.findById(19L))
+                .thenReturn(user(19L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(19L, SocialProvider.KAKAO))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 지금 인증한 provider 를 그대로 들고 기존 소셜 가입 흐름으로 간다.
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.KAKAO);
+        assertThat(pending.providerUserId()).isEqualTo("5068008846");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        // 정상 회원 세션은 만들어지지 않는다. 가입을 끝내야 로그인된다.
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        // 최종 파기는 지금 로그인한 provider 를 알려 주고 맡긴다(현재 provider unlink 억제).
+        verify(withdrawalGraceService).resolveAccess(19L, SocialProvider.KAKAO);
+    }
+
+    /** Google/Naver 도 같은 흐름을 탄다. provider 별로 분기하지 않는다. */
+    @Test
+    void anExpiredGoogleAccountAlsoContinuesIntoTheSocialSignupFlow() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "expired-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "expired-sub"))
+                .thenReturn(socialAccount(7L, "expired-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("expired-sub");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+    }
+
+    /** 최종 탈퇴(DEACTIVATED)는 이번 변경과 무관하게 그대로 막힌다. */
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"INACTIVE", "SUSPENDED", "DEACTIVATED"})
+    void unavailableGoogleAccountStatusesAreRejected(UserStatus status) throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "blocked-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "blocked-sub"))
+                .thenReturn(socialAccount(7L, "blocked-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, UserRole.USER, status));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        saveAuthentication(request, authentication);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+    }
+
+    @Test
+    void unknownGoogleAccountStoresOnlyShortLivedVerifiedSignupData() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "new@example.com", true, "ROLE_ADMIN");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        saveAuthentication(request, authentication);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.flowId()).isNotBlank();
+        assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("new-google-sub");
+        assertThat(pending.providerEmail()).isEqualTo("new@example.com");
+        assertThat(pending.providerEmailVerified()).isTrue();
+        assertThat(Duration.between(pending.createdAt(), pending.expiresAt()))
+                .isEqualTo(Duration.ofMinutes(10));
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        assertThat(Collections.list(request.getSession().getAttributeNames()))
+                .containsExactly(PendingSocialSignup.SESSION_ATTRIBUTE);
+        // 같은 이메일 계정 유무는 먼저 확인하되, 없으면 기존 신규가입 흐름 그대로다.
+        verify(userMapper).findByEmail("new@example.com");
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    @Test
+    void validConnectionIntentConnectsTheCurrentMemberAndBypassesNormalSocialLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-link-sub", "existing@example.com", true, "OIDC_USER");
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.GOOGLE);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.GOOGLE, "google-link-sub",
+                "existing@example.com", true))
+                .thenReturn(SocialConnectionResult.CONNECTED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.CONNECTED, SocialProvider.GOOGLE));
+        verify(authenticationRestorer).restore(request, response, 7L);
+        verify(socialAccountService).connectToUser(
+                7L, SocialProvider.GOOGLE, "google-link-sub",
+                "existing@example.com", true);
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        verify(userMapper, never()).findByEmail(anyString());
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    @Test
+    void connectionOwnedByAnotherMemberIsRejectedWithoutEnteringNormalLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "owned-naver", "email", "same@example.com"),
+                "OAUTH2_USER", true);
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.NAVER);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.NAVER, "owned-naver", "same@example.com", null))
+                .thenReturn(SocialConnectionResult.OWNED_BY_ANOTHER_USER);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.ERROR, SocialProvider.NAVER));
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void duplicateProviderConnectionReturnsAHandledNoticeWithoutNormalLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-new",
+                null, null, "OIDC_USER");
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.KAKAO);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.KAKAO, "kakao-new", null, null))
+                .thenReturn(SocialConnectionResult.ALREADY_CONNECTED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.ALREADY_CONNECTED,
+                        SocialProvider.KAKAO));
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void differentOAuthStateCannotConsumeAConnectionIntent() throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "normal-login-sub", "normal@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "normal-login-sub")).thenReturn(null);
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.GOOGLE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "different-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isEqualTo(pending);
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isInstanceOf(PendingSocialSignup.class);
+        verify(socialAccountService, never()).connectToUser(
+                any(), any(), anyString(), any(), any());
+    }
+
+    /**
+     * Google 이 email_verified 를 주지 않으면 인증된 이메일로 쓰지 않는다.
+     * 이메일 없이 조용히 가입시키지도, 그 이메일의 기존 계정을 찾지도 않는다.
+     */
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void unverifiedGoogleEmailNeitherSignsUpNorLooksUpAnExistingAccount(Boolean emailVerified)
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "sub-not-email", "existing@example.com", emailVerified, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "sub-not-email")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialEmailUnverified=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).findByEmail("existing@example.com");
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** verified 이메일이 기존 회원의 이메일과 같으면 새 users 대신 연결 확인으로 보낸다. */
+    @Test
+    void googleVerifiedEmailOfAnActiveMemberStartsLinkConfirmationInsteadOfSignup()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "Member@Example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com"))
+                .thenReturn(user(17L, UserRole.USER, UserStatus.ACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        saveAuthentication(request, authentication);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialLink pending = (PendingSocialLink) request.getSession()
+                .getAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
+        assertThat(pending.flowId()).isNotBlank();
+        assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("new-google-sub");
+        assertThat(pending.email()).isEqualTo("member@example.com");
+        assertThat(pending.targetUserId()).isEqualTo(17L);
+        assertThat(Duration.between(pending.createdAt(), pending.expiresAt()))
+                .isEqualTo(Duration.ofMinutes(10));
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-link");
+        // 확인 전에는 아무것도 저장하지 않고 로그인도 시키지 않는다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    /** 유예 중인 계정이 그 이메일을 점유한다. 새 계정도 연결도 만들지 않는다. */
+    @Test
+    void googleEmailHeldByAnAccountStillInWithdrawalGraceCannotCreateABypassAccount()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com")).thenReturn(
+                user(17L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(17L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialEmailWithdrawing=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /**
+     * Kakao/Naver 가입 후 이메일 인증 전에 같은 버튼을 다시 누른 경우.
+     * 새 가입 화면을 다시 띄우거나 새 users 를 만들지 않고 인증 대기 화면으로 보낸다.
+     */
+    @ParameterizedTest
+    @EnumSource(value = SocialProvider.class, names = {"KAKAO", "NAVER"})
+    void reLoggingInBeforeEmailVerificationGoesBackToTheWaitingScreen(SocialProvider provider)
+            throws Exception {
+        String providerUserId = provider == SocialProvider.KAKAO ? "kakao-sub" : "naver-id";
+        OAuth2AuthenticationToken authentication = provider == SocialProvider.KAKAO
+                ? oidcAuthentication("kakao", "https://kauth.kakao.com",
+                        providerUserId, null, null, "OIDC_USER")
+                : naverAuthentication("00", Map.of("id", providerUserId), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(provider, providerUserId))
+                .thenReturn(socialAccount(52L, provider, providerUserId));
+        User pendingMember = user(52L, UserRole.USER, UserStatus.INACTIVE);
+        pendingMember.setUserEmail("member@example.com");
+        when(userMapper.findById(52L)).thenReturn(pendingMember);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/users/register/verify-waiting");
+        // 재발송과 대기 화면이 보는 세션 값은 일반 회원가입과 같다.
+        assertThat(request.getSession().getAttribute("pendingVerificationEmail"))
+                .isEqualTo("member@example.com");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 이메일이 없는 옛 소셜 INACTIVE 계정은 인증 대기 흐름으로 보내지 않고 기존 정책을 쓴다. */
+    @Test
+    void anInactiveSocialAccountWithoutAnEmailKeepsTheExistingRejection() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub", null, null, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "kakao-sub"))
+                .thenReturn(socialAccount(52L, SocialProvider.KAKAO, "kakao-sub"));
+        when(userMapper.findById(52L))
+                .thenReturn(user(52L, UserRole.USER, UserStatus.INACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+    }
+
+    /** 이메일 인증 대기 계정을 소셜 로그인으로 조용히 가져가거나 우회 가입하지 않는다. */
+    @Test
+    void googleEmailHeldByAnUnverifiedRegularAccountGoesToTheVerificationNotice()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com"))
+                .thenReturn(user(17L, UserRole.USER, UserStatus.INACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?socialEmailPending=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    @Test
+    void activeKakaoAccountUsesSubAndDatabaseRoleInsteadOfProviderAuthority()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub-123",
+                "same@example.com", true, "ROLE_ADMIN");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "kakao-sub-123"))
+                .thenReturn(socialAccount(17L, SocialProvider.KAKAO, "kakao-sub-123"));
+        when(userMapper.findById(17L))
+                .thenReturn(user(17L, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(17L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        Authentication internal = savedAuthentication(request);
+        assertThat(((CustomUserDetails) internal.getPrincipal()).getId()).isEqualTo(17L);
+        assertThat(internal.getAuthorities())
+                .extracting(authority -> authority.getAuthority())
+                .containsExactly("ROLE_USER");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(17L);
+        assertThat(response.getRedirectedUrl()).isEqualTo("/");
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isNull();
+        verify(socialAccountService).findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "kakao-sub-123");
+        verify(userMapper, never()).insertUser(any());
+        verify(userMapper, never()).findByEmail(anyString());
+    }
+
+    @Test
+    void unknownKakaoAccountWithoutEmailCreatesValidMinimalPendingSignup()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "new-kakao-sub",
+                null, null, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "new-kakao-sub")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.KAKAO);
+        assertThat(pending.providerUserId()).isEqualTo("new-kakao-sub");
+        assertThat(pending.providerEmail()).isNull();
+        assertThat(pending.providerEmailVerified()).isNull();
+        assertThat(Duration.between(pending.createdAt(), pending.expiresAt()))
+                .isEqualTo(Duration.ofMinutes(10));
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    @Test
+    void unavailableKakaoAccountUsesTheExistingFailurePolicy() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "suspended-kakao-sub",
+                null, null, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "suspended-kakao-sub"))
+                .thenReturn(socialAccount(
+                        17L, SocialProvider.KAKAO, "suspended-kakao-sub"));
+        when(userMapper.findById(17L))
+                .thenReturn(user(17L, UserRole.USER, UserStatus.SUSPENDED));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+    }
+
+    @Test
+    void activeNaverAccountUsesNestedResponseIdAndDatabaseRole() throws Exception {
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "naver-id-123", "email", "same@example.com"),
+                "ROLE_ADMIN", true);
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "naver-id-123"))
+                .thenReturn(socialAccount(27L, SocialProvider.NAVER, "naver-id-123"));
+        when(userMapper.findById(27L))
+                .thenReturn(user(27L, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(27L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        Authentication internal = savedAuthentication(request);
+        assertThat(((CustomUserDetails) internal.getPrincipal()).getId()).isEqualTo(27L);
+        assertThat(internal.getAuthorities())
+                .extracting(authority -> authority.getAuthority())
+                .containsExactly("ROLE_USER");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(27L);
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isNull();
+        assertThat(response.getRedirectedUrl()).isEqualTo("/");
+        verify(socialAccountService).findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "naver-id-123");
+        verify(userMapper, never()).findByEmail(anyString());
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    @Test
+    void unknownNaverAccountStoresEmailAsUnverifiedReferenceOnly() throws Exception {
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "new-naver-id", "email", "naver@example.com"),
+                "ROLE_ADMIN", true);
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "new-naver-id")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.NAVER);
+        assertThat(pending.providerUserId()).isEqualTo("new-naver-id");
+        assertThat(pending.providerEmail()).isEqualTo("naver@example.com");
+        assertThat(pending.providerEmailVerified()).isNull();
+        assertThat(Duration.between(pending.createdAt(), pending.expiresAt()))
+                .isEqualTo(Duration.ofMinutes(10));
+        assertThat(Collections.list(request.getSession().getAttributeNames()))
+                .containsExactly(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        verify(userMapper, never()).findByEmail(anyString());
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    @Test
+    void unknownNaverAccountWithoutEmailStillCreatesPendingSignup() throws Exception {
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "new-naver-id"), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "new-naver-id")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.NAVER);
+        assertThat(pending.providerUserId()).isEqualTo("new-naver-id");
+        assertThat(pending.providerEmail()).isNull();
+        assertThat(pending.providerEmailVerified()).isNull();
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+    }
+
+    @Test
+    void suspendedNaverAccountUsesTheExistingFailurePolicy() throws Exception {
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "suspended-naver-id"), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "suspended-naver-id"))
+                .thenReturn(socialAccount(
+                        27L, SocialProvider.NAVER, "suspended-naver-id"));
+        when(userMapper.findById(27L))
+                .thenReturn(user(27L, UserRole.USER, UserStatus.SUSPENDED));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+    }
+
+    @Test
+    void naverRejectsFailedResultCodeMissingResponseAndUnexpectedResponseType()
+            throws Exception {
+        assertNaverRejected(naverAuthentication(
+                "01", Map.of("id", "id"), "OAUTH2_USER", true));
+        assertNaverRejected(naverAuthentication(
+                "00", null, "OAUTH2_USER", false));
+        assertNaverRejected(naverAuthentication(
+                "00", "not-a-map", "OAUTH2_USER", true));
+
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void naverRejectsMissingOrBlankResponseIdWithoutEmailFallback() throws Exception {
+        assertNaverRejected(naverAuthentication(
+                "00", Map.of("email", "fallback@example.com"), "OAUTH2_USER", true));
+        assertNaverRejected(naverAuthentication(
+                "00", Map.of("id", "   ", "email", "fallback@example.com"),
+                "OAUTH2_USER", true));
+
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        verify(userMapper, never()).findByEmail(anyString());
+    }
+
+    @Test
+    void unsupportedRegistrationIdIsRejectedBeforeSocialAccountLookup() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "unsupported", "https://example.com", "unsupported-sub",
+                null, null, "OIDC_USER");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void validWithdrawalIntentUsesTheFreshTokenAndBypassesNormalLoginBeforeLogout()
+            throws Exception {
+        handler = withdrawalHandler();
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub",
+                "same@example.com", true, "ROLE_ADMIN");
+        PendingSocialWithdrawal pending = withdrawalPending(7L, SocialProvider.KAKAO);
+        when(authorizedClientService.loadAuthorizedClient("kakao", authentication.getName()))
+                .thenReturn(authorizedClient("kakao", authentication.getName(), "fresh-token"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(socialWithdrawalService).complete(
+                pending, 7L, SocialProvider.KAKAO, "kakao-sub", "fresh-token");
+        verify(authorizedClientService).removeAuthorizedClient(
+                "kakao", authentication.getName());
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        org.mockito.InOrder order = inOrder(authorizedClientService, socialWithdrawalService);
+        order.verify(authorizedClientService).loadAuthorizedClient(
+                "kakao", authentication.getName());
+        order.verify(authorizedClientService).removeAuthorizedClient(
+                "kakao", authentication.getName());
+        order.verify(socialWithdrawalService).complete(
+                pending, 7L, SocialProvider.KAKAO, "kakao-sub", "fresh-token");
+        assertThat(request.getSession(false)).isNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(response.getRedirectedUrl()).isEqualTo("/?withdrawn=true");
+    }
+
+    @Test
+    void withdrawalIdentityMismatchConsumesIntentRestoresSessionAndNeverReportsSuccess()
+            throws Exception {
+        handler = withdrawalHandler();
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "naver-account-b"), "ROLE_ADMIN", true);
+        PendingSocialWithdrawal pending = withdrawalPending(7L, SocialProvider.NAVER);
+        when(authorizedClientService.loadAuthorizedClient("naver", authentication.getName()))
+                .thenReturn(authorizedClient("naver", authentication.getName(), "fresh-token"));
+        doThrow(new SocialWithdrawalException("safe failure"))
+                .when(socialWithdrawalService).complete(
+                        pending, 7L, SocialProvider.NAVER,
+                        "naver-account-b", "fresh-token");
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(request.getSession().getAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE)).isNull();
+        assertThat(((org.springframework.mock.web.MockHttpSession) request.getSession())
+                .isInvalid()).isFalse();
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/mypage/account?socialWithdrawalError=true");
+        verify(authorizedClientService).removeAuthorizedClient(
+                "naver", authentication.getName());
+        verify(authenticationRestorer).restore(request, response, 7L);
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    private SocialOAuth2LoginSuccessHandler withdrawalHandler() {
+        return new SocialOAuth2LoginSuccessHandler(
+                socialAccountService,
+                userMapper,
+                userSanctionService,
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
+                        withdrawalGraceService,
+                        socialLoginLinkService(),
+                        missingEmailRegistrationService()),
+                withdrawalGraceService,
+                socialWithdrawalService,
+                authorizedClientService,
+                authenticationRestorer,
+                emailAccountResolver(),
+                emailCorrectionService);
+    }
+
+    private SocialOAuth2LoginSuccessHandler connectionHandler() {
+        return withdrawalHandler();
+    }
+
+    private PendingSocialConnection connectionPending(
+            Long userId, SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialConnection(
+                "connection-flow", userId, provider, now, now.plusSeconds(600),
+                "connection-state");
+    }
+
+    private PendingSocialWithdrawal withdrawalPending(Long userId, SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialWithdrawal(
+                "flow-id", userId, provider, now, now.plusSeconds(600));
+    }
+
+    private OAuth2AuthorizedClient authorizedClient(String registrationId,
+                                                    String principalName,
+                                                    String tokenValue) {
+        ClientRegistration registration = ClientRegistration
+                .withRegistrationId(registrationId)
+                .clientId("client-id")
+                .clientSecret("client-secret")
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .authorizationUri("https://provider.example/authorize")
+                .tokenUri("https://provider.example/token")
+                .userInfoUri("https://provider.example/me")
+                .userNameAttributeName("sub")
+                .clientName(registrationId)
+                .build();
+        OAuth2AccessToken accessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                tokenValue,
+                Instant.now(),
+                Instant.now().plusSeconds(300));
+        return new OAuth2AuthorizedClient(registration, principalName, accessToken);
+    }
+
+    private OAuth2AuthenticationToken googleAuthentication(String sub, String email,
+                                                            Boolean emailVerified,
+                                                            String authority) {
+        return oidcAuthentication(
+                "google", "https://accounts.google.com", sub, email,
+                emailVerified, authority);
+    }
+
+    private OAuth2AuthenticationToken oidcAuthentication(
+            String registrationId, String issuer, String sub, String email,
+            Boolean emailVerified, String authority) {
+        Instant issuedAt = Instant.parse("2026-09-02T00:00:00Z");
+        Map<String, Object> claims = new LinkedHashMap<>();
+        claims.put("iss", issuer);
+        claims.put("sub", sub);
+        claims.put("aud", List.of("test-client"));
+        claims.put("iat", issuedAt);
+        claims.put("exp", issuedAt.plusSeconds(300));
+        if (email != null) {
+            claims.put("email", email);
+        }
+        if (emailVerified != null) {
+            claims.put("email_verified", emailVerified);
+        }
+        OidcIdToken idToken = new OidcIdToken(
+                "test-id-token-value", issuedAt, issuedAt.plusSeconds(300), claims);
+        OidcUser oidcUser = new DefaultOidcUser(
+                List.of(new SimpleGrantedAuthority(authority)), idToken, "sub");
+        return new OAuth2AuthenticationToken(
+                oidcUser, oidcUser.getAuthorities(), registrationId);
+    }
+
+    private OAuth2AuthenticationToken naverAuthentication(
+            String resultCode, Object response, String authority,
+            boolean includeResponse) {
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        attributes.put("resultcode", resultCode);
+        if (includeResponse) {
+            attributes.put("response", response);
+        }
+        OAuth2User oauth2User = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority(authority)), attributes, "resultcode");
+        return new OAuth2AuthenticationToken(
+                oauth2User, oauth2User.getAuthorities(), "naver");
+    }
+
+    private void assertNaverRejected(OAuth2AuthenticationToken authentication)
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isNull();
+    }
+
+    private SocialAccount socialAccount(Long userId, String providerUserId) {
+        return socialAccount(userId, SocialProvider.GOOGLE, providerUserId);
+    }
+
+    private SocialAccount socialAccount(Long userId, SocialProvider provider,
+                                        String providerUserId) {
+        SocialAccount account = new SocialAccount();
+        account.setUserId(userId);
+        account.setProvider(provider);
+        account.setProviderUserId(providerUserId);
+        return account;
+    }
+
+    private User user(Long id, UserRole role, UserStatus status) {
+        User user = new User();
+        user.setId(id);
+        user.setUserRole(role);
+        user.setStatus(status);
+        return user;
+    }
+
+    private void saveAuthentication(MockHttpServletRequest request, Authentication authentication) {
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        request.getSession().setAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+    }
+
+    private Authentication savedAuthentication(MockHttpServletRequest request) {
+        SecurityContext context = (SecurityContext) request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        assertThat(context).isNotNull();
+        return context.getAuthentication();
+    }
+
+    /** 기다리는 연결 문맥이 없으면 항상 NONE 이라 평소 로그인 흐름이 그대로 유지된다. */
+    /** userMapper stub 이 false 를 주므로 기본값은 "이메일 등록 대상 아님" 이다. */
+    private MissingEmailRegistrationService missingEmailRegistrationService() {
+        return new MissingEmailRegistrationService(
+                userMapper,
+                org.mockito.Mockito.mock(SocialEmailAccountResolver.class),
+                org.mockito.Mockito.mock(
+                        com.tripbora.service.email.EmailVerificationService.class));
+    }
+
+    private SocialLoginLinkService socialLoginLinkService() {
+        return new SocialLoginLinkService(
+                userMapper, org.mockito.Mockito.mock(SocialAccountService.class));
+    }
+
+
+    /**
+     * 연결 대기 중인 provider 로 다시 로그인해도 가입 화면이 또 열리지 않는다.
+     * 새 users 도 만들지 않고, 기다리는 문맥도 지우지 않는다.
+     */
+    @ParameterizedTest
+    @EnumSource(value = SocialProvider.class, names = {"KAKAO", "NAVER"})
+    void reAuthenticatingWithTheProviderBeingLinkedNeverReopensSignup(SocialProvider provider)
+            throws Exception {
+        String providerUserId = provider == SocialProvider.KAKAO ? "kakao-sub" : "naver-id";
+        OAuth2AuthenticationToken authentication = provider == SocialProvider.KAKAO
+                ? oidcAuthentication("kakao", "https://kauth.kakao.com",
+                        providerUserId, null, null, "OIDC_USER")
+                : naverAuthentication("00", Map.of("id", providerUserId), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(provider, providerUserId))
+                .thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        PendingSocialLoginLink pending = pendingLoginLink(provider);
+        request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialLinkLoginRequired=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        // 다른 로그인 수단으로 돌아올 수 있도록 대기 문맥은 그대로 둔다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isSameAs(pending);
+        verify(userMapper, never()).insertUser(any());
+        verify(userMapper, never()).findByEmail(anyString());
+    }
+
+    /** 다른 provider 로 기존 계정에 로그인하면 평소 로그인 경로를 그대로 타고 후처리가 붙는다. */
+    @Test
+    void loggingInWithAnotherConnectedProviderStillReachesTheSharedLoginSuccessHandler()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-sub-123", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123"))
+                .thenReturn(socialAccount(25L, "google-sub-123"));
+        when(userMapper.findById(25L))
+                .thenReturn(user(25L, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(25L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE,
+                pendingLoginLink(SocialProvider.KAKAO));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 연결 후처리는 CustomLoginSuccessHandler 안의 공통 서비스가 맡는다.
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(25L);
+        assertThat(savedAuthentication(request)).isNotNull();
+    }
+
+
+    /**
+     * 이메일 변경 본인확인. target 의 신원과 일치하면 변경 화면으로만 보낸다.
+     * 재인증 성공은 로그인이 아니다.
+     */
+    @Test
+    void emailCorrectionReauthenticationGrantsTheRightWithoutLoggingAnyoneIn() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub", null, null, "OIDC_USER");
+        PendingEmailCorrection pending = correction();
+        PendingEmailCorrection authorized = pending.authorize();
+        when(emailCorrectionService.authorize(
+                pending, SocialProvider.KAKAO, "kakao-sub")).thenReturn(authorized);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/email-required/change");
+        assertThat(request.getSession().getAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE))
+                .isSameAs(authorized);
+        // 로그인시키지 않는다. 계정은 여전히 인증 대기다.
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        // 일반 로그인 판정으로 새지 않는다.
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 남의 소셜 계정으로 인증하면 권한을 주지 않고 인증 대기 화면으로 돌려보낸다. */
+    @Test
+    void anIdentityThatDoesNotMatchTheTargetGetsNoCorrectionRight() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "someone-else", null, null, "OIDC_USER");
+        when(emailCorrectionService.authorize(any(), any(), anyString())).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(
+                PendingEmailCorrection.SESSION_ATTRIBUTE, correction());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/users/register/verify-waiting?emailCorrectionFailed=true");
+        assertThat(request.getSession().getAttribute(
+                PendingEmailCorrection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+    }
+
+    private PendingEmailCorrection correction() {
+        Instant now = Instant.now();
+        return new PendingEmailCorrection("correction-flow", 23L, "typo@example.com",
+                PendingEmailCorrection.Method.SOCIAL, SocialProvider.KAKAO, false, now.minusSeconds(10), now.plusSeconds(590));
+    }
+
+
+    /** 이미 연결된 소셜 계정 로그인은 신규 users 를 만들지 않으므로 연령 확인 화면을 거치지 않는다. */
+    @Test
+    void anExistingSocialLoginNeverPassesThroughTheAgeCheckScreen() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-sub-123", "same@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123"))
+                .thenReturn(socialAccount(7L, "google-sub-123"));
+        when(userMapper.findById(7L)).thenReturn(user(7L, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 가입 화면(/social-signup)으로 가지 않고 곧바로 로그인된다.
+        assertThat(response.getRedirectedUrl()).isNotEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 신규 소셜 식별자는 users 를 만들지 않고 연령 확인이 있는 가입 화면으로만 보낸다. */
+    @Test
+    void aBrandNewSocialIdentityOnlyReachesTheSignupScreenWithoutCreatingAUser()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "brand-new-sub", "brand-new@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "brand-new-sub")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        // OAuth 성공만으로는 아무 계정도 만들어지지 않는다.
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    private PendingSocialLoginLink pendingLoginLink(SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialLoginLink(
+                "link-flow", provider, "linking-sub", null, null,
+                25L, "member@example.com", now.minusSeconds(10), now.plusSeconds(590));
+    }
+
+}

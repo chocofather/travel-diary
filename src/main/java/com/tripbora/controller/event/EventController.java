@@ -1,0 +1,112 @@
+package com.tripbora.controller.event;
+
+import com.tripbora.config.i18n.SupportedLanguage;
+import com.tripbora.model.Event;
+import com.tripbora.seo.SeoModel;
+import com.tripbora.seo.SeoTextUtils;
+import com.tripbora.service.event.EventLocalizationService;
+import com.tripbora.service.event.EventService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+import java.util.Map;
+
+@RequiredArgsConstructor
+@Controller
+@RequestMapping("/events")
+public class EventController {
+
+    private static final int DEFAULT_PAGE_SIZE = 9;
+    private static final int MAX_PAGE_SIZE = 48;
+
+    private final EventService eventService;
+    private final EventLocalizationService eventLocalizationService;
+
+    /** 이벤트 리스트 (진행중/예정/종료 탭 + 페이징 지원) */
+    @GetMapping
+    public String eventList(@RequestParam(required = false) String status,
+                            @RequestParam(defaultValue = "1") int page,
+                            @RequestParam(defaultValue = "9") int size,
+                            Model model) {
+        String selectedStatus = normalizeStatus(status);
+        int safeSize = normalizeSize(size);
+        long totalCount = eventService.countEventsByStatus(selectedStatus);
+        int totalPages = totalCount == 0
+                ? 0
+                : (int) Math.ceil((double) totalCount / safeSize);
+        int safePage = Math.max(page, 1);
+        if (totalPages > 0) {
+            safePage = Math.min(safePage, totalPages);
+        }
+        long offset = (long) (safePage - 1) * safeSize;
+
+        // 상태·정렬·페이징은 그대로 두고, 화면에 찍을 값만 요청 언어로 바꾼다.
+        // 번역은 이 한 페이지 분량을 한 번에 읽는다. (카드마다 조회하지 않는다)
+        List<Event> events = eventLocalizationService.localizeAll(
+                eventService.getEventsByStatus(selectedStatus, offset, safeSize),
+                requestedLanguage());
+        int pageStart = Math.max(1, safePage - 2);
+        int pageEnd = Math.min(totalPages, pageStart + 4);
+        pageStart = Math.max(1, pageEnd - 4);
+
+        model.addAttribute("eventList", events);
+        model.addAttribute("selectedStatus", selectedStatus);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("pageStart", pageStart);
+        model.addAttribute("pageEnd", pageEnd);
+        Map<String, Object> canonicalParameters = SeoModel.parameters();
+        canonicalParameters.put("status", "ongoing".equals(selectedStatus) ? null : selectedStatus);
+        canonicalParameters.put("page", safePage);
+        model.addAttribute("seoCanonicalPath",
+                SeoModel.canonicalPath("/events", canonicalParameters));
+        return "event/event-list";
+    }
+
+    private int normalizeSize(int size) {
+        if (size < 1) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    /** 이벤트 상세 */
+    @GetMapping("/{id}")
+    public String eventDetail(@PathVariable Long id, Model model) {
+        // 유형·기간·상태 판정은 원본 값을 그대로 쓰고, 제목·본문·포스터만 요청 언어로 바꾼다.
+        Event event = eventLocalizationService.localize(
+                eventService.getEventDetail(id), requestedLanguage());
+        model.addAttribute("event", event);
+        SeoModel.apply(model,
+                event.getTitle() + " | TripBora",
+                event.getDescription(),
+                "/events/" + id,
+                SeoTextUtils.firstNonBlank(event.getEventImg(), event.getPosterImg()),
+                "article");
+        return "event/event-detail"; // templates/event/event-detail.html
+    }
+
+    /** 공개 이벤트 화면이 쓸 언어. 지원하지 않는 locale 이면 한국어로 본다. */
+    private SupportedLanguage requestedLanguage() {
+        return SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+    }
+
+    private String normalizeStatus(String status) {
+        return switch (status == null ? "" : status) {
+            case "ongoing", "upcoming", "ended" -> status;
+            default -> "ongoing";
+        };
+    }
+
+
+}

@@ -3,10 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverDesignElementMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverDesignElementMapper">
 
     <resultMap id="DiaryCoverDesignElementMap"
-               type="com.example.travlediary.model.DiaryCoverDesignElement">
+               type="com.tripbora.model.DiaryCoverDesignElement">
         <id     property="id"          column="id"/>
         <result property="designId"    column="design_id"/>
         <result property="elementType" column="element_type"/>
@@ -42,7 +42,7 @@
       (DB payload CHECK 와 같은 규칙, 어느 값을 채울지는 Service 가 정한다.
        text_font 는 TEXT 전용이라 다른 유형에서는 늘 NULL 이고 payload CHECK 대상도 아니다)
     -->
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesignElement"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCoverDesignElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_design_elements (
             design_id, element_type, text_content, image_url, library_photo_asset_id,

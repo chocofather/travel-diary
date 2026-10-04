@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.post.PostMapper">
+<mapper namespace="com.tripbora.repository.post.PostMapper">
 
-    <resultMap id="PostDetailMap" type="com.example.travlediary.dto.PostDetailDto">
+    <resultMap id="PostDetailMap" type="com.tripbora.dto.PostDetailDto">
         <id property="id" column="post_id"/>
         <result property="userId" column="post_user_id"/>
         <result property="postType" column="post_type"/>
@@ -22,7 +22,7 @@
         <result property="bookmarked" column="bookmarked"/>
     </resultMap>
 
-    <resultMap id="PostImageMap" type="com.example.travlediary.model.PostImage">
+    <resultMap id="PostImageMap" type="com.tripbora.model.PostImage">
         <id property="id" column="image_id"/>
         <result property="imageUrl" column="image_url"/>
         <result property="deleted" column="image_deleted"/>
@@ -32,7 +32,7 @@
         <result property="postId" column="image_post_id"/>
     </resultMap>
 
-    <resultMap id="ActivePostMap" type="com.example.travlediary.model.UserPost">
+    <resultMap id="ActivePostMap" type="com.tripbora.model.UserPost">
         <id property="id" column="post_id"/>
         <result property="userId" column="post_user_id"/>
         <result property="title" column="post_title"/>
@@ -43,7 +43,7 @@
         <result property="updatedAt" column="post_updated_at"/>
     </resultMap>
 
-    <resultMap id="PostEditMap" type="com.example.travlediary.dto.PostEditDto">
+    <resultMap id="PostEditMap" type="com.tripbora.dto.PostEditDto">
         <id property="id" column="post_id"/>
         <result property="title" column="post_title"/>
         <result property="postType" column="post_type"/>
@@ -133,7 +133,7 @@
     </sql>
 
     <select id="findVisibleTranslationSource"
-            resultType="com.example.travlediary.model.translation.UserPostTranslationSource">
+            resultType="com.tripbora.model.translation.UserPostTranslationSource">
         SELECT p.id AS content_id,
                p.title,
                p.title_source_language,
@@ -148,7 +148,7 @@
     </select>
 
     <select id="findVisibleTranslationSourceForUpdate"
-            resultType="com.example.travlediary.model.translation.UserPostTranslationSource">
+            resultType="com.tripbora.model.translation.UserPostTranslationSource">
         SELECT p.id AS content_id,
                p.title,
                p.title_source_language,
@@ -184,7 +184,7 @@
     </update>
 
     <select id="findUndeterminedPostLanguagesAfter"
-            resultType="com.example.travlediary.model.translation.UserPostLanguageBackfillRow">
+            resultType="com.tripbora.model.translation.UserPostLanguageBackfillRow">
         SELECT id, title, content, title_source_language, content_source_language, updated_at
         FROM user_posts
         WHERE (title_source_language = 'und' OR content_source_language = 'und')
@@ -241,7 +241,7 @@
     </select>
 
     <!-- 게시글 저장 -->
-    <insert id="insertPost" parameterType="com.example.travlediary.model.UserPost" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertPost" parameterType="com.tripbora.model.UserPost" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_posts (
             title, title_source_language, content, content_source_language,
             post_type, views, created_at, user_id, deleted
@@ -252,7 +252,7 @@
     </insert>
 
     <!-- 이미지 저장 -->
-    <insert id="insertPostImage" parameterType="com.example.travlediary.model.PostImage" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertPostImage" parameterType="com.tripbora.model.PostImage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO post_images (
             image_url, deleted, uploaded_at, post_id
         ) VALUES (

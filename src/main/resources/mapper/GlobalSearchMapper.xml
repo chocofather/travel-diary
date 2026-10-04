@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.search.GlobalSearchMapper">
+<mapper namespace="com.tripbora.repository.search.GlobalSearchMapper">
 
-    <resultMap id="GlobalSearchResultMap" type="com.example.travlediary.dto.GlobalSearchResultDto">
+    <resultMap id="GlobalSearchResultMap" type="com.tripbora.dto.GlobalSearchResultDto">
         <id property="type" column="search_type"/>
         <id property="id" column="id"/>
         <result property="title" column="title"/>

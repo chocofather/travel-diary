@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.user.BlockedEmailMapper">
+<mapper namespace="com.tripbora.repository.user.BlockedEmailMapper">
 
-    <insert id="insert" parameterType="com.example.travlediary.model.BlockedEmail"
+    <insert id="insert" parameterType="com.tripbora.model.BlockedEmail"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO blocked_emails (email_hash, user_id, sanction_id, reason, created_by)
         VALUES (#{emailHash}, #{userId}, #{sanctionId}, #{reason}, #{createdBy})

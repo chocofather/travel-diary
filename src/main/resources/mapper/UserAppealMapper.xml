@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.user.UserAppealMapper">
+<mapper namespace="com.tripbora.repository.user.UserAppealMapper">
 
-    <resultMap id="UserAppealResultMap" type="com.example.travlediary.model.UserAppeal">
+    <resultMap id="UserAppealResultMap" type="com.tripbora.model.UserAppeal">
         <id property="id" column="id"/>
         <result property="sanctionId" column="sanction_id"/>
         <result property="userId" column="user_id"/>
@@ -24,7 +24,7 @@
     </sql>
 
     <!-- 로그인 상태로 제출하므로 이메일 인증(DRAFT/token) 단계 없이 바로 접수한다. -->
-    <insert id="insert" parameterType="com.example.travlediary.model.UserAppeal"
+    <insert id="insert" parameterType="com.tripbora.model.UserAppeal"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_appeals (sanction_id, user_id, status, content, submitted_at)
         VALUES (#{sanctionId}, #{userId}, #{status}, #{content}, #{submittedAt})
@@ -65,7 +65,7 @@
 
     <!-- ================= 관리자 목록·상세 ================= -->
 
-    <resultMap id="AdminAppealResultMap" type="com.example.travlediary.dto.AdminAppealDto">
+    <resultMap id="AdminAppealResultMap" type="com.tripbora.dto.AdminAppealDto">
         <id property="id" column="id"/>
         <result property="status" column="status"/>
         <result property="content" column="content"/>

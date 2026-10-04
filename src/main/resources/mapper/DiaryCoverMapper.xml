@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverMapper">
 
-    <resultMap id="DiaryCoverMap" type="com.example.travlediary.model.DiaryCover">
+    <resultMap id="DiaryCoverMap" type="com.tripbora.model.DiaryCover">
         <id     property="id"              column="id"/>
         <result property="diaryId"         column="diary_id"/>
         <result property="baseCoverStyle"  column="base_cover_style"/>
@@ -19,7 +19,7 @@
     </sql>
 
     <!-- 한 다이어리에 표지 하나다. (uq_diary_covers_diary 가 두 번째 행을 막는다) -->
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCover"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCover"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_covers (
             diary_id, base_cover_style, background_color, created_at, updated_at

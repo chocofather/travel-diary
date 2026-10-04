@@ -1,0 +1,338 @@
+package com.tripbora.controller.destination;
+
+import com.tripbora.config.i18n.SupportedLanguage;
+import com.tripbora.dto.DestinationCategoryFilterDto;
+import com.tripbora.dto.DestinationDto;
+import com.tripbora.model.CountryCategory;
+import com.tripbora.service.category.CountryCategoryService;
+import com.tripbora.service.category.ReferenceNameLocalizationService;
+import com.tripbora.service.comment.DestinationCommentService;
+import com.tripbora.service.destination.DestinationImageService;
+import com.tripbora.service.destination.DestinationService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
+import org.apache.ibatis.session.Configuration;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockServletContext;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.ui.Model;
+import org.thymeleaf.context.WebContext;
+import org.thymeleaf.spring6.SpringTemplateEngine;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import org.thymeleaf.web.servlet.JakartaServletWebApplication;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * 공개 여행지 목록 카테고리 필터.
+ * 대표 카테고리만이 아니라 모든 등록 카테고리로 찾고(OR, 중복 없음), 지역·정렬·쪽과 함께 주소로 이어진다.
+ */
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class DestinationListCategoryFilterTest {
+
+    private static final List<Long> SEOUL_REGION_IDS = List.of(38L, 235L);
+
+    @Mock private DestinationService destinationService;
+    @Mock private DestinationImageService destinationImageService;
+    @Mock private CountryCategoryService countryCategoryService;
+    @Mock private DestinationCommentService destinationCommentService;
+    @Mock private ReferenceNameLocalizationService referenceNameLocalizationService;
+    @Mock private HttpServletRequest request;
+
+    private DestinationController controller;
+
+    @BeforeEach
+    void setUp() {
+        LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
+        controller = new DestinationController(destinationService, destinationImageService,
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService,
+                new com.tripbora.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
+                        org.mockito.Mockito.mock(DestinationImageService.class)));
+        when(countryCategoryService.getById(38L)).thenReturn(region(38L, "서울", 3, 7L));
+        when(countryCategoryService.getSubregions(38L, 4)).thenReturn(List.of());
+        when(countryCategoryService.getAllRegionIdsUnder(38L)).thenReturn(SEOUL_REGION_IDS);
+        when(destinationService.getDestinationsByRegionIdsPaged(anyList(), anyList(), anyInt(), anyInt(), anyString()))
+                .thenReturn(List.of());
+        when(destinationService.convertToLocalizedDtoWithBookmark(anyList(), any(), any(), any()))
+                .thenReturn(List.of());
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(any(), any())).thenReturn(Map.of());
+        // 서울 범위: 고궁(5) 2곳, 랜드마크(3) 3곳, 사진명소(8) 1곳. 12 는 있는 카테고리지만 서울에는 없다.
+        when(referenceNameLocalizationService.localizeCategories(any(), eq(SupportedLanguage.KOREAN)))
+                .thenAnswer(invocation -> {
+                    Map<Long, String> names = new HashMap<>();
+                    for (Object id : (java.util.Collection<?>) invocation.getArgument(0)) {
+                        names.put((Long) id, Map.of(3L, "랜드마크", 5L, "고궁", 8L, "사진명소", 12L, "야경")
+                                .get((Long) id));
+                    }
+                    return names;
+                });
+    }
+
+    @AfterEach
+    void clearLocale() {
+        LocaleContextHolder.resetLocaleContext();
+    }
+
+    @Test
+    void eightItemPagesUseTheSameLimitOffsetAndPaginationForAllListEndpoints() {
+        when(destinationService.countDestinationsByRegionIds(SEOUL_REGION_IDS, List.of()))
+                .thenReturn(25);
+        for (int endpoint = 0; endpoint < 3; endpoint++) {
+            Model model = new ExtendedModelMap();
+            if (endpoint == 0) {
+                controller.destinationList("domestic", 38L, 2, 8, "views", null, null, request, model);
+            } else if (endpoint == 1) {
+                controller.regionFragment("domestic", 38L, 2, 8, "views", null, null, model);
+            } else {
+                controller.destinationListFragment("domestic", 38L, 2, 8, "views", null, null, model);
+            }
+            assertThat(model.getAttribute("pageSize")).isEqualTo(8);
+            assertThat(model.getAttribute("currentPage")).isEqualTo(2);
+            assertThat(model.getAttribute("totalPages")).isEqualTo(4);
+        }
+        verify(destinationService, org.mockito.Mockito.times(3))
+                .getDestinationsByRegionIdsPaged(SEOUL_REGION_IDS, List.of(), 8, 8, "views");
+    }
+
+    @Test
+    void oneCategoryIsSelectedEvenWhenAnOldMultiValueAddressIsUsed() {
+        // 예전 다중 선택 주소(category=abc&category=12&category=5)는 스프링이 "abc,12,5" 로 이어 준다.
+        // 잘못된 값은 버리고 첫 번째 올바른 값 하나만 쓴다. 야경(12)은 서울에 0곳이어도 있는 카테고리라 고른다.
+        when(destinationService.getCategoryFilterCounts(SEOUL_REGION_IDS, List.of(12L)))
+                .thenReturn(Map.of(3L, 3, 5L, 2, 8L, 1, 12L, 0));
+        Model model = new ExtendedModelMap();
+
+        controller.destinationListFragment("domestic", 38L, 2, 12, "views", "abc,12,5", null, model);
+
+        verify(destinationService).getDestinationsByRegionIdsPaged(SEOUL_REGION_IDS, List.of(12L), 12, 12, "views");
+        verify(destinationService).countDestinationsByRegionIds(SEOUL_REGION_IDS, List.of(12L));
+        assertThat(model.getAttribute("selectedCategoryId")).isEqualTo(12L);
+        assertThat(model.getAttribute("selectedCategoryName")).isEqualTo("야경");
+        // 선택지: 서울 범위의 카테고리 + 고른 것, 이름순. 고른 것 하나만 표시된다.
+        assertThat(options(model)).extracting(DestinationCategoryFilterDto::name)
+                .containsExactly("고궁", "랜드마크", "사진명소", "야경");
+        assertThat(options(model)).extracting(DestinationCategoryFilterDto::selected)
+                .containsExactly(false, false, false, true);
+    }
+
+    @Test
+    void anUnknownOrInvalidCategoryShowsTheWholeList() {
+        when(destinationService.getCategoryFilterCounts(SEOUL_REGION_IDS, List.of(999L))).thenReturn(Map.of(5L, 2));
+        Model unknown = new ExtendedModelMap();
+
+        controller.destinationListFragment("domestic", 38L, 1, 12, "default", "999", null, unknown);
+        controller.destinationListFragment("domestic", 38L, 1, 12, "default", "-3", null, new ExtendedModelMap());
+
+        verify(destinationService, org.mockito.Mockito.times(2))
+                .getDestinationsByRegionIdsPaged(SEOUL_REGION_IDS, List.of(), 0, 12, "default");
+        assertThat(unknown.getAttribute("selectedCategoryId")).isNull();
+        assertThat(unknown.getAttribute("selectedCategoryName")).isNull();
+    }
+
+    @Test
+    void theListFilterMatchesEveryRegisteredCategoryOnceNotOnlyTheMainOne() throws IOException {
+        Configuration configuration = mapperConfiguration();
+        Map<String, Object> filtered = new HashMap<>(Map.of("regionIds", List.of(38L, 235L),
+                "categoryIds", List.of(3L, 5L), "offset", 0, "size", 12, "sort", "views"));
+
+        String list = sql(configuration, "findByRegionIdsPaged", filtered);
+        String count = sql(configuration, "countByRegionIds", filtered);
+        for (String query : List.of(list, count)) {
+            // 대표 여부(is_main)를 보지 않는 모든 연결, EXISTS 라 두 카테고리에 모두 걸려도 한 번만 나온다.
+            assertThat(query)
+                    .contains("AND EXISTS (SELECT 1 FROM destination_categories dc WHERE dc.destination_id = d.id "
+                            + "AND dc.category_id IN (? , ?))")
+                    .doesNotContain("dc.is_main")
+                    .doesNotContain("JOIN destination_categories");
+        }
+        // 같은 조회수면 id 순으로 고정해 쪽을 넘겨도 겹치거나 빠지지 않는다.
+        assertThat(list).contains("ORDER BY d.views DESC, d.id ASC");
+
+        Map<String, Object> unfiltered = new HashMap<>(filtered);
+        unfiltered.put("categoryIds", List.of());
+        assertThat(sql(configuration, "findByRegionIdsPaged", unfiltered)).doesNotContain("destination_categories");
+        assertThat(sql(configuration, "countByRegionIds", unfiltered)).doesNotContain("destination_categories");
+    }
+
+    @Test
+    void theFragmentKeepsTheSelectionInPagingLinksAndShowsAnEmptyState() {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("destinations", List.<DestinationDto>of());
+        variables.put("regionDisplayNames", Map.of());
+        variables.put("selectedCityId", 38L);
+        variables.put("selectedCityName", "서울");
+        variables.put("totalPages", 3);
+        variables.put("currentPage", 2);
+        variables.put("pageSize", 12);
+        variables.put("sort", "views");
+        variables.put("type", "domestic");
+        variables.put("categoryFilterOptions", List.of(new DestinationCategoryFilterDto(5L, "고궁", 2, true),
+                new DestinationCategoryFilterDto(3L, "랜드마크", 3, false),
+                new DestinationCategoryFilterDto(8L, "사진명소", 1, false)));
+        variables.put("selectedCategoryId", 5L);
+        variables.put("selectedCategoryName", "고궁");
+
+        Document page = renderList(variables, Locale.KOREAN);
+
+        assertThat(page.selectFirst("#destination-list").attr("data-category")).isEqualTo("5");
+        Map<String, Object> headingVariables = new HashMap<>(variables);
+        headingVariables.put("selectedCityName", "종로구");
+        Document heading = renderList(headingVariables, Locale.KOREAN);
+        assertThat(heading.select(".destination-title-context")).isEmpty();
+        assertThat(heading.selectFirst("#page-title").text()).isEqualTo("종로구 여행지");
+        assertThat(page.selectFirst("[data-category-filter-toggle]").text()).isEqualTo("카테고리 · 고궁");
+        // 메뉴: 버튼 바로 아래 팝오버(처음에는 닫힘). 맨 앞 '전체' + 이름만 있는 항목, 고른 것 하나만 눌린 상태
+        var panel = page.selectFirst("[data-category-filter] > [data-category-filter-panel]");
+        assertThat(panel.hasAttr("hidden")).isTrue();
+        assertThat(panel.select("[data-category-filter-option]")).extracting(e -> e.text())
+                .containsExactly("전체", "고궁", "랜드마크", "사진명소");
+        assertThat(panel.select("[data-category-filter-option]")).extracting(e -> e.val())
+                .containsExactly("", "5", "3", "8");
+        assertThat(panel.select("[data-category-filter-option][aria-pressed=true]")).extracting(e -> e.text())
+                .containsExactly("고궁");
+        // 체크박스·여행지 수·적용 버튼·선택 칩은 없다.
+        assertThat(page.select("input[type=checkbox], .category-filter-count, [data-category-filter-apply], "
+                + ".category-filter-chips")).isEmpty();
+        // 쪽 이동에도 지역·정렬·카테고리가 그대로 실린다.
+        assertThat(page.select(".pagination a.page-number").first().attr("href"))
+                .isEqualTo("/destinations/fragment?type=domestic&region=38&page=1&size=12&sort=views&category=5");
+        assertThat(page.selectFirst(".destination-list-empty").text())
+                .contains("조건에 맞는 여행지가 없습니다.", "다른 카테고리나 전체를 골라 보세요.");
+
+        // 안 고르면 '전체'가 눌린 상태. 다른 언어는 번역 문구를 쓴다.
+        variables.put("categoryFilterOptions", List.of(new DestinationCategoryFilterDto(5L, "고궁", 2, false),
+                new DestinationCategoryFilterDto(3L, "랜드마크", 3, false)));
+        variables.put("selectedCategoryId", null);
+        variables.put("selectedCategoryName", null);
+        Document none = renderList(variables, Locale.KOREAN);
+        assertThat(none.selectFirst("[data-category-filter-toggle]").text()).isEqualTo("카테고리 · 전체");
+        assertThat(none.select("[data-category-filter-option][aria-pressed=true]")).extracting(e -> e.text())
+                .containsExactly("전체");
+        assertThat(none.selectFirst("#destination-list").hasAttr("data-category")).isFalse();
+        Document english = renderList(variables, Locale.ENGLISH);
+        assertThat(english.selectFirst("[data-category-filter-toggle]").text()).isEqualTo("Category · All");
+        assertThat(english.selectFirst("[data-category-filter-panel]").attr("aria-label")).isEqualTo("Choose a category");
+        assertThat(english.selectFirst("[data-category-filter-option]").text()).isEqualTo("All");
+        assertThat(renderList(variables, Locale.JAPANESE).selectFirst("[data-category-filter-toggle]").text())
+                .isEqualTo("カテゴリー · すべて");
+    }
+
+    @Test
+    void overseasRegionBackStaysOutsideTheLoopAndKeepsFiltersWithoutRegionOrPage() {
+        Map<String, Object> variables = new HashMap<>();
+        CountryCategory country = region(8L, "일본", 2, 1L);
+        country.setIconPath("/images/japan.png");
+        variables.put("cities", List.of(country));
+        variables.put("destinations", List.of());
+        variables.put("regionDisplayNames", Map.of(8L, "일본"));
+        variables.put("selectedCityId", 1L);
+        variables.put("selectedSubregionId", null);
+        variables.put("subregions", List.of());
+        variables.put("totalPages", 0);
+        variables.put("currentPage", 3);
+        variables.put("pageSize", 8);
+        variables.put("sort", "views");
+        variables.put("type", "overseas");
+        variables.put("selectedCategoryId", 5L);
+        Document continent = renderFragment(variables, Locale.KOREAN, "regionFragment");
+        var back = continent.selectFirst("[data-region-back]");
+        assertThat(back).isNotNull();
+        assertThat(back.text()).isEqualTo("대륙");
+        assertThat(back.select(".region-back-visual[aria-hidden=true] svg path")).hasSize(1);
+        assertThat(back.hasClass("region-btn")).isFalse();
+        assertThat(back.attr("href")).isEqualTo("/destinations?type=overseas&sort=views&size=8&category=5");
+        assertThat(continent.select(".region-buttons [data-region-back]")).isEmpty();
+        variables.put("selectedCityId", 8L);
+        assertThat(renderFragment(variables, Locale.ENGLISH, "regionFragment")
+                .selectFirst("[data-region-back]").text()).isEqualTo("Continents");
+        variables.put("selectedCityId", null);
+        assertThat(renderFragment(variables, Locale.KOREAN, "regionFragment").select("[data-region-back]")).isEmpty();
+        variables.put("type", "domestic");
+        variables.put("selectedCityId", 38L);
+        assertThat(renderFragment(variables, Locale.KOREAN, "regionFragment").select("[data-region-back]")).isEmpty();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<DestinationCategoryFilterDto> options(Model model) {
+        return (List<DestinationCategoryFilterDto>) model.getAttribute("categoryFilterOptions");
+    }
+
+    private static Document renderList(Map<String, Object> variables, Locale locale) {
+        return renderFragment(variables, locale, "destinationList");
+    }
+
+    private static Document renderFragment(Map<String, Object> variables, Locale locale, String fragment) {
+        ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
+        resolver.setPrefix("templates/");
+        resolver.setSuffix(".html");
+        resolver.setCharacterEncoding("UTF-8");
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
+        SpringTemplateEngine engine = new SpringTemplateEngine();
+        engine.setTemplateResolver(resolver);
+        engine.setTemplateEngineMessageSource(messages);
+
+        MockServletContext servletContext = new MockServletContext();
+        WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
+                .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
+        context.setVariables(variables);
+        return Jsoup.parse(engine.process("destination/fragment", Set.of(fragment), context));
+    }
+
+    private Configuration mapperConfiguration() throws IOException {
+        Configuration configuration = new Configuration();
+        configuration.setMapUnderscoreToCamelCase(true);
+        try (InputStream input = getClass().getResourceAsStream("/mapper/DestinationMapper.xml")) {
+            assertThat(input).isNotNull();
+            new XMLMapperBuilder(input, configuration, "mapper/DestinationMapper.xml",
+                    configuration.getSqlFragments()).parse();
+        }
+        return configuration;
+    }
+
+    private static String sql(Configuration configuration, String id, Map<String, Object> parameters) {
+        return configuration.getMappedStatement("com.tripbora.repository.destination.DestinationMapper." + id)
+                .getBoundSql(parameters).getSql()
+                .replaceAll("\\s+", " ").replaceAll("\\( ", "(").replaceAll(" \\)", ")").trim();
+    }
+
+    private static CountryCategory region(Long id, String name, int depth, Long parentId) {
+        CountryCategory region = new CountryCategory();
+        region.setId(id);
+        region.setRegionName(name);
+        region.setDepth(depth);
+        region.setParentId(parentId);
+        return region;
+    }
+}

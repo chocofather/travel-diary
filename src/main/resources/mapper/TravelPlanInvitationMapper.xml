@@ -3,13 +3,13 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanInvitationMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanInvitationMapper">
 
     <!--
       방에 살아 있는 초대 링크.
       방마다 ACTIVE 는 1건이라는 규칙은 Service 가 지키므로 여기서는 최신 1건만 읽는다.
     -->
-    <select id="findActiveByPlanId" resultType="com.example.travlediary.model.TravelPlanInvitation">
+    <select id="findActiveByPlanId" resultType="com.tripbora.model.TravelPlanInvitation">
         SELECT id, travel_plan_id, created_by_user_id, token_hash, token_encrypted, status,
                invalidated_at, created_at, updated_at
         FROM travel_plan_invitations
@@ -25,7 +25,7 @@
       평문 raw token 을 담는 컬럼은 없다.
       invalidated_at / created_at / updated_at 은 DB DEFAULT 를 쓴다.
     -->
-    <insert id="insertInvitation" parameterType="com.example.travlediary.model.TravelPlanInvitation"
+    <insert id="insertInvitation" parameterType="com.tripbora.model.TravelPlanInvitation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plan_invitations (
             travel_plan_id, created_by_user_id, token_hash, token_encrypted, status
@@ -52,7 +52,7 @@
 
     <!-- 초대 링크 해석. 상태 조건에서 REPLACED / DISABLED 가 걸러진다 -->
     <select id="findActiveByTokenHash"
-            resultType="com.example.travlediary.model.TravelPlanInvitation">
+            resultType="com.tripbora.model.TravelPlanInvitation">
         SELECT id, travel_plan_id, created_by_user_id, token_hash, status,
                invalidated_at, created_at, updated_at
         FROM travel_plan_invitations

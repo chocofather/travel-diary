@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryElementMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryElementMapper">
 
-    <resultMap id="DiaryElementMap" type="com.example.travlediary.model.DiaryElement">
+    <resultMap id="DiaryElementMap" type="com.tripbora.model.DiaryElement">
         <id     property="id"          column="id"/>
         <result property="pageId"      column="page_id"/>
         <result property="elementType" column="element_type"/>
@@ -56,7 +56,7 @@
       photo_style 은 PHOTO 전용, text_font/text_color 는 TEXT 전용이라 다른 유형에서는 늘 NULL 이고
       payload CHECK 도 이 칸들을 보지 않는다.
     -->
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_elements (
             page_id, element_type, text_content, image_url, style_type, color_type,
@@ -72,7 +72,7 @@
     </insert>
 
     <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER ↔ NOTE 전환은 하지 않는다) -->
-    <update id="update" parameterType="com.example.travlediary.model.DiaryElement">
+    <update id="update" parameterType="com.tripbora.model.DiaryElement">
         UPDATE diary_elements
         SET text_content = #{textContent},
             image_url = #{imageUrl},
@@ -103,7 +103,7 @@
       요소 PK 로 시작해 FK 인덱스만 타므로 사진 한 장에 query 한 번이면 끝난다.
       부모 번호를 조작하면 조건이 맞지 않아 결과가 없다 — 존재 여부가 드러나지 않는다.
     -->
-    <select id="findPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+    <select id="findPhotoRef" resultType="com.tripbora.dto.DiaryPrivatePhotoRef">
         SELECT e.image_url AS image_url,
                d.id        AS diary_id,
                d.pin_hash  AS pin_hash

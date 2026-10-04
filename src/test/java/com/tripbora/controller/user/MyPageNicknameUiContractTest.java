@@ -1,0 +1,168 @@
+package com.tripbora.controller.user;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class MyPageNicknameUiContractTest {
+
+    private static final Path RESOURCES = Path.of("src/main/resources");
+    private static final String FORMAT_GUIDANCE =
+            "2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다.";
+    private static final String POLICY_GUIDANCE =
+            "공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.";
+
+    @Test
+    void profileUiUsesDebouncedAbortableAuthenticatedNicknameCheck() throws IOException {
+        String template = read("templates/mypage/profile.html");
+        String script = read("static/js/mypage-profile.js");
+
+        // 안내 문구는 화면이 data-* 로 내려 준다. (스크립트에 언어별 문자열을 두지 않는다)
+        assertThat(template)
+                .contains("maxlength=\"16\"",
+                        "#{mypage.profile.nickname.help.format}",
+                        "#{mypage.profile.nickname.help.forbidden}",
+                        "/js/mypage-profile.js", "id=\"nickname-availability\"",
+                        "id=\"profileSaveButton\"", "data-current-nickname",
+                        "data-message-too-short=#{mypage.profile.nickname.client.tooShort}",
+                        "data-message-invalid-chars=#{mypage.profile.nickname.client.invalidChars}",
+                        "data-message-current=#{mypage.profile.nickname.status.CURRENT}",
+                        "data-message-forbidden=#{mypage.profile.nickname.status.FORBIDDEN}");
+        assertThat(script)
+                .contains("/mypage/profile/check-nickname?nickname=",
+                        "new AbortController()", "requestSequence", "}, 250)",
+                        "nicknameInput.dataset.currentNickname",
+                        "saveButton.disabled",
+                        "case \"FORBIDDEN\"",
+                        "setState(\"forbidden\"",
+                        "messages.messageForbidden",
+                        "messages.messageCurrent",
+                        "case \"AVAILABLE\"",
+                        "case \"DUPLICATE\"",
+                        "messages.messageTooShort",
+                        "messages.messageInvalidChars")
+                .doesNotContain("userId=")
+                // 한국어 문구를 스크립트에 다시 넣지 않는다
+                .doesNotContain(FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                        "사용할 수 없는 닉네임입니다.", "현재 사용 중인 닉네임입니다.");
+    }
+
+    @Test
+    void profileHidesTheNativeFilePickerButKeepsItsUploadContract() throws IOException {
+        String template = read("templates/mypage/profile.html");
+        String script = read("static/js/mypage-profile.js");
+        String stylesheet = read("static/css/mypage-profile.css");
+
+        assertThat(template)
+                // 실제 파일 칸은 그대로 두고 화면에서만 감춘다
+                .contains("class=\"mypage-file-input\"",
+                        "type=\"file\"",
+                        "th:field=\"*{profileImageFile}\"",
+                        "accept=\"image/jpeg,image/png,image/webp\"",
+                        "enctype=\"multipart/form-data\"",
+                        // 선택창은 label 이 연다
+                        "<label class=\"mypage-file-button\" for=\"profileImageFile\"",
+                        "#{mypage.profile.image.choose}",
+                        "id=\"profileImageFileName\"",
+                        "aria-live=\"polite\"",
+                        "th:text=\"#{mypage.profile.image.noneSelected}\"",
+                        "data-message-none-selected=#{mypage.profile.image.noneSelected}",
+                        // 업로드 안내는 그대로 유지한다
+                        "#{mypage.profile.image.help}");
+        assertThat(script)
+                .contains("#profileImageFile", "#profileImageFileName",
+                        "fileInput.files[0]",
+                        "fileName.dataset.messageNoneSelected",
+                        "addEventListener(\"change\"")
+                // 파일 안내 문구도 스크립트에 두지 않는다
+                .doesNotContain("파일 선택", "선택된 파일 없음",
+                        "No file selected", "ファイルを選択");
+        assertThat(stylesheet)
+                .contains(".mypage-file-input", "clip: rect(0, 0, 0, 0)",
+                        ".mypage-file-input:focus-visible + .mypage-file-button",
+                        "text-overflow: ellipsis")
+                // 회색 native 파일 버튼 스타일은 남기지 않는다
+                .doesNotContain("input[type=\"file\"]");
+    }
+
+    @Test
+    void accountPageDoesNotExposeLegacyPersonalInformation() throws IOException {
+        String template = read("templates/mypage/account.html");
+
+        assertThat(template)
+                .contains("account.userEmail")
+                .doesNotContain("account.username")
+                .doesNotContain("id=\"userBirth\"", "*{userBirth}", "type=\"date\"",
+                        "account.fullName", "account.userPhone", "account.userBirth",
+                        "mypage.account.edit.personal.title");
+        assertThat(template.split("mypage-account-readonly-list", -1).length - 1)
+                .as("로그인 이메일을 계정 정보 목록에서 보여 준다").isEqualTo(1);
+    }
+
+    @Test
+    void registrationShowsTheSamePolicyAndKeepsItsClientValidationAligned() throws IOException {
+        String template = read("templates/register.html");
+        String sharedScript = read("static/js/nickname-availability.js");
+
+        assertThat(template).contains(
+                "maxlength=\"16\"", FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                "/js/nickname-availability.js",
+                // 문구는 공용 fragment 가 현재 locale 값으로 내려 준다.
+                "~{fragments/nickname-messages :: nicknameMessages}");
+        // 프론트 정규식은 서버 NicknamePolicy 와 같은 문자 범위/길이를 쓴다.
+        assertThat(sharedScript).contains(
+                "const nicknamePattern = "
+                        + "/^[가-힣A-Za-z0-9\\u3041-\\u3096\\u30A1-\\u30FA\\u30FC\\u4E00-\\u9FFF]{2,16}$/;",
+                "response.status === \"FORBIDDEN\"");
+        // 스크립트에는 언어별 문자열을 두지 않는다.
+        assertThat(sharedScript)
+                .doesNotContain("사용 가능한 닉네임입니다.")
+                .doesNotContain("이미 사용 중인 닉네임입니다.")
+                .doesNotContain("사용할 수 없는 닉네임입니다.");
+    }
+
+    @Test
+    void socialSignupUsesTheRegistrationNicknameAvailabilityAndRecommendationContract()
+            throws IOException {
+        String template = read("templates/social-signup.html");
+        String sharedScript = read("static/js/nickname-availability.js");
+        // 소셜 신규가입은 일반 회원가입과 같은 스타일시트를 쓴다.
+        String stylesheet = read("static/css/registration.css");
+
+        assertThat(template).contains(
+                "id=\"nickname\"",
+                "id=\"generateNickname\"",
+                "id=\"nicknameMessage\"",
+                "aria-live=\"polite\"",
+                "/js/nickname-availability.js",
+                // 일반 회원가입과 같은 문구 fragment 를 쓴다.
+                "~{fragments/nickname-messages :: nicknameMessages}");
+        assertThat(sharedScript).contains(
+                "/api/users/check-nickname",
+                "/api/users/generate-nickname",
+                // 문구는 data-* 로 받는다.
+                "document.getElementById(\"nickname-messages\")",
+                "messages.available",
+                "messages.taken",
+                "messages.forbidden");
+        // 닉네임 행·추천 버튼·피드백 문구 스타일은 일반 회원가입 것을 그대로 재사용한다.
+        assertThat(template).contains(
+                "class=\"nickname-row\"",
+                "class=\"button-tertiary\" id=\"generateNickname\"",
+                "class=\"field-feedback\"");
+        assertThat(stylesheet).contains(
+                ".nickname-row",
+                "grid-template-columns: minmax(0, 1fr) auto;",
+                ".button-tertiary",
+                ".field-feedback");
+    }
+
+    private String read(String relativePath) throws IOException {
+        return Files.readString(RESOURCES.resolve(relativePath), StandardCharsets.UTF_8);
+    }
+}

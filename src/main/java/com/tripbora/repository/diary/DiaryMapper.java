@@ -1,0 +1,73 @@
+package com.tripbora.repository.diary;
+
+import com.tripbora.dto.DiaryListItemDto;
+import com.tripbora.dto.DiaryPrivatePhotoRef;
+import com.tripbora.model.Diary;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.time.LocalDate;
+import java.util.List;
+
+/**
+ * 개인 여행일기(다이어리) 저장소.
+ * 수정/삭제 SQL 에도 user_id 조건을 넣어 서비스 검증과 함께 소유권을 이중으로 지킨다.
+ */
+@Mapper
+public interface DiaryMapper {
+
+    /** 회원이 가진 다이어리 목록 (최근 여행부터) */
+    List<Diary> findByUserId(@Param("userId") Long userId);
+
+    /**
+     * 통제된 대표 이미지 응답이 쓰는 한 줄. 소유권과 PIN 판단, 저장 키를 함께 읽는다.
+     * 남의 다이어리이거나 대표 이미지가 없으면 결과가 없다.
+     */
+    DiaryPrivatePhotoRef findCoverPhotoRef(@Param("diaryId") Long diaryId,
+                                           @Param("userId") Long userId);
+
+    /**
+     * 일기장형 목록 한 쪽. 페이지 수까지 한 번에 읽는다. (다이어리마다 재조회하지 않는다)
+     * keyword 가 있으면 제목/한 줄 메모/본문에서 찾고, 결과는 다이어리 한 권 단위다.
+     * sort 는 허용된 이름(DiarySort)만 오고, 실제 ORDER BY 는 XML 이 정한다.
+     */
+    List<DiaryListItemDto> findListItems(@Param("userId") Long userId,
+                                         @Param("keyword") String keyword,
+                                         @Param("sort") String sort,
+                                         @Param("offset") int offset,
+                                         @Param("limit") int limit);
+
+    /** 같은 조건의 전체 다이어리 수 (쪽수 계산용) */
+    int countListItems(@Param("userId") Long userId,
+                       @Param("keyword") String keyword);
+
+    /** 그 기간과 여행 기간이 겹치는 회원의 다이어리 (달력 한 달치) */
+    List<Diary> findByUserIdAndPeriod(@Param("userId") Long userId,
+                                      @Param("from") LocalDate from,
+                                      @Param("to") LocalDate to);
+
+    /** 본인 소유 다이어리 1건 */
+    Diary findByIdAndUserId(@Param("diaryId") Long diaryId,
+                            @Param("userId") Long userId);
+
+    /** 다이어리 등록. 생성된 id 는 diary.id 에 채워진다. */
+    int insert(Diary diary);
+
+    /** 본인 소유 다이어리 수정 */
+    int update(Diary diary);
+
+    /**
+     * PIN 잠금 해시만 바꾼다. (설정 / 변경 / 해제가 모두 이 한 문을 쓴다)
+     * NULL 을 넣으면 잠금이 풀린 다이어리가 된다. 그 밖의 값은 건드리지 않는다.
+     */
+    int updatePinHash(@Param("diaryId") Long diaryId,
+                      @Param("userId") Long userId,
+                      @Param("pinHash") String pinHash);
+
+    /** 본인 소유 다이어리 삭제 (페이지/요소는 FK CASCADE 로 함께 지워진다) */
+    int delete(@Param("diaryId") Long diaryId,
+               @Param("userId") Long userId);
+
+    /** 최종 탈퇴 파기용. 페이지와 요소는 FK ON DELETE CASCADE 로 함께 지워진다. */
+    int deleteAllByUserId(@Param("userId") Long userId);
+}

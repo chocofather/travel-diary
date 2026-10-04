@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.comment.CommentLikeMapper">
+<mapper namespace="com.tripbora.repository.comment.CommentLikeMapper">
 
     <!-- 좋아요 추가 -->
     <insert id="insert">

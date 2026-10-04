@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.post.PostCommentMapper">
+<mapper namespace="com.tripbora.repository.post.PostCommentMapper">
 
     <!-- 관리자 조치(ACTIVE)로 숨겨진 댓글. 사용자 직접 삭제와 구분한다. -->
     <sql id="ModeratedComment">
@@ -96,7 +96,7 @@
         )
     </select>
 
-    <select id="findByPostId" resultType="com.example.travlediary.dto.PostCommentDto">
+    <select id="findByPostId" resultType="com.tripbora.dto.PostCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM post_comments pc
@@ -144,7 +144,7 @@
             pc.id ASC
     </select>
 
-    <select id="findPagedRootComments" resultType="com.example.travlediary.dto.PostCommentDto">
+    <select id="findPagedRootComments" resultType="com.tripbora.dto.PostCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM post_comments pc
@@ -183,7 +183,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="findRepliesForRootComments" resultType="com.example.travlediary.dto.PostCommentDto">
+    <select id="findRepliesForRootComments" resultType="com.tripbora.dto.PostCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM post_comments pc
@@ -296,7 +296,7 @@
           )
     </select>
 
-    <select id="findActiveComment" resultType="com.example.travlediary.model.PostComment">
+    <select id="findActiveComment" resultType="com.tripbora.model.PostComment">
         SELECT
             id,
             post_id AS postId,
@@ -314,7 +314,7 @@
           AND deleted = 0
     </select>
 
-    <select id="findActiveCommentForUpdate" resultType="com.example.travlediary.model.PostComment">
+    <select id="findActiveCommentForUpdate" resultType="com.tripbora.model.PostComment">
         SELECT
             id,
             post_id AS postId,
@@ -333,7 +333,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findCommentForUpdate" resultType="com.example.travlediary.model.PostComment">
+    <select id="findCommentForUpdate" resultType="com.tripbora.model.PostComment">
         SELECT
             id,
             post_id AS postId,
@@ -351,7 +351,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findDtoById" resultType="com.example.travlediary.dto.PostCommentDto">
+    <select id="findDtoById" resultType="com.tripbora.dto.PostCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM post_comments pc
@@ -365,7 +365,7 @@
     </select>
 
     <select id="findVisibleTranslationSource"
-            resultType="com.example.travlediary.model.translation.PostCommentTranslationSource">
+            resultType="com.tripbora.model.translation.PostCommentTranslationSource">
         SELECT pc.id AS content_id,
                pc.content AS source_text,
                pc.source_language,
@@ -381,7 +381,7 @@
     </select>
 
     <select id="findVisibleTranslationSourceForUpdate"
-            resultType="com.example.travlediary.model.translation.PostCommentTranslationSource">
+            resultType="com.tripbora.model.translation.PostCommentTranslationSource">
         SELECT pc.id AS content_id,
                pc.content AS source_text,
                pc.source_language,
@@ -410,7 +410,7 @@
 
     <!-- 일회성 로컬 언어 backfill: 삭제 여부와 관계없이 und 행만 keyset 방식으로 읽는다. -->
     <select id="findUndeterminedLanguagesAfter"
-            resultType="com.example.travlediary.model.translation.PostCommentLanguageBackfillRow">
+            resultType="com.tripbora.model.translation.PostCommentLanguageBackfillRow">
         SELECT id, content, updated_at
         FROM post_comments
         WHERE source_language = 'und'
@@ -430,7 +430,7 @@
           AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
     </update>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.PostComment"
+    <insert id="insert" parameterType="com.tripbora.model.PostComment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO post_comments (
             content, source_language, post_id, user_id, parent_comment_id, reply_to_comment_id,

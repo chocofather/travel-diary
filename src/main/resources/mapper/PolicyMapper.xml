@@ -2,9 +2,9 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.policy.PolicyMapper">
+<mapper namespace="com.tripbora.repository.policy.PolicyMapper">
 
-    <resultMap id="PolicyVersionResultMap" type="com.example.travlediary.model.PolicyVersion">
+    <resultMap id="PolicyVersionResultMap" type="com.tripbora.model.PolicyVersion">
         <id property="id" column="id"/>
         <result property="policyType" column="policy_type"/>
         <result property="version" column="version"/>
@@ -17,7 +17,7 @@
     </resultMap>
 
     <resultMap id="PolicyTranslationResultMap"
-               type="com.example.travlediary.model.PolicyTranslation">
+               type="com.tripbora.model.PolicyTranslation">
         <result property="policyVersionId" column="policy_version_id"/>
         <result property="locale" column="locale"/>
         <result property="title" column="title"/>

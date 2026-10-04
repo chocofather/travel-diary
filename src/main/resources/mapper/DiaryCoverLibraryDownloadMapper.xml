@@ -3,17 +3,17 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryDownloadMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverLibraryDownloadMapper">
 
     <resultMap id="LibraryDownloadMap"
-               type="com.example.travlediary.model.DiaryCoverLibraryDownload">
+               type="com.tripbora.model.DiaryCoverLibraryDownload">
         <id property="id" column="id"/>
         <result property="libraryItemId" column="library_item_id"/>
         <result property="downloaderUserId" column="downloader_user_id"/>
         <result property="firstDownloadedAt" column="first_downloaded_at"/>
     </resultMap>
 
-    <insert id="insertIgnore" parameterType="com.example.travlediary.model.DiaryCoverLibraryDownload"
+    <insert id="insertIgnore" parameterType="com.tripbora.model.DiaryCoverLibraryDownload"
             useGeneratedKeys="true" keyProperty="id">
         INSERT IGNORE INTO diary_cover_library_downloads (
             library_item_id, downloader_user_id, first_downloaded_at

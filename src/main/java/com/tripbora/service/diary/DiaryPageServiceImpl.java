@@ -1,0 +1,260 @@
+package com.tripbora.service.diary;
+
+import com.tripbora.model.Diary;
+import com.tripbora.model.DiaryPage;
+import com.tripbora.repository.diary.DiaryPageMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+@Service
+@RequiredArgsConstructor
+public class DiaryPageServiceImpl implements DiaryPageService {
+
+    /** 배경 유형 기본값 (DB 기본값과 같은 값) */
+    private static final String DEFAULT_BACKGROUND_TYPE = "PLAIN";
+    /** 현재 화면에서 쓰는 배경 유형 */
+    private static final Set<String> BACKGROUND_TYPES =
+            Set.of("PLAIN", "LINED", "GRID", "DOT");
+    /** 본문 길이 상한 (MEDIUMTEXT 안에서 안전한 선) */
+    private static final int MAX_CONTENT_LENGTH = 200_000;
+    /** 상단 한 줄 메모 길이 상한 (page_header VARCHAR(100) 과 같은 값) */
+    private static final int MAX_PAGE_HEADER_LENGTH = 100;
+    /** 상단 한 줄 메모 글꼴 기본값 (DB 기본값과 같은 값) */
+    private static final String DEFAULT_PAGE_HEADER_FONT = "DEFAULT";
+    /** 종이 바탕색은 #RRGGBB 만 저장한다. (paper_color VARCHAR(7)) */
+    private static final Pattern PAPER_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+
+    private final DiaryService diaryService;
+    private final DiaryPageMapper diaryPageMapper;
+    private final DiaryContentSanitizer diaryContentSanitizer;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DiaryPage> getPages(Long diaryId, Long userId) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        return diaryPageMapper.findByDiaryId(diary.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DiaryPage getPage(Long diaryId, Long pageId, Long userId) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        return requirePageOfDiary(pageId, diary.getId());
+    }
+
+    @Override
+    @Transactional
+    public DiaryPage create(Long diaryId, Long userId, DiaryPage page) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage prepared = validated(page, diary);
+        // 대상 다이어리는 요청 값을 믿지 않고 검증된 diaryId 로 설정한다.
+        prepared.setDiaryId(diary.getId());
+
+        insertPage(prepared);
+        return requirePageOfDiary(prepared.getId(), diary.getId());
+    }
+
+    @Override
+    @Transactional
+    public DiaryPage append(Long diaryId, Long userId, DiaryPage page) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        if (page == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "페이지 정보를 입력해 주세요.");
+        }
+
+        // 순서는 사용자가 정하지 않고 마지막 장 다음 번호로 붙인다.
+        Integer lastPageOrder = diaryPageMapper.findMaxPageOrder(diary.getId());
+        page.setPageOrder(lastPageOrder == null ? 1 : lastPageOrder + 1);
+        return create(diary.getId(), userId, page);
+    }
+
+    @Override
+    @Transactional
+    public DiaryPage update(Long diaryId, Long pageId, Long userId, DiaryPage page) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+        DiaryPage prepared = validated(page, diary);
+        // 대상 페이지/다이어리는 요청 값이 아니라 검증된 값으로 고정한다.
+        prepared.setId(existing.getId());
+        prepared.setDiaryId(diary.getId());
+        // 날짜/배경만 바꾸는 요청(content 없음)에서 본문이 지워지지 않게 기존 값을 그대로 둔다.
+        if (prepared.getContent() == null) {
+            prepared.setContent(existing.getContent());
+        }
+
+        updatePage(prepared);
+        return requirePageOfDiary(existing.getId(), diary.getId());
+    }
+
+    /** 본문 자동저장. 날짜/순서/배경은 건드리지 않고 content 만 바꾼다. */
+    @Override
+    @Transactional
+    public DiaryPage updateContent(Long diaryId, Long pageId, Long userId, String content) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
+        if (content != null && content.length() > MAX_CONTENT_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "본문이 너무 깁니다.");
+        }
+        // 허용한 서식만 남기고, 사실상 빈 본문은 null 로 저장한다.
+        String sanitized = diaryContentSanitizer.sanitize(content);
+
+        if (diaryPageMapper.updateContent(existing.getId(), diary.getId(), sanitized) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
+        return requirePageOfDiary(existing.getId(), diary.getId());
+    }
+
+    /**
+     * 상단 한 줄 메모 자동저장. 본문/날짜/순서/배경은 건드리지 않는다.
+     * 비어 있으면 NULL 로 저장해 '메모 없음'과 빈 문자열을 구분하지 않는다.
+     */
+    @Override
+    @Transactional
+    public DiaryPage updatePageHeader(Long diaryId, Long pageId, Long userId,
+                                      String pageHeader, String pageHeaderFont,
+                                      boolean pageHeaderBold) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
+        String header = pageHeader == null ? "" : pageHeader.strip();
+        if (header.length() > MAX_PAGE_HEADER_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "한 줄 메모는 100자 이하로 입력해 주세요.");
+        }
+
+        // 글꼴은 본문에서 쓰는 글꼴 키와 기본값만 허용한다. (임의 문자열 저장 금지)
+        String font = pageHeaderFont == null ? "" : pageHeaderFont.strip();
+        if (font.isEmpty()) {
+            font = DEFAULT_PAGE_HEADER_FONT;
+        } else if (!DEFAULT_PAGE_HEADER_FONT.equals(font)
+                && !DiaryContentSanitizer.DIARY_FONT_KEYS.contains(font)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 글꼴입니다.");
+        }
+
+        if (diaryPageMapper.updatePageHeader(existing.getId(), diary.getId(),
+                header.isEmpty() ? null : header, font, pageHeaderBold) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
+        return requirePageOfDiary(existing.getId(), diary.getId());
+    }
+
+    /** 페이지 삭제와 뒤 페이지 순서 정리는 한 트랜잭션에서 함께 처리한다. */
+    @Override
+    @Transactional
+    public void delete(Long diaryId, Long pageId, Long userId) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
+        // 요소 행은 FK ON DELETE CASCADE 로 함께 삭제된다.
+        if (diaryPageMapper.delete(pageId, diary.getId()) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
+        // 삭제한 자리 뒤의 페이지를 한 칸씩 당겨 1,2,3... 이 이어지게 한다.
+        diaryPageMapper.shiftPageOrdersAfter(diary.getId(), existing.getPageOrder());
+    }
+
+    /** 부모 다이어리 소유권 확인. 없는 다이어리와 남의 다이어리를 같은 404 로 처리한다. */
+    private Diary requireOwnedDiary(Long diaryId, Long userId) {
+        return diaryService.getMyDiary(diaryId, userId);
+    }
+
+    /** 그 페이지가 해당 다이어리에 속하는지 확인한다. */
+    private DiaryPage requirePageOfDiary(Long pageId, Long diaryId) {
+        DiaryPage page = pageId == null ? null : diaryPageMapper.findByIdAndDiaryId(pageId, diaryId);
+        if (page == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
+        return page;
+    }
+
+    /** UNIQUE(diary_id, page_order) 위반은 서버 오류가 아니라 입력 오류로 돌려준다. */
+    private void insertPage(DiaryPage page) {
+        try {
+            if (diaryPageMapper.insert(page) != 1 || page.getId() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "페이지를 저장하지 못했습니다.");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw duplicatePageOrder(exception);
+        }
+    }
+
+    private void updatePage(DiaryPage page) {
+        try {
+            if (diaryPageMapper.update(page) != 1) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+            }
+        } catch (DuplicateKeyException exception) {
+            throw duplicatePageOrder(exception);
+        }
+    }
+
+    private ResponseStatusException duplicatePageOrder(DuplicateKeyException exception) {
+        return new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "이미 사용 중인 페이지 순서입니다.", exception);
+    }
+
+    /** 저장 전 입력값 검증. 원본을 건드리지 않고 정리된 값을 담은 DiaryPage 를 돌려준다. */
+    private DiaryPage validated(DiaryPage page, Diary diary) {
+        if (page == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "페이지 정보를 입력해 주세요.");
+        }
+
+        LocalDate pageDate = page.getPageDate();
+        if (pageDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "페이지 날짜를 입력해 주세요.");
+        }
+        // 같은 날짜에 여러 페이지는 허용하되, 여행 기간을 벗어난 날짜는 막는다.
+        if (pageDate.isBefore(diary.getStartDate()) || pageDate.isAfter(diary.getEndDate())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "페이지 날짜는 여행 기간 안에서 선택해 주세요.");
+        }
+
+        Integer pageOrder = page.getPageOrder();
+        if (pageOrder == null || pageOrder < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "페이지 순서는 1 이상이어야 합니다.");
+        }
+
+        String backgroundType = page.getBackgroundType() == null
+                ? "" : page.getBackgroundType().strip().toUpperCase(Locale.ROOT);
+        if (backgroundType.isEmpty()) {
+            backgroundType = DEFAULT_BACKGROUND_TYPE;
+        }
+        if (!BACKGROUND_TYPES.contains(backgroundType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 페이지 배경입니다.");
+        }
+
+        DiaryPage prepared = new DiaryPage();
+        prepared.setPageDate(pageDate);
+        prepared.setPageOrder(pageOrder);
+        prepared.setBackgroundType(backgroundType);
+        prepared.setPaperColor(paperColor(page.getPaperColor()));
+        prepared.setContent(page.getContent());
+        return prepared;
+    }
+
+    /**
+     * 종이 바탕색. 고르지 않았으면 null(기본 종이색)이고,
+     * 값이 있으면 #RRGGBB 만 허용한다. (임의 CSS 문자열이 스타일로 들어가지 못하게 한다)
+     */
+    private String paperColor(String value) {
+        String color = value == null ? "" : value.strip();
+        if (color.isEmpty()) {
+            return null;
+        }
+        if (!PAPER_COLOR.matcher(color).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "종이 색상을 다시 선택해 주세요.");
+        }
+        return color.toUpperCase(Locale.ROOT);
+    }
+}

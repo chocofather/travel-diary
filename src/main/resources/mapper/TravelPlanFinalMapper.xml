@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanFinalMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanFinalMapper">
 
     <!--
       최종본의 머리.
@@ -119,7 +119,7 @@
       지우기는 내 목록에서만 치우는 것이라, 남의 화면에서 사람이 줄면 안 된다.
     -->
     <select id="findSnapshotsByUserId"
-            resultType="com.example.travlediary.dto.TravelPlanFinalListItemDto">
+            resultType="com.tripbora.dto.TravelPlanFinalListItemDto">
         SELECT s.travel_plan_id AS travel_plan_id,
                s.id             AS snapshot_id,
                s.title,
@@ -156,7 +156,7 @@
       목록과 같은 조건을 여기에도 건다.
     -->
     <select id="findSnapshotByPlanAndUser"
-            resultType="com.example.travlediary.model.TravelPlanFinalSnapshot">
+            resultType="com.tripbora.model.TravelPlanFinalSnapshot">
         SELECT s.id, s.travel_plan_id, s.title, s.start_date, s.end_date,
                s.representative_image_url, s.finalized_at, s.created_at
         FROM travel_plan_final_snapshots s
@@ -172,7 +172,7 @@
       남의 화면에 적힌 "함께한 사람" 에서 사라지면 안 된다.
     -->
     <select id="findMembersBySnapshotId"
-            resultType="com.example.travlediary.model.TravelPlanFinalMember">
+            resultType="com.tripbora.model.TravelPlanFinalMember">
         SELECT id, snapshot_id, user_id, display_name, role, hidden_at, created_at
         FROM travel_plan_final_members
         WHERE snapshot_id = #{snapshotId}
@@ -180,7 +180,7 @@
     </select>
 
     <select id="findDaysBySnapshotId"
-            resultType="com.example.travlediary.model.TravelPlanFinalDay">
+            resultType="com.tripbora.model.TravelPlanFinalDay">
         SELECT id, snapshot_id, day_number, plan_date, created_at
         FROM travel_plan_final_days
         WHERE snapshot_id = #{snapshotId}
@@ -189,7 +189,7 @@
 
     <!-- 날짜 수만큼 조회가 나가지 않게 한 문장으로 읽는다. 완료 시점의 순서 그대로다 -->
     <select id="findItemsBySnapshotId"
-            resultType="com.example.travlediary.model.TravelPlanFinalItem">
+            resultType="com.tripbora.model.TravelPlanFinalItem">
         SELECT i.id, i.final_day_id, i.content, i.tag, i.display_order, i.created_at
         FROM travel_plan_final_items i
                  JOIN travel_plan_final_days d ON d.id = i.final_day_id
@@ -199,7 +199,7 @@
 
     <!-- 일정 수만큼 조회가 나가지 않게 한 문장으로 읽는다. B(1) 다음 C(2) 순이다 -->
     <select id="findAlternativesBySnapshotId"
-            resultType="com.example.travlediary.model.TravelPlanFinalItemAlternative">
+            resultType="com.tripbora.model.TravelPlanFinalItemAlternative">
         SELECT a.id, a.final_item_id, a.alternative_order, a.condition_label,
                a.content, a.tag, a.created_at
         FROM travel_plan_final_item_alternatives a

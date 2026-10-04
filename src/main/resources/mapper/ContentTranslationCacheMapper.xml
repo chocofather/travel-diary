@@ -3,8 +3,8 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.translation.ContentTranslationCacheMapper">
-    <resultMap id="cacheMap" type="com.example.travlediary.model.translation.ContentTranslationCache">
+<mapper namespace="com.tripbora.repository.translation.ContentTranslationCacheMapper">
+    <resultMap id="cacheMap" type="com.tripbora.model.translation.ContentTranslationCache">
         <id property="id" column="id"/>
         <result property="contentType" column="content_type"/>
         <result property="contentId" column="content_id"/>
@@ -33,7 +33,7 @@
           AND target_language = #{targetLanguage}
     </select>
 
-    <insert id="insertProcessing" parameterType="com.example.travlediary.model.translation.ContentTranslationCache">
+    <insert id="insertProcessing" parameterType="com.tripbora.model.translation.ContentTranslationCache">
         INSERT IGNORE INTO content_translation_cache (
             content_type, content_id, source_field, target_language, source_hash,
             provider, status, lease_token, lease_expires_at, created_at, updated_at
@@ -101,7 +101,7 @@
     </update>
 
     <insert id="upsertReady"
-            parameterType="com.example.travlediary.model.translation.ContentTranslationCache">
+            parameterType="com.tripbora.model.translation.ContentTranslationCache">
         INSERT INTO content_translation_cache (
             content_type, content_id, source_field, target_language, source_hash,
             detected_source_language, translated_text, provider, status,

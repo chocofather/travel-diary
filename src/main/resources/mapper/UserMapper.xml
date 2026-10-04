@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.user.UserMapper">
+<mapper namespace="com.tripbora.repository.user.UserMapper">
 
     <!--
       email_verification_purpose 값. 예전 Kakao/Naver 회원의 이메일 보완 인증임을 나타낸다.
@@ -12,7 +12,7 @@
     <sql id="LegacySocialEmailPurpose">'LEGACY_SOCIAL_EMAIL'</sql>
 
     <!-- 사용자 저장 -->
-    <insert id="insertUser" parameterType="com.example.travlediary.model.User"
+    <insert id="insertUser" parameterType="com.tripbora.model.User"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
             nickname, user_email, user_password, profile_image,
@@ -79,7 +79,7 @@
       여기서는 날짜를 조건에 넣지 않는다. 복구 가능 여부 판단은 위의 조회들이 맡는다.
     -->
     <select id="findWithdrawalPendingById"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id, user_email, status,
                withdrawal_requested_at, purge_scheduled_at
         FROM users
@@ -90,7 +90,7 @@
 
     <!-- 확인 화면에서 링크가 아직 쓸 수 있는지만 본다. 잠그지 않고 아무것도 바꾸지 않는다. -->
     <select id="findRecoverableWithdrawalById"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id, user_email, status, purge_scheduled_at
         FROM users
         WHERE id = #{id}
@@ -102,7 +102,7 @@
 
     <!-- 복구 확정 트랜잭션에서 회원 행을 잠그고 같은 조건을 다시 확인한다. -->
     <select id="findRecoverableWithdrawalByIdForUpdate"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id, user_email, status, purge_scheduled_at
         FROM users
         WHERE id = #{id}
@@ -167,7 +167,7 @@
 
     <!-- 파기 트랜잭션에서 회원 행을 잠그고 대상 조건을 다시 확인한다. -->
     <select id="findPurgeTargetByIdForUpdate"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id, user_email, nickname, user_role, status,
                profile_image, withdrawal_requested_at, purge_scheduled_at
         FROM users
@@ -227,7 +227,7 @@
         </foreach>
     </select>
 
-    <select id="findPendingVerificationByToken" resultType="com.example.travlediary.model.User">
+    <select id="findPendingVerificationByToken" resultType="com.tripbora.model.User">
         SELECT *
         FROM users
         WHERE verification_token = #{token}
@@ -235,7 +235,7 @@
           AND deleted_at IS NULL
     </select>
 
-    <select id="findPendingVerificationByEmail" resultType="com.example.travlediary.model.User">
+    <select id="findPendingVerificationByEmail" resultType="com.tripbora.model.User">
         SELECT *
         FROM users
         WHERE user_email = #{userEmail}
@@ -269,14 +269,14 @@
                OR verification_requested_at &lt;= #{cooldownCutoff})
     </update>
 
-    <select id="findByEmail" parameterType="String" resultType="com.example.travlediary.model.User">
+    <select id="findByEmail" parameterType="String" resultType="com.tripbora.model.User">
         SELECT * FROM users WHERE user_email = #{email}
     </select>
 
     <!-- 일반 이메일/비밀번호 인증 전용. 소셜 이메일 충돌 조회와 인증 조건을 섞지 않는다. -->
     <select id="findForAuthenticationByEmail"
             parameterType="string"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id,
                user_email AS userEmail,
                user_password AS userPassword,
@@ -397,7 +397,7 @@
     <!-- 삭제되지 않은 활성 로컬 계정만 비밀번호를 재설정할 수 있다. -->
     <select id="findActiveLocalAccountByEmailForPasswordReset"
             parameterType="string"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT id
         FROM users
         WHERE user_email = #{userEmail}
@@ -417,7 +417,7 @@
     <!-- ③ 토큰으로 사용자 찾기 (만료 여부는 Service 단에서 검사) -->
     <select id="findByResetToken"
             parameterType="string"
-            resultType="com.example.travlediary.model.User">
+            resultType="com.tripbora.model.User">
         SELECT *,
                reset_token      AS resetToken,
                reset_token_exp  AS resetTokenExp
@@ -435,13 +435,13 @@
         WHERE id = #{id}
     </update>
 
-    <select id="findById" parameterType="long" resultType="com.example.travlediary.model.User">
+    <select id="findById" parameterType="long" resultType="com.tripbora.model.User">
         SELECT *
         FROM users
         WHERE id = #{id}
     </select>
 
-    <select id="findAccountDetailsById" resultType="com.example.travlediary.dto.AccountDetailsDto">
+    <select id="findAccountDetailsById" resultType="com.tripbora.dto.AccountDetailsDto">
         SELECT user_email AS userEmail,
                full_name AS fullName,
                user_phone AS userPhone,
@@ -461,7 +461,7 @@
         )
     </select>
 
-    <select id="findActiveAccountSecurityById" resultType="com.example.travlediary.model.User">
+    <select id="findActiveAccountSecurityById" resultType="com.tripbora.model.User">
         SELECT id,
                user_password AS userPassword,
                user_role AS userRole,
@@ -473,7 +473,7 @@
           AND deleted_at IS NULL
     </select>
 
-    <select id="findActiveAccountSecurityByIdForUpdate" resultType="com.example.travlediary.model.User">
+    <select id="findActiveAccountSecurityByIdForUpdate" resultType="com.tripbora.model.User">
         SELECT id,
                user_password AS userPassword,
                user_role AS userRole,
@@ -486,7 +486,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findPublicProfileById" resultType="com.example.travlediary.dto.PublicUserProfileDto">
+    <select id="findPublicProfileById" resultType="com.tripbora.dto.PublicUserProfileDto">
         SELECT
             id,
             nickname,
@@ -503,7 +503,7 @@
         profile_image AS profileImage
     </sql>
 
-    <select id="findMyPageProfileById" resultType="com.example.travlediary.dto.MyPageProfileDto">
+    <select id="findMyPageProfileById" resultType="com.tripbora.dto.MyPageProfileDto">
         SELECT
         <include refid="MyPageProfileColumns"/>
         FROM users
@@ -512,7 +512,7 @@
           AND deleted_at IS NULL
     </select>
 
-    <select id="findMyPageProfileByIdForUpdate" resultType="com.example.travlediary.dto.MyPageProfileDto">
+    <select id="findMyPageProfileByIdForUpdate" resultType="com.tripbora.dto.MyPageProfileDto">
         SELECT
         <include refid="MyPageProfileColumns"/>
         FROM users
@@ -542,7 +542,7 @@
 
     <!-- ================= 관리자 회원 조회 (읽기 전용) ================= -->
 
-    <resultMap id="AdminUserListResultMap" type="com.example.travlediary.dto.AdminUserListItemDto">
+    <resultMap id="AdminUserListResultMap" type="com.tripbora.dto.AdminUserListItemDto">
         <id property="id" column="id"/>
         <result property="nickname" column="nickname"/>
         <result property="userEmail" column="user_email"/>
@@ -551,7 +551,7 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <resultMap id="AdminUserDetailResultMap" type="com.example.travlediary.dto.AdminUserDetailDto">
+    <resultMap id="AdminUserDetailResultMap" type="com.tripbora.dto.AdminUserDetailDto">
         <id property="id" column="id"/>
         <result property="nickname" column="nickname"/>
         <result property="userEmail" column="user_email"/>
@@ -595,7 +595,7 @@
         OFFSET #{offset}
     </select>
 
-    <select id="findByIdForUpdate" resultType="com.example.travlediary.model.User">
+    <select id="findByIdForUpdate" resultType="com.tripbora.model.User">
         SELECT id,
                user_email AS userEmail,
                nickname,
@@ -607,7 +607,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findStatusById" resultType="com.example.travlediary.model.UserStatus">
+    <select id="findStatusById" resultType="com.tripbora.model.UserStatus">
         SELECT status
         FROM users
         WHERE id = #{id}

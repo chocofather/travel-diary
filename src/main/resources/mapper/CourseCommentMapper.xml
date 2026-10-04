@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.course.CourseCommentMapper">
+<mapper namespace="com.tripbora.repository.course.CourseCommentMapper">
 
     <!-- 관리자 조치(ACTIVE)로 숨겨진 댓글. 사용자 직접 삭제와 구분한다. -->
     <sql id="ModeratedComment">
@@ -94,7 +94,7 @@
         )
     </select>
 
-    <select id="findByCourseId" resultType="com.example.travlediary.dto.CourseCommentDto">
+    <select id="findByCourseId" resultType="com.tripbora.dto.CourseCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM course_comments cc
@@ -142,7 +142,7 @@
             cc.id ASC
     </select>
 
-    <select id="findPagedRootComments" resultType="com.example.travlediary.dto.CourseCommentDto">
+    <select id="findPagedRootComments" resultType="com.tripbora.dto.CourseCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM course_comments cc
@@ -181,7 +181,7 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="findRepliesForRootComments" resultType="com.example.travlediary.dto.CourseCommentDto">
+    <select id="findRepliesForRootComments" resultType="com.tripbora.dto.CourseCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM course_comments cc
@@ -294,7 +294,7 @@
           )
     </select>
 
-    <select id="findActiveComment" resultType="com.example.travlediary.model.CourseComment">
+    <select id="findActiveComment" resultType="com.tripbora.model.CourseComment">
         SELECT
             id,
             parent_comment_id AS parentCommentId,
@@ -312,7 +312,7 @@
           AND deleted = 0
     </select>
 
-    <select id="findActiveCommentForUpdate" resultType="com.example.travlediary.model.CourseComment">
+    <select id="findActiveCommentForUpdate" resultType="com.tripbora.model.CourseComment">
         SELECT
             id,
             parent_comment_id AS parentCommentId,
@@ -331,7 +331,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findCommentForUpdate" resultType="com.example.travlediary.model.CourseComment">
+    <select id="findCommentForUpdate" resultType="com.tripbora.model.CourseComment">
         SELECT
             id,
             parent_comment_id AS parentCommentId,
@@ -349,7 +349,7 @@
         FOR UPDATE
     </select>
 
-    <select id="findDtoById" resultType="com.example.travlediary.dto.CourseCommentDto">
+    <select id="findDtoById" resultType="com.tripbora.dto.CourseCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM course_comments cc
@@ -363,7 +363,7 @@
     </select>
 
     <select id="findVisibleTranslationSource"
-            resultType="com.example.travlediary.model.translation.CourseCommentTranslationSource">
+            resultType="com.tripbora.model.translation.CourseCommentTranslationSource">
         SELECT cc.id AS content_id,
                cc.content AS source_text,
                cc.source_language,
@@ -379,7 +379,7 @@
     </select>
 
     <select id="findVisibleTranslationSourceForUpdate"
-            resultType="com.example.travlediary.model.translation.CourseCommentTranslationSource">
+            resultType="com.tripbora.model.translation.CourseCommentTranslationSource">
         SELECT cc.id AS content_id,
                cc.content AS source_text,
                cc.source_language,
@@ -411,7 +411,7 @@
 
     <!-- 일회성 로컬 언어 backfill: 삭제 여부와 관계없이 und 행만 keyset 방식으로 읽는다. -->
     <select id="findUndeterminedLanguagesAfter"
-            resultType="com.example.travlediary.model.translation.CourseCommentLanguageBackfillRow">
+            resultType="com.tripbora.model.translation.CourseCommentLanguageBackfillRow">
         SELECT id, content, updated_at
         FROM course_comments
         WHERE source_language = 'und'
@@ -431,7 +431,7 @@
           AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
     </update>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.CourseComment"
+    <insert id="insert" parameterType="com.tripbora.model.CourseComment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO course_comments (
             parent_comment_id, reply_to_comment_id, content, source_language, deleted,

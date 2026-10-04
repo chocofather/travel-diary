@@ -1,0 +1,1141 @@
+package com.tripbora.service.travelinfo;
+
+import com.tripbora.dto.AdminTravelInfoDetailDto;
+import com.tripbora.dto.InfoPeriodForm;
+import com.tripbora.dto.TravelInfoForm;
+import com.tripbora.dto.TravelInfoDetailDto;
+import com.tripbora.dto.TravelInfoListItemDto;
+import com.tripbora.model.Bookmark;
+import com.tripbora.model.InfoCategory;
+import com.tripbora.model.InfoImage;
+import com.tripbora.model.InfoPeriod;
+import com.tripbora.model.TravelInfo;
+import com.tripbora.model.TravelInfoContentType;
+import com.tripbora.model.TravelInfoScope;
+import com.tripbora.repository.bookmark.BookmarkMapper;
+import com.tripbora.repository.category.InfoCategoryMapper;
+import com.tripbora.repository.travelinfo.TravelInfoMapper;
+import com.tripbora.service.file.FileUploadService;
+import com.tripbora.repository.category.CategoryMapper;
+import com.tripbora.repository.category.CountryCategoryMapper;
+import com.tripbora.service.category.LocalizedReferenceNameResolver;
+import com.tripbora.service.category.ReferenceNameLocalizationService;
+import com.tripbora.service.post.PostContentSanitizer;
+import com.tripbora.service.travelinfo.structured.StructuredContentTestSupport;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class TravelInfoServiceTest {
+
+    @Mock
+    private TravelInfoMapper travelInfoMapper;
+    @Mock
+    private com.tripbora.repository.travelinfo.FestivalInfoMapper festivalInfoMapper;
+    @Mock
+    private BookmarkMapper bookmarkMapper;
+    @Mock
+    private InfoCategoryMapper infoCategoryMapper;
+    @Mock
+    private FileUploadService fileUploadService;
+
+    private TravelInfoService travelInfoService;
+
+    @BeforeEach
+    void setUp() {
+        travelInfoService = new TravelInfoService(
+                travelInfoMapper, festivalInfoMapper, bookmarkMapper, infoCategoryMapper,
+                new PostContentSanitizer(), fileUploadService,
+                new TravelInfoLocalizationService(travelInfoMapper),
+                new ReferenceNameLocalizationService(
+                        org.mockito.Mockito.mock(CountryCategoryMapper.class),
+                        org.mockito.Mockito.mock(CategoryMapper.class),
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()),
+                StructuredContentTestSupport.structuredContentService());
+    }
+
+    @AfterEach
+    void clearTransactionSynchronization() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void getsFestivalAdminDetailWithCategorySanitizedContentAndMultiplePeriods() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        existing.setTitle("벚꽃 축제");
+        existing.setContent("<p onclick=\"alert(1)\"><span class=\"ql-font-pretendard\">축제 본문</span></p>"
+                + "<p class=\"ql-indent-3\"><span class=\"ql-font-nanum-human\">들여쓴 안내</span></p>"
+                + "<ul><li data-list=\"unchecked\"><span class=\"ql-font-school-safe-bareonbatang\">준비물</span></li>"
+                + "<li data-list=\"checked\"><span class=\"ql-font-cafe24-dongdong\">예약</span></li></ul>"
+                + "<p><span class=\"ql-font-gangwon-saeeum\">출발</span></p>"
+                + "<img src=\"/uploads/editor/festival.png\" width=\"640\"><script>alert(1)</script>");
+        existing.setViews(37);
+        existing.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
+        existing.setUpdatedAt(Timestamp.valueOf("2026-04-02 11:30:00"));
+        List<InfoPeriod> periods = List.of(
+                infoPeriod("2026-04-01", "2026-04-03"),
+                infoPeriod("2026-05-10", "2026-05-12"));
+        when(travelInfoMapper.findById(10L)).thenReturn(existing);
+        when(travelInfoMapper.findPeriodsByInfoId(10L)).thenReturn(periods);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        AdminTravelInfoDetailDto detail = travelInfoService.getAdminDetail(10L);
+
+        assertThat(detail.getId()).isEqualTo(10L);
+        assertThat(detail.getTitle()).isEqualTo("벚꽃 축제");
+        assertThat(detail.getCategoryId()).isEqualTo(3L);
+        assertThat(detail.getCategoryName()).isEqualTo("계절여행");
+        assertThat(detail.getViews()).isEqualTo(37);
+        assertThat(detail.getCreatedAt()).isEqualTo(existing.getCreatedAt());
+        assertThat(detail.getUpdatedAt()).isEqualTo(existing.getUpdatedAt());
+        assertThat(detail.getPeriods()).containsExactlyElementsOf(periods);
+        assertThat(detail.getContent())
+                .contains(
+                        "<p><span class=\"ql-font-pretendard\">축제 본문</span></p>",
+                        "class=\"ql-indent-3\"",
+                        "class=\"ql-font-nanum-human\"",
+                        "data-list=\"unchecked\"",
+                        "class=\"ql-font-school-safe-bareonbatang\"",
+                        "data-list=\"checked\"",
+                        "class=\"ql-font-cafe24-dongdong\"",
+                        "class=\"ql-font-gangwon-saeeum\"",
+                        "src=\"/uploads/editor/festival.png\" width=\"640\""
+                )
+                .doesNotContain("onclick", "script");
+        verify(travelInfoMapper).findById(10L);
+        verify(travelInfoMapper).findPeriodsByInfoId(10L);
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void getsGeneralAdminDetailWithEmptyPeriodsAndNoPeriodQuery() {
+        when(travelInfoMapper.findById(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        AdminTravelInfoDetailDto detail = travelInfoService.getAdminDetail(10L);
+
+        assertThat(detail.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
+        assertThat(detail.getPeriods()).isEmpty();
+        verify(travelInfoMapper).findById(10L);
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void publicListAndCountDelegateWithoutAdditionalThumbnailPeriodOrViewQueries() {
+        TravelInfoListItemDto item = new TravelInfoListItemDto();
+        item.setId(10L);
+        List<Long> categoryIds = List.of(3L, 5L, 7L);
+        String keyword = "  100%_!!test  ";
+        String keywordPattern = "100!%!_!!!!test";
+        when(travelInfoMapper.findPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keywordPattern, null, null, "views", 12L, 12))
+                .thenReturn(List.of(item));
+        when(travelInfoMapper.countPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keywordPattern, null, null))
+                .thenReturn(25L);
+
+        assertThat(travelInfoService.getPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keyword, null, "views", 12L, 12))
+                .containsExactly(item);
+        assertThat(travelInfoService.countPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keyword, null))
+                .isEqualTo(25L);
+
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoInteractions(infoCategoryMapper, fileUploadService);
+    }
+
+    @Test
+    void blankPublicSearchKeywordDelegatesAsNoKeywordCondition() {
+        when(travelInfoMapper.findPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null, "latest", 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoMapper.countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null))
+                .thenReturn(0L);
+
+        assertThat(travelInfoService.getPublicList(
+                null, null, List.of(), "   \t", null, "latest", 0L, 12)).isEmpty();
+        assertThat(travelInfoService.countPublicList(
+                null, null, List.of(), null, null)).isZero();
+
+        verify(travelInfoMapper).findPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null, "latest", 0L, 12);
+        verify(travelInfoMapper).countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null);
+    }
+
+    @Test
+    void publicSearchDelegatesTheSameKoreanPatternToListAndCount() {
+        String keyword = "썸ㄴ";
+        String koreanPattern = TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword);
+        when(travelInfoMapper.findPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern,
+                null, "latest", 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoMapper.countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, null))
+                .thenReturn(0L);
+
+        assertThat(travelInfoService.getPublicList(
+                null, null, List.of(), keyword, null, "latest", 0L, 12)).isEmpty();
+        assertThat(travelInfoService.countPublicList(
+                null, null, List.of(), keyword, null)).isZero();
+
+        verify(travelInfoMapper).findPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern,
+                null, "latest", 0L, 12);
+        verify(travelInfoMapper).countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, null);
+    }
+
+    @Test
+    void populatesLoggedInPublicListBookmarksWithOneBoundedQuery() {
+        TravelInfoListItemDto first = new TravelInfoListItemDto();
+        first.setId(10L);
+        TravelInfoListItemDto second = new TravelInfoListItemDto();
+        second.setId(20L);
+        TravelInfoListItemDto duplicate = new TravelInfoListItemDto();
+        duplicate.setId(10L);
+        when(bookmarkMapper.findBookmarkedTargetIds(
+                7L, "TRAVEL_INFO", List.of(10L, 20L)))
+                .thenReturn(Set.of(20L));
+
+        travelInfoService.populatePublicListBookmarks(
+                List.of(first, second, duplicate), 7L);
+
+        assertThat(first.isBookmarked()).isFalse();
+        assertThat(second.isBookmarked()).isTrue();
+        assertThat(duplicate.isBookmarked()).isFalse();
+        verify(bookmarkMapper).findBookmarkedTargetIds(
+                7L, "TRAVEL_INFO", List.of(10L, 20L));
+    }
+
+    @Test
+    void guestOrEmptyPublicListDoesNotQueryBookmarks() {
+        TravelInfoListItemDto item = new TravelInfoListItemDto();
+        item.setId(10L);
+        item.setBookmarked(true);
+
+        travelInfoService.populatePublicListBookmarks(List.of(item), null);
+        travelInfoService.populatePublicListBookmarks(List.of(), 7L);
+
+        assertThat(item.isBookmarked()).isFalse();
+        verifyNoInteractions(bookmarkMapper);
+    }
+
+    @Test
+    void populatesPublicDetailBookmarkOnlyForLoggedInUserWithoutChangingViews() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        int existingViews = detail.getViews();
+        when(bookmarkMapper.findByUserAndTarget(7L, "TRAVEL_INFO", 10L))
+                .thenReturn(new Bookmark());
+
+        travelInfoService.populatePublicDetailBookmark(detail, 7L);
+
+        assertThat(detail.isBookmarked()).isTrue();
+        assertThat(detail.getViews()).isEqualTo(existingViews);
+        verify(bookmarkMapper).findByUserAndTarget(7L, "TRAVEL_INFO", 10L);
+        verify(travelInfoMapper, never()).incrementPublicViews(any());
+    }
+
+    @Test
+    void guestPublicDetailDoesNotQueryBookmarks() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        detail.setBookmarked(true);
+
+        travelInfoService.populatePublicDetailBookmark(detail, null);
+
+        assertThat(detail.isBookmarked()).isFalse();
+        verifyNoInteractions(bookmarkMapper);
+    }
+
+    @Test
+    void getsGeneralPublicDetailAfterIncrementAndSanitizesWithoutPeriodOrThumbnailLookup() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        detail.setContent("<p onclick=\"alert(1)\">일반 본문</p><script>alert(1)</script>");
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(detail);
+
+        TravelInfoDetailDto result = travelInfoService.getPublicDetail(10L);
+
+        assertThat(result.getContent()).isEqualTo("<p>일반 본문</p>");
+        assertThat(result.getPeriods()).isEmpty();
+        var order = org.mockito.Mockito.inOrder(travelInfoMapper);
+        order.verify(travelInfoMapper).incrementPublicViews(10L);
+        order.verify(travelInfoMapper).findPublicDetailById(10L);
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verifyNoInteractions(infoCategoryMapper, fileUploadService);
+    }
+
+    @Test
+    void getsFestivalPublicDetailWithEveryPeriodMappedWithoutInternalIds() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.FESTIVAL);
+        List<InfoPeriod> periods = List.of(
+                infoPeriod("2026-08-10", "2026-08-15"),
+                infoPeriod("2026-08-20", "2026-08-25"));
+        periods.get(0).setId(101L);
+        periods.get(0).setInfoId(10L);
+        periods.get(1).setId(102L);
+        periods.get(1).setInfoId(10L);
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(detail);
+        when(travelInfoMapper.findPeriodsByInfoId(10L)).thenReturn(periods);
+
+        TravelInfoDetailDto result = travelInfoService.getPublicDetail(10L);
+
+        assertThat(result.getPeriods())
+                .extracting(period -> period.getStartDate() + "/" + period.getEndDate())
+                .containsExactly(
+                        "2026-08-10/2026-08-15",
+                        "2026-08-20/2026-08-25");
+        verify(travelInfoMapper).findPeriodsByInfoId(10L);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void missingOrHiddenPublicDetailReturnsNotFoundBeforeDetailAndPeriodQueries() {
+        when(travelInfoMapper.incrementPublicViews(99L)).thenReturn(0);
+
+        assertNotFound(() -> travelInfoService.getPublicDetail(99L));
+
+        verify(travelInfoMapper).incrementPublicViews(99L);
+        verify(travelInfoMapper, never()).findPublicDetailById(any());
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void publicDetailFailureAfterIncrementPropagatesForTransactionalRollback() {
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(null);
+
+        assertNotFound(() -> travelInfoService.getPublicDetail(10L));
+
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+    }
+
+    @Test
+    void publicDetailMethodUsesWritableTransaction() throws NoSuchMethodException {
+        Transactional transactional = TravelInfoService.class
+                .getMethod("getPublicDetail", Long.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.readOnly()).isFalse();
+    }
+
+    @Test
+    void missingAdminDetailReturnsNotFoundBeforeCategoryOrPeriodLookup() {
+        when(travelInfoMapper.findById(99L)).thenReturn(null);
+
+        assertNotFound(() -> travelInfoService.getAdminDetail(99L));
+
+        verify(travelInfoMapper).findById(99L);
+        verifyNoMoreInteractions(travelInfoMapper);
+        verifyNoInteractions(infoCategoryMapper);
+    }
+
+    @Test
+    void createsGeneralInfoWithAuthenticatedAdminAndNoPeriods() {
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        allowCategory();
+        stubTravelInfoInsert(100L);
+
+        Long id = travelInfoService.create(form, 7L);
+
+        assertThat(id).isEqualTo(100L);
+        ArgumentCaptor<TravelInfo> captor = ArgumentCaptor.forClass(TravelInfo.class);
+        verify(travelInfoMapper).insertTravelInfo(captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("벚꽃 여행");
+        assertThat(captor.getValue().getUserId()).isEqualTo(7L);
+        assertThat(captor.getValue().getViews()).isZero();
+        verify(travelInfoMapper, never()).insertPeriod(any());
+        verify(travelInfoMapper, never()).insertInfoImage(any());
+        verify(fileUploadService, never()).saveTravelInfoThumbnail(any());
+    }
+
+    @Test
+    void createsGuideWithGuideCategoryAndWithoutScopeOrPeriods() {
+        TravelInfoForm form = form(TravelInfoContentType.GUIDE);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        allowCategory(TravelInfoContentType.GUIDE);
+        stubTravelInfoInsert(101L);
+
+        Long id = travelInfoService.create(form, 7L);
+
+        assertThat(id).isEqualTo(101L);
+        ArgumentCaptor<TravelInfo> captor = ArgumentCaptor.forClass(TravelInfo.class);
+        verify(travelInfoMapper).insertTravelInfo(captor.capture());
+        assertThat(captor.getValue().getContentType()).isEqualTo(TravelInfoContentType.GUIDE);
+        assertThat(captor.getValue().getScope()).isNull();
+        verify(travelInfoMapper, never()).insertPeriod(any());
+    }
+
+    @Test
+    void guideAndGeneralDoNotShareCategories() {
+        allowCategory(TravelInfoContentType.GENERAL);
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GUIDE), 7L));
+
+        allowCategory(TravelInfoContentType.GUIDE);
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GENERAL), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void createsInfoWithOneMainThumbnail() {
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory();
+        stubTravelInfoInsert(100L);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        assertThat(travelInfoService.create(form, 7L)).isEqualTo(100L);
+
+        ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
+        verify(travelInfoMapper).insertInfoImage(captor.capture());
+        assertThat(captor.getValue().getInfoId()).isEqualTo(100L);
+        assertThat(captor.getValue().getImageUrl())
+                .isEqualTo("/uploads/travel-info/thumbnails/new.jpg");
+        assertThat(captor.getValue().getIsMain()).isTrue();
+        assertThat(captor.getValue().getOrderIndex()).isEqualTo(1);
+    }
+
+    @Test
+    void createRollbackDeletesNewThumbnailFile() {
+        beginTransactionSynchronization();
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory();
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertTravelInfo(any())).thenReturn(0);
+
+        assertThatThrownBy(() -> travelInfoService.create(form, 7L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("여행정보 저장에 실패했습니다.");
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+        verify(travelInfoMapper, never()).insertInfoImage(any());
+    }
+
+    @Test
+    void createsFestivalWithMultiplePeriodsInDateOrder() {
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(
+                period("2026-05-10", "2026-05-12"),
+                period("2026-04-01", "2026-04-03")));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+        stubTravelInfoInsert(100L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+
+        travelInfoService.create(form, 7L);
+
+        ArgumentCaptor<InfoPeriod> captor = ArgumentCaptor.forClass(InfoPeriod.class);
+        verify(travelInfoMapper, times(2)).insertPeriod(captor.capture());
+        assertThat(captor.getAllValues()).extracting(InfoPeriod::getStartDate)
+                .containsExactly(LocalDate.parse("2026-04-01"), LocalDate.parse("2026-05-10"));
+        assertThat(captor.getAllValues()).allSatisfy(period -> assertThat(period.getInfoId()).isEqualTo(100L));
+    }
+
+    @Test
+    void festivalRequiresAtLeastOneCompletePeriod() {
+        TravelInfoForm empty = form(TravelInfoContentType.FESTIVAL);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("축제 여행정보는 기간을 한 개 이상 입력해 주세요.",
+                () -> travelInfoService.create(empty, 7L));
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void festivalRejectsHalfFilledPeriod() {
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        InfoPeriodForm period = new InfoPeriodForm();
+        period.setStartDate(LocalDate.parse("2026-04-01"));
+        form.setPeriods(List.of(period));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("축제 기간의 시작일과 종료일을 모두 입력해 주세요.",
+                () -> travelInfoService.create(form, 7L));
+    }
+
+    @Test
+    void festivalRejectsStartAfterEnd() {
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(period("2026-04-10", "2026-04-01")));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("축제 기간의 시작일은 종료일보다 늦을 수 없습니다.",
+                () -> travelInfoService.create(form, 7L));
+    }
+
+    @Test
+    void festivalRejectsDuplicateAndOverlappingPeriods() {
+        TravelInfoForm duplicate = form(TravelInfoContentType.FESTIVAL);
+        duplicate.setPeriods(List.of(
+                period("2026-04-01", "2026-04-03"),
+                period("2026-04-01", "2026-04-03")));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+        assertValidation("동일한 축제 기간을 중복해서 입력할 수 없습니다.",
+                () -> travelInfoService.create(duplicate, 7L));
+
+        TravelInfoForm overlap = form(TravelInfoContentType.FESTIVAL);
+        overlap.setPeriods(List.of(
+                period("2026-04-01", "2026-04-05"),
+                period("2026-04-05", "2026-04-10")));
+        assertValidation("서로 겹치는 축제 기간을 입력할 수 없습니다.",
+                () -> travelInfoService.create(overlap, 7L));
+    }
+
+    /* === 개최연도 우회 방지 === */
+
+    @Test
+    void theGeneralFormCanStillMoveAFestivalPeriodWithinItsOwnYear() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(period("2026-08-01", "2026-08-10")));
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).insertPeriod(any());
+    }
+
+    @Test
+    void theGeneralFormCannotMoveAFestivalToAnotherYear() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        // 축제 전용 화면에서 막은 덮어쓰기를 이 폼으로 우회할 수 없어야 한다.
+        form.setPeriods(List.of(period("2027-08-01", "2027-08-10")));
+
+        assertValidation("다른 연도 개최분은 새 축제로 등록해야 합니다. 이 글은 2026년 개최분입니다.",
+                () -> travelInfoService.update(10L, form));
+
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).insertPeriod(any());
+    }
+
+    @Test
+    void theGuardUsesTheEarliestStartDateWhenAFestivalHasSeveralPeriods() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        // 가장 이른 시작일이 2027 이면 이 개최분이 아니다. 순서를 바꿔 넣어도 같다.
+        form.setPeriods(List.of(period("2027-02-01", "2027-02-05"),
+                period("2027-01-10", "2027-01-20")));
+
+        assertValidation("다른 연도 개최분은 새 축제로 등록해야 합니다. 이 글은 2026년 개최분입니다.",
+                () -> travelInfoService.update(10L, form));
+    }
+
+    @Test
+    void aFestivalWithoutFestivalInfoIsNotBlockedByTheGuard() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(null);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(period("2027-08-01", "2027-08-10")));
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).insertPeriod(any());
+    }
+
+    private com.tripbora.model.FestivalInfo festivalInfoOfYear(int eventYear) {
+        com.tripbora.model.FestivalInfo festivalInfo =
+                new com.tripbora.model.FestivalInfo();
+        festivalInfo.setInfoId(10L);
+        festivalInfo.setEventYear(eventYear);
+        return festivalInfo;
+    }
+
+    @Test
+    void festivalToGeneralDeletesPeriodsAndPreservesOwnerAndViews() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        existing.setUserId(42L);
+        existing.setViews(93);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory();
+
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-02")));
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).deletePeriodsByInfoId(10L);
+        verify(travelInfoMapper, never()).insertPeriod(any());
+        assertThat(existing.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
+        assertThat(existing.getUserId()).isEqualTo(42L);
+        assertThat(existing.getViews()).isEqualTo(93);
+        verify(travelInfoMapper, never()).findMainImageUrlsByInfoId(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+    }
+
+    @Test
+    void replacesThumbnailAndDeletesOldFilesOnlyAfterCommit() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L)).thenReturn(List.of(
+                "/uploads/travel-info/thumbnails/old-a.jpg",
+                "/uploads/travel-info/thumbnails/old-b.jpg"));
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).deleteMainImagesByInfoId(10L);
+        verify(travelInfoMapper).insertInfoImage(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old-a.jpg");
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old-b.jpg");
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+    }
+
+    @Test
+    void removesThumbnailAndDeletesFileOnlyAfterCommit() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).deleteMainImagesByInfoId(10L);
+        verify(travelInfoMapper, never()).insertInfoImage(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
+    }
+
+    @Test
+    void rollbackDeletesNewThumbnailAndKeepsOldFile() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(0);
+        allowCategory();
+
+        assertNotFound(() -> travelInfoService.update(10L, form));
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+    }
+
+    @Test
+    void generalToFestivalRequiresPeriodBeforeUpdating() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("축제 여행정보는 기간을 한 개 이상 입력해 주세요.",
+                () -> travelInfoService.update(10L, form(TravelInfoContentType.FESTIVAL)));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+    }
+
+    @Test
+    void createsGeneralAsHomeFeaturedWithItsOrder() {
+        assertHomeFeaturedCreate(TravelInfoContentType.GENERAL, 2);
+    }
+
+    @Test
+    void createsGuideAsHomeFeaturedWithItsOrder() {
+        assertHomeFeaturedCreate(TravelInfoContentType.GUIDE, 3);
+    }
+
+    private void assertHomeFeaturedCreate(TravelInfoContentType contentType, int order) {
+        TravelInfoForm form = homeFeaturedForm(contentType, order);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory(contentType);
+        stubTravelInfoInsert(100L);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        travelInfoService.create(form, 7L);
+
+        verify(travelInfoMapper).updateHomeFeatured(100L, true, order);
+    }
+
+    @Test
+    void createSavesTheEnteredOrderEvenWhenNotFeatured() {
+        allowCategory();
+        stubTravelInfoInsert(100L);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setHomeFeaturedOrder(3);
+
+        travelInfoService.create(form, 7L);
+
+        // 체크는 노출 여부만 정한다. 이미지가 없어도 미노출이면 막지 않는다.
+        verify(travelInfoMapper).updateHomeFeatured(100L, false, 3);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void homeFeaturedCreateWithoutThumbnailIsRejectedBeforeAnyWrite() {
+        allowCategory();
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, 1), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+        verify(fileUploadService, never()).saveTravelInfoThumbnail(any());
+    }
+
+    @Test
+    void homeFeaturedRequiresOrderOfAtLeastOne() {
+        allowCategory();
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, 0), 7L));
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, null), 7L));
+
+        // 순서는 체크하지 않아도 저장되므로 같은 규칙을 지킨다.
+        TravelInfoForm notFeatured = form(TravelInfoContentType.GUIDE);
+        notFeatured.setHomeFeaturedOrder(null);
+        allowCategory(TravelInfoContentType.GUIDE);
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(notFeatured, 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateKeepsStoredThumbnailAndSavesOrder() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GUIDE);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageByInfoId(10L)).thenReturn(new InfoImage());
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory(TravelInfoContentType.GUIDE);
+
+        travelInfoService.update(10L, homeFeaturedForm(TravelInfoContentType.GUIDE, 4));
+
+        verify(travelInfoMapper).updateHomeFeatured(10L, true, 4);
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateCannotRemoveTheOnlyThumbnail() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.GENERAL, 1);
+        form.setRemoveThumbnail(true);
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.update(10L, form));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+        verify(travelInfoMapper, never()).updateHomeFeatured(any(), anyBoolean(), any());
+    }
+
+    @Test
+    void homeFeaturedUpdateWithoutStoredThumbnailIsRejected() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.update(10L, homeFeaturedForm(TravelInfoContentType.GENERAL, 1)));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateAcceptsReplacingThumbnailWithoutStoredLookup() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.GENERAL, 1);
+        form.setThumbnailFile(thumbnailFile());
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verify(travelInfoMapper).updateHomeFeatured(10L, true, 1);
+    }
+
+    @Test
+    void uncheckedHomeFeaturedStillSavesTheEditedOrderAndSkipsThumbnailCheck() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(true);
+        existing.setHomeFeaturedOrder(2);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory();
+
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setHomeFeaturedOrder(3);
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).updateHomeFeatured(10L, false, 3);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void festivalIsNeverSavedAsHomeFeatured() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(true);
+        existing.setHomeFeaturedOrder(4);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        // 대표 이미지가 없어도 축제는 추천 대상이 아니므로 막지 않고 꺼서 저장한다.
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.FESTIVAL, 2);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        travelInfoService.update(10L, form);
+
+        assertThat(form.isHomeFeatured()).isFalse();
+        // 축제 화면에는 순서 입력이 없으므로 폼 값(2)이 아니라 저장된 순서(4)를 그대로 둔다.
+        verify(travelInfoMapper).updateHomeFeatured(10L, false, 4);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+
+        TravelInfoForm created = homeFeaturedForm(TravelInfoContentType.FESTIVAL, 2);
+        created.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        stubTravelInfoInsert(100L);
+        travelInfoService.create(created, 7L);
+        verify(travelInfoMapper, never()).updateHomeFeatured(eq(100L), anyBoolean(), any());
+    }
+
+    @Test
+    void editFormRestoresHomeFeaturedAndOrder() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(false);
+        existing.setHomeFeaturedOrder(3);
+        when(travelInfoMapper.findById(10L)).thenReturn(existing);
+
+        TravelInfoForm form = travelInfoService.getForm(10L);
+
+        assertThat(form.isHomeFeatured()).isFalse();
+        // 노출을 꺼 둔 글도 저장된 순서를 보여 주어 다시 켤 때 그대로 쓴다.
+        assertThat(form.getHomeFeaturedOrder()).isEqualTo(3);
+    }
+
+    @Test
+    void rejectsCreateWhenCategoryContentTypeDiffersFromTravelInfo() {
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GENERAL), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void rejectsUpdateWhenCategoryContentTypeDiffersFromTravelInfo() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.update(10L, form(TravelInfoContentType.GENERAL)));
+
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+    }
+
+    @Test
+    void stripsTitleAndSanitizesContentBeforeInsert() {
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setTitle("  안전 여행  ");
+        form.setContent("<p onclick=\"alert(1)\"><span class=\"ql-font-noto-sans-kr\">안전 정보</span></p>"
+                + "<img src=\"/uploads/editor/safe.png\" width=\"600\"><script>alert(1)</script>");
+        allowCategory();
+        stubTravelInfoInsert(100L);
+
+        travelInfoService.create(form, 7L);
+
+        ArgumentCaptor<TravelInfo> captor = ArgumentCaptor.forClass(TravelInfo.class);
+        verify(travelInfoMapper).insertTravelInfo(captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("안전 여행");
+        assertThat(captor.getValue().getContent())
+                .isEqualTo("<p><span class=\"ql-font-noto-sans-kr\">안전 정보</span></p>"
+                        + "<img src=\"/uploads/editor/safe.png\" width=\"600\">")
+                .doesNotContain("script", "onclick");
+    }
+
+    @Test
+    void rejectsBlankOrOversizedTitleAndEmptySanitizedContent() {
+        TravelInfoForm blankTitle = form(TravelInfoContentType.GENERAL);
+        blankTitle.setTitle("   ");
+        assertValidation("제목을 입력해 주세요.", () -> travelInfoService.create(blankTitle, 7L));
+
+        TravelInfoForm longTitle = form(TravelInfoContentType.GENERAL);
+        longTitle.setTitle("가".repeat(256));
+        assertValidation("제목은 255자 이하로 입력해 주세요.",
+                () -> travelInfoService.create(longTitle, 7L));
+
+        TravelInfoForm emptyContent = form(TravelInfoContentType.GENERAL);
+        emptyContent.setContent("<script>alert(1)</script><p><br></p>");
+        assertValidation("본문을 입력해 주세요.", () -> travelInfoService.create(emptyContent, 7L));
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void rejectsMissingCategoryBeforeInsert() {
+        when(infoCategoryMapper.findById(3L)).thenReturn(null);
+
+        assertValidation("존재하지 않는 정보 카테고리입니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GENERAL), 7L));
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void missingUpdateAndDeleteReturnNotFound() {
+        when(travelInfoMapper.findByIdForUpdate(99L)).thenReturn(null);
+
+        assertNotFound(() -> travelInfoService.update(99L, form(TravelInfoContentType.GENERAL)));
+        assertNotFound(() -> travelInfoService.delete(99L));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deleteTravelInfo(any());
+    }
+
+    @Test
+    void deletesExistingTravelInfoAndReliesOnDatabaseCascadeBeforeDeletingFileAfterCommit() {
+        beginTransactionSynchronization();
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.FESTIVAL));
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
+        when(travelInfoMapper.deleteTravelInfo(10L)).thenReturn(1);
+
+        travelInfoService.delete(10L);
+
+        var deleteOrder = org.mockito.Mockito.inOrder(bookmarkMapper, travelInfoMapper);
+        deleteOrder.verify(bookmarkMapper).deleteByTarget("TRAVEL_INFO", 10L);
+        deleteOrder.verify(travelInfoMapper).deleteTravelInfo(10L);
+        verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
+    }
+
+    @Test
+    void requiresScopeAndContentType() {
+        TravelInfoForm missingScope = form(TravelInfoContentType.GENERAL);
+        missingScope.setScope(null);
+        assertValidation("국내/해외 범위를 선택해 주세요.",
+                () -> travelInfoService.create(missingScope, 7L));
+
+        TravelInfoForm missingType = form(TravelInfoContentType.GENERAL);
+        missingType.setContentType(null);
+        assertValidation("여행정보 유형을 선택해 주세요.",
+                () -> travelInfoService.create(missingType, 7L));
+    }
+
+    private TravelInfoForm form(TravelInfoContentType contentType) {
+        TravelInfoForm form = new TravelInfoForm();
+        form.setTitle("  벚꽃 여행  ");
+        form.setContent("<p>봄 여행 정보</p>");
+        form.setScope(TravelInfoScope.DOMESTIC);
+        form.setContentType(contentType);
+        form.setCategoryId(3L);
+        return form;
+    }
+
+    private TravelInfoForm homeFeaturedForm(TravelInfoContentType contentType, Integer order) {
+        TravelInfoForm form = form(contentType);
+        form.setHomeFeatured(true);
+        form.setHomeFeaturedOrder(order);
+        return form;
+    }
+
+    private MockMultipartFile thumbnailFile() {
+        return new MockMultipartFile(
+                "thumbnailFile", "thumbnail.jpg", "image/jpeg", new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff});
+    }
+
+    private void beginTransactionSynchronization() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    private void completeTransaction(int status) {
+        List<TransactionSynchronization> synchronizations =
+                TransactionSynchronizationManager.getSynchronizations();
+        if (status == TransactionSynchronization.STATUS_COMMITTED) {
+            synchronizations.forEach(TransactionSynchronization::afterCommit);
+        }
+        synchronizations.forEach(synchronization -> synchronization.afterCompletion(status));
+        TransactionSynchronizationManager.clearSynchronization();
+    }
+
+    private InfoPeriodForm period(String startDate, String endDate) {
+        InfoPeriodForm form = new InfoPeriodForm();
+        form.setStartDate(LocalDate.parse(startDate));
+        form.setEndDate(LocalDate.parse(endDate));
+        return form;
+    }
+
+    private InfoPeriod infoPeriod(String startDate, String endDate) {
+        InfoPeriod period = new InfoPeriod();
+        period.setInfoId(10L);
+        period.setStartDate(LocalDate.parse(startDate));
+        period.setEndDate(LocalDate.parse(endDate));
+        return period;
+    }
+
+    private TravelInfoDetailDto publicDetail(TravelInfoContentType contentType) {
+        TravelInfoDetailDto detail = new TravelInfoDetailDto();
+        detail.setId(10L);
+        detail.setTitle("여행정보 제목");
+        detail.setScope(TravelInfoScope.DOMESTIC);
+        detail.setContentType(contentType);
+        detail.setCategoryName("계절여행");
+        detail.setContent("<p>본문</p>");
+        detail.setViews(38);
+        detail.setCreatedAt(Timestamp.valueOf("2026-08-01 10:00:00"));
+        detail.setUpdatedAt(Timestamp.valueOf("2026-08-02 11:00:00"));
+        return detail;
+    }
+
+    private TravelInfo existingInfo(Long id, TravelInfoContentType contentType) {
+        TravelInfo info = new TravelInfo();
+        info.setId(id);
+        info.setTitle("기존 제목");
+        info.setContent("<p>기존 본문</p>");
+        info.setScope(TravelInfoScope.DOMESTIC);
+        info.setContentType(contentType);
+        info.setCategoryId(3L);
+        info.setViews(0);
+        info.setUserId(7L);
+        return info;
+    }
+
+    private void allowCategory() {
+        allowCategory(TravelInfoContentType.GENERAL);
+    }
+
+    private void allowCategory(TravelInfoContentType contentType) {
+        InfoCategory category = new InfoCategory();
+        category.setId(3L);
+        category.setName("계절여행");
+        category.setContentType(contentType);
+        category.setIsVisible(true);
+        when(infoCategoryMapper.findById(3L)).thenReturn(category);
+    }
+
+    private void stubTravelInfoInsert(Long id) {
+        when(travelInfoMapper.insertTravelInfo(any())).thenAnswer(invocation -> {
+            TravelInfo travelInfo = invocation.getArgument(0);
+            travelInfo.setId(id);
+            return 1;
+        });
+    }
+
+    private void assertValidation(String message, Runnable action) {
+        assertThatThrownBy(action::run)
+                .isInstanceOf(TravelInfoValidationException.class)
+                .hasMessage(message);
+    }
+
+    private void assertNotFound(Runnable action) {
+        assertThatThrownBy(action::run)
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+}

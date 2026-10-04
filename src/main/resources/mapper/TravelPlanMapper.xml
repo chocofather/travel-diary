@@ -3,14 +3,14 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanMapper">
 
     <!--
       방 1건 등록.
       last_activity_at / created_at / updated_at 은 DB DEFAULT 를 그대로 쓴다.
       status 는 TravelPlanStatus enum 이름이 저장된다.
     -->
-    <insert id="insertPlan" parameterType="com.example.travlediary.model.TravelPlan"
+    <insert id="insertPlan" parameterType="com.tripbora.model.TravelPlan"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plans (
             created_by_user_id, title, start_date, end_date,
@@ -26,7 +26,7 @@
       rejoin_allowed / joined_at / created_at / updated_at 은 DB DEFAULT 를 쓴다.
       role, status 는 각각 TravelPlanRole / TravelPlanMemberStatus enum 이름이 저장된다.
     -->
-    <insert id="insertMember" parameterType="com.example.travlediary.model.TravelPlanMember"
+    <insert id="insertMember" parameterType="com.tripbora.model.TravelPlanMember"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plan_members (
             travel_plan_id, user_id, display_name, role, status
@@ -51,7 +51,7 @@
       진행 중인 방은 보통 몇 건뿐이라 쪽으로 끊지 않고 전부 읽는다.
     -->
     <select id="findActivePlansByUserId"
-            resultType="com.example.travlediary.dto.TravelPlanListItemDto">
+            resultType="com.tripbora.dto.TravelPlanListItemDto">
         SELECT p.id                       AS travel_plan_id,
                p.title                    AS title,
                p.start_date               AS start_date,
@@ -72,7 +72,7 @@
     </select>
 
     <!-- 방 1건. 상태 조건을 함께 건다 -->
-    <select id="findPlanByIdAndStatus" resultType="com.example.travlediary.model.TravelPlan">
+    <select id="findPlanByIdAndStatus" resultType="com.tripbora.model.TravelPlan">
         SELECT id, created_by_user_id, title, start_date, end_date,
                representative_image_url, status, last_activity_at, finalized_at,
                created_at, updated_at
@@ -82,7 +82,7 @@
     </select>
 
     <!-- 이 방에서의 현재 사용자 참여 정보. 접근 권한 확인에 쓴다 -->
-    <select id="findMemberByPlanAndUser" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findMemberByPlanAndUser" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, travel_plan_id, user_id, display_name, role, status,
                rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
         FROM travel_plan_members
@@ -96,7 +96,7 @@
       FOR UPDATE 로 그 방 row 를 잠가 같은 방으로 동시에 들어오는 참여를 한 줄로 세운다.
       뒤따르는 정원 계산과 INSERT 가 같은 트랜잭션 안에 있어야 8명을 넘길 수 없다.
     -->
-    <select id="findPlanByIdAndStatusForUpdate" resultType="com.example.travlediary.model.TravelPlan">
+    <select id="findPlanByIdAndStatusForUpdate" resultType="com.tripbora.model.TravelPlan">
         SELECT id, created_by_user_id, title, start_date, end_date,
                representative_image_url, status, last_activity_at, finalized_at,
                created_at, updated_at
@@ -110,7 +110,7 @@
       상태를 가리지 않는 참여 기록.
       LEFT / REMOVED row 가 있는 사람이 초대로 새 참여자가 되어 버리지 않게 확인한다.
     -->
-    <select id="findAnyMemberByPlanAndUser" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findAnyMemberByPlanAndUser" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, travel_plan_id, user_id, display_name, role, status,
                rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
         FROM travel_plan_members
@@ -176,7 +176,7 @@
       users 를 JOIN 하지 않으므로 계정 정보가 따라올 수 없다.
       OWNER 를 맨 앞에 두고 그 뒤는 참여한 순서(joined_at)로 정렬한다.
     -->
-    <select id="findActiveMembersByPlanId" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findActiveMembersByPlanId" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, display_name, role
         FROM travel_plan_members
         WHERE travel_plan_id = #{travelPlanId}
@@ -193,7 +193,7 @@
       여기서 읽지 않으면 NULL 로 저장되어 그 여행이 누구의 목록에도 나오지 않는다.
     -->
     <select id="findActiveMembersForSnapshot"
-            resultType="com.example.travlediary.model.TravelPlanMember">
+            resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, user_id, display_name, role
         FROM travel_plan_members
         WHERE travel_plan_id = #{travelPlanId}
@@ -204,7 +204,7 @@
     </select>
 
     <!-- 참여자 1건. 방 소속까지 함께 확인해 다른 방의 memberId 를 막는다 -->
-    <select id="findMemberByPlanAndId" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findMemberByPlanAndId" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, travel_plan_id, user_id, display_name, role, status,
                rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
         FROM travel_plan_members
@@ -286,7 +286,7 @@
       화면에 쓰는 것은 표시 이름과 재참여 허용 여부뿐이라 그 밖의 컬럼은 읽지 않고,
       users 를 JOIN 하지 않으므로 계정 정보가 따라올 수 없다.
     -->
-    <select id="findMembersByPlanAndStatus" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findMembersByPlanAndStatus" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, display_name, role, rejoin_allowed
         FROM travel_plan_members
         WHERE travel_plan_id = #{travelPlanId}
@@ -322,7 +322,7 @@
       역할로 참여자를 찾는다. 초대 미리보기의 OWNER 표시 이름에 쓴다.
       users 를 JOIN 하지 않으므로 이메일/아이디/닉네임이 함께 새어 나갈 수 없다.
     -->
-    <select id="findMemberByPlanAndRole" resultType="com.example.travlediary.model.TravelPlanMember">
+    <select id="findMemberByPlanAndRole" resultType="com.tripbora.model.TravelPlanMember">
         SELECT id, travel_plan_id, user_id, display_name, role, status,
                rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
         FROM travel_plan_members
@@ -334,7 +334,7 @@
     </select>
 
     <!-- 방의 DAY 목록 -->
-    <select id="findDaysByPlanId" resultType="com.example.travlediary.model.TravelPlanDay">
+    <select id="findDaysByPlanId" resultType="com.tripbora.model.TravelPlanDay">
         SELECT id, travel_plan_id, day_number, plan_date, created_at, updated_at
         FROM travel_plan_days
         WHERE travel_plan_id = #{travelPlanId}
@@ -342,7 +342,7 @@
     </select>
 
     <!-- DAY 1건. 방 소속까지 함께 확인한다 -->
-    <select id="findDayByPlanAndId" resultType="com.example.travlediary.model.TravelPlanDay">
+    <select id="findDayByPlanAndId" resultType="com.tripbora.model.TravelPlanDay">
         SELECT id, travel_plan_id, day_number, plan_date, created_at, updated_at
         FROM travel_plan_days
         WHERE id = #{dayId}

@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.recommend.DestinationRecommendMapper">
+<mapper namespace="com.tripbora.repository.recommend.DestinationRecommendMapper">
 
-    <resultMap id="SeasonDestinationDtoMap" type="com.example.travlediary.dto.SeasonDestinationDto">
+    <resultMap id="SeasonDestinationDtoMap" type="com.tripbora.dto.SeasonDestinationDto">
         <id     property="id"           column="destination_id"/>
         <result property="name"         column="name"/>
         <result property="imageUrl"     column="image_url"/>

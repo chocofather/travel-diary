@@ -128,7 +128,7 @@ server:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.example.travlediary.model
+  type-aliases-package: com.tripbora.model
   configuration:
     map-underscore-to-camel-case: true
 

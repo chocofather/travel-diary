@@ -3,10 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryReportMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverLibraryReportMapper">
 
     <resultMap id="LibraryReportMap"
-               type="com.example.travlediary.model.DiaryCoverLibraryReport">
+               type="com.tripbora.model.DiaryCoverLibraryReport">
         <id property="id" column="id"/>
         <result property="libraryItemId" column="library_item_id"/>
         <result property="reportedSnapshotVersion" column="reported_snapshot_version"/>
@@ -25,7 +25,7 @@
     </resultMap>
 
     <resultMap id="AdminReportListMap"
-               type="com.example.travlediary.dto.DiaryCoverLibraryReportListItemDto">
+               type="com.tripbora.dto.DiaryCoverLibraryReportListItemDto">
         <id property="reportId" column="report_id"/>
         <result property="libraryItemId" column="library_item_id"/>
         <result property="reportedSnapshotVersion" column="reported_snapshot_version"/>
@@ -45,7 +45,7 @@
         created_at, updated_at
     </sql>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryReport"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCoverLibraryReport"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_library_reports (
             library_item_id, reported_snapshot_version, photo_asset_id,

@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryMapper">
 
-    <resultMap id="DiaryMap" type="com.example.travlediary.model.Diary">
+    <resultMap id="DiaryMap" type="com.tripbora.model.Diary">
         <id     property="id"            column="id"/>
         <result property="userId"        column="user_id"/>
         <result property="title"         column="title"/>
@@ -19,7 +19,7 @@
         <result property="updatedAt"     column="updated_at"/>
     </resultMap>
 
-    <resultMap id="DiaryListItemMap" type="com.example.travlediary.dto.DiaryListItemDto">
+    <resultMap id="DiaryListItemMap" type="com.tripbora.dto.DiaryListItemDto">
         <id     property="id"            column="id"/>
         <result property="title"         column="title"/>
         <result property="startDate"     column="start_date"/>
@@ -119,7 +119,7 @@
           AND user_id = #{userId}
     </select>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.Diary"
+    <insert id="insert" parameterType="com.tripbora.model.Diary"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diaries (
             user_id, title, start_date, end_date,
@@ -131,7 +131,7 @@
     </insert>
 
     <!-- 소유권은 서비스에서도 확인하지만 여기서도 user_id 로 한 번 더 막는다. -->
-    <update id="update" parameterType="com.example.travlediary.model.Diary">
+    <update id="update" parameterType="com.tripbora.model.Diary">
         UPDATE diaries
         SET title = #{title},
             start_date = #{startDate},
@@ -174,7 +174,7 @@
       통제된 대표 이미지 응답 전용. 다이어리 한 권을 통째로 읽지 않고 필요한 세 칸만 가져온다.
       소유권(user_id)이 조건에 들어 있어 남의 다이어리는 결과 자체가 없다. (PK 로 한 행)
     -->
-    <select id="findCoverPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+    <select id="findCoverPhotoRef" resultType="com.tripbora.dto.DiaryPrivatePhotoRef">
         SELECT d.cover_image_url AS image_url,
                d.id              AS diary_id,
                d.pin_hash        AS pin_hash

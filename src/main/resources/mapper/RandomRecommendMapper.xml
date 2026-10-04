@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.recommend.RandomRecommendMapper">
+<mapper namespace="com.tripbora.repository.recommend.RandomRecommendMapper">
 
-    <resultMap id="RandomDestinationDtoMap" type="com.example.travlediary.dto.RandomDestinationDto">
+    <resultMap id="RandomDestinationDtoMap" type="com.tripbora.dto.RandomDestinationDto">
         <id property="destinationId" column="destination_id"/>
         <result property="destinationName" column="name"/>
         <result property="shortDescription" column="short_description"/>
@@ -16,7 +16,7 @@
         <result property="regionName" column="region_name"/>
     </resultMap>
 
-    <resultMap id="RandomTravelRegionDtoMap" type="com.example.travlediary.dto.RandomTravelRegionDto">
+    <resultMap id="RandomTravelRegionDtoMap" type="com.tripbora.dto.RandomTravelRegionDto">
         <id property="regionId" column="region_id"/>
         <result property="regionName" column="region_name"/>
         <result property="countryId" column="country_id"/>

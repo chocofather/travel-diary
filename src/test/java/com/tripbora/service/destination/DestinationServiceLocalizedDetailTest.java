@@ -1,0 +1,247 @@
+package com.tripbora.service.destination;
+
+import com.tripbora.config.i18n.SupportedLanguage;
+import com.tripbora.dto.DestinationDetailDto;
+import com.tripbora.model.Destination;
+import com.tripbora.model.DestinationImage;
+import com.tripbora.model.DestinationTranslation;
+import com.tripbora.model.DestinationType;
+import com.tripbora.model.AttractionInfo;
+import com.tripbora.repository.bookmark.BookmarkMapper;
+import com.tripbora.repository.destination.DestinationMapper;
+import com.tripbora.service.amenity.AmenityService;
+import com.tripbora.service.comment.DestinationCommentService;
+import com.tripbora.service.course.CourseService;
+import com.tripbora.service.info.AccommodationInfoService;
+import com.tripbora.service.info.ActivityInfoService;
+import com.tripbora.service.info.AttractionInfoService;
+import com.tripbora.service.info.RestaurantInfoService;
+import com.tripbora.service.info.ShopInfoService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class DestinationServiceLocalizedDetailTest {
+
+    @Mock private DestinationMapper destinationMapper;
+    @Mock private DestinationImageService destinationImageService;
+    @Mock private BookmarkMapper bookmarkMapper;
+    @Mock private AmenityService amenityService;
+    @Mock private DestinationCommentService destinationCommentService;
+    @Mock private CourseService courseService;
+    @Mock private AccommodationInfoService accommodationInfoService;
+    @Mock private AttractionInfoService attractionInfoService;
+    @Mock private RestaurantInfoService restaurantInfoService;
+    @Mock private ActivityInfoService activityInfoService;
+    @Mock private ShopInfoService shopInfoService;
+
+    private DestinationService destinationService;
+
+    @BeforeEach
+    void setUpBaseDetail() {
+        destinationService = new DestinationService(destinationMapper, destinationImageService,
+                bookmarkMapper, amenityService, destinationCommentService, courseService,
+                accommodationInfoService, attractionInfoService, restaurantInfoService,
+                activityInfoService, shopInfoService,
+                new DestinationLocalizationService(destinationMapper));
+
+        Destination destination = new Destination();
+        destination.setId(15L);
+        destination.setType(DestinationType.ATTRACTION);
+        when(destinationMapper.findDestinationDetail(15L)).thenReturn(destination);
+    }
+
+    @Test
+    void koreanRequestUsesKoreanTranslation() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명"),
+                translation(2L, "en", "Gyeongbokgung Palace", "English summary", "English description")));
+
+        Destination destination = detail(SupportedLanguage.KOREAN);
+
+        assertThat(destination.getName()).isEqualTo("경복궁");
+        assertThat(destination.getShortDescription()).isEqualTo("한국어 요약");
+        assertThat(destination.getDescription()).isEqualTo("한국어 설명");
+    }
+
+    @Test
+    void englishRequestUsesEnglishTranslationWhenPresent() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명"),
+                translation(2L, "en", "Gyeongbokgung Palace", "English summary", "English description")));
+
+        Destination destination = detail(SupportedLanguage.ENGLISH);
+
+        assertThat(destination.getName()).isEqualTo("Gyeongbokgung Palace");
+        assertThat(destination.getShortDescription()).isEqualTo("English summary");
+        assertThat(destination.getDescription()).isEqualTo("English description");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SupportedLanguage.class, names = {
+            "JAPANESE", "CHINESE_SIMPLIFIED", "CHINESE_TRADITIONAL"
+    })
+    void untranslatedSupportedLanguageFallsBackToKorean(SupportedLanguage requestedLanguage) {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명"),
+                translation(2L, "en", "Gyeongbokgung Palace", "English summary", "English description")));
+
+        Destination destination = detail(requestedLanguage);
+
+        assertThat(destination.getName()).isEqualTo("경복궁");
+        assertThat(destination.getShortDescription()).isEqualTo("한국어 요약");
+        assertThat(destination.getDescription()).isEqualTo("한국어 설명");
+    }
+
+    @Test
+    void eachNullRequestedFieldFallsBackIndependently() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명"),
+                translation(2L, "en", "Gyeongbokgung Palace", null, "English description")));
+
+        Destination destination = detail(SupportedLanguage.ENGLISH);
+
+        assertThat(destination.getName()).isEqualTo("Gyeongbokgung Palace");
+        assertThat(destination.getShortDescription()).isEqualTo("한국어 요약");
+        assertThat(destination.getDescription()).isEqualTo("English description");
+    }
+
+    @Test
+    void blankRequestedFieldUsesTheSameFieldFallbackPolicy() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명"),
+                translation(2L, "en", "   ", "English summary", "English description")));
+
+        Destination destination = detail(SupportedLanguage.ENGLISH);
+
+        assertThat(destination.getName()).isEqualTo("경복궁");
+        assertThat(destination.getShortDescription()).isEqualTo("English summary");
+        assertThat(destination.getDescription()).isEqualTo("English description");
+    }
+
+    @Test
+    void missingRequestedAndKoreanTranslationsUseDeterministicLanguageOrder() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(5L, "zh-TW", "繁體名稱", "繁體摘要", "繁體說明"),
+                translation(9L, "en", "English name", "English summary", "English description")));
+
+        Destination destination = detail(SupportedLanguage.JAPANESE);
+
+        assertThat(destination.getName()).isEqualTo("English name");
+        assertThat(destination.getShortDescription()).isEqualTo("English summary");
+        assertThat(destination.getDescription()).isEqualTo("English description");
+    }
+
+    @Test
+    void destinationWithoutAnyTranslationUsesExistingNotFoundResult() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of());
+
+        assertThat(destinationService.getDestinationDetailWithInfo(
+                15L, SupportedLanguage.ENGLISH)).isNull();
+        verify(destinationMapper, never()).findImagesByDestinationId(15L);
+    }
+
+    @Test
+    void publicLocalizedDetailPassesRequestedLanguageToAttractionInfoService() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
+        AttractionInfo localized = new AttractionInfo();
+        localized.setDestinationId(15L);
+        localized.setClosedDays("Tuesday");
+        when(attractionInfoService.findLocalizedByDestinationId(15L, SupportedLanguage.ENGLISH))
+                .thenReturn(localized);
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(
+                15L, SupportedLanguage.ENGLISH);
+
+        assertThat(detail.getAttractionInfo()).isSameAs(localized);
+        verify(attractionInfoService).findLocalizedByDestinationId(15L, SupportedLanguage.ENGLISH);
+    }
+
+    @Test
+    void baseDetailUsedByAdminKeepsBaseAttractionRead() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
+        AttractionInfo baseInfo = new AttractionInfo();
+        baseInfo.setDestinationId(15L);
+        when(attractionInfoService.findByDestinationId(15L)).thenReturn(baseInfo);
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(15L);
+
+        assertThat(detail.getAttractionInfo()).isSameAs(baseInfo);
+        verify(attractionInfoService).findByDestinationId(15L);
+        verify(attractionInfoService, never()).findLocalizedByDestinationId(
+                15L, SupportedLanguage.KOREAN);
+    }
+
+    @Test
+    void detailDtoKeepsEachImagesSourceMetadata() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "요약", "설명")));
+        DestinationImage first = new DestinationImage();
+        first.setSourceName("한국관광공사");
+        first.setLicenseType("KOGL_TYPE_1");
+        first.setSourceUrl("https://example.com/first");
+        DestinationImage second = new DestinationImage();
+        second.setSourceName("서울특별시");
+        second.setLicenseType("KOGL_TYPE_3");
+        second.setSourceUrl("https://example.com/second");
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of(first, second));
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(
+                15L, SupportedLanguage.KOREAN);
+
+        assertThat(detail.getImages())
+                .extracting(DestinationImage::getSourceName,
+                        DestinationImage::getLicenseType,
+                        DestinationImage::getSourceUrl)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "한국관광공사", "KOGL_TYPE_1", "https://example.com/first"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "서울특별시", "KOGL_TYPE_3", "https://example.com/second"));
+    }
+
+    private Destination detail(SupportedLanguage language) {
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(15L, language);
+        assertThat(detail).isNotNull();
+        return detail.getDestination();
+    }
+
+    private DestinationTranslation translation(Long id, String languageCode, String name,
+                                               String shortDescription, String description) {
+        DestinationTranslation translation = new DestinationTranslation();
+        translation.setId(id);
+        translation.setDestinationId(15L);
+        translation.setLanguageCode(languageCode);
+        translation.setName(name);
+        translation.setShortDescription(shortDescription);
+        translation.setDescription(description);
+        return translation;
+    }
+}

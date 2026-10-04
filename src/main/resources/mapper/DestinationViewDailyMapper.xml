@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.destination.DestinationViewDailyMapper">
+<mapper namespace="com.tripbora.repository.destination.DestinationViewDailyMapper">
 
     <!--
       여행지 일별 조회 +1. 한 문장 upsert 라 동시 요청에서도 행이 둘 생기거나 증가가 빠지지 않는다.

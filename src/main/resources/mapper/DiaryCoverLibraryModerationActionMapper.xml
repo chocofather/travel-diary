@@ -3,10 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryModerationActionMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverLibraryModerationActionMapper">
 
     <resultMap id="LibraryModerationActionMap"
-               type="com.example.travlediary.model.DiaryCoverLibraryModerationAction">
+               type="com.tripbora.model.DiaryCoverLibraryModerationAction">
         <id property="id" column="id"/>
         <result property="reportId" column="report_id"/>
         <result property="libraryItemId" column="library_item_id"/>
@@ -47,7 +47,7 @@
     </select>
 
     <insert id="insert"
-            parameterType="com.example.travlediary.model.DiaryCoverLibraryModerationAction"
+            parameterType="com.tripbora.model.DiaryCoverLibraryModerationAction"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_library_moderation_actions (
             report_id, library_item_id, photo_asset_id, action_type,

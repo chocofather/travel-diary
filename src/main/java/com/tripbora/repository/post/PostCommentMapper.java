@@ -1,0 +1,84 @@
+package com.tripbora.repository.post;
+
+import com.tripbora.dto.PostCommentDto;
+import com.tripbora.model.PostComment;
+import com.tripbora.model.translation.PostCommentLanguageBackfillRow;
+import com.tripbora.model.translation.PostCommentTranslationSource;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface PostCommentMapper {
+
+    boolean existsActivePost(@Param("postId") Long postId);
+
+    List<PostCommentDto> findByPostId(@Param("postId") Long postId,
+                                      @Param("currentUserId") Long currentUserId);
+
+    List<PostCommentDto> findPagedRootComments(@Param("postId") Long postId,
+                                               @Param("currentUserId") Long currentUserId,
+                                               @Param("sort") String sort,
+                                               @Param("limit") int limit,
+                                               @Param("offset") int offset);
+
+    List<PostCommentDto> findRepliesForRootComments(@Param("postId") Long postId,
+                                                    @Param("currentUserId") Long currentUserId,
+                                                    @Param("rootIds") List<Long> rootIds);
+
+    int countRootCommentThreads(@Param("postId") Long postId);
+
+    int countActiveComments(@Param("postId") Long postId);
+
+    Long findActiveRootIdForLocation(@Param("postId") Long postId,
+                                     @Param("commentId") Long commentId);
+
+    int countRootCommentsBefore(@Param("postId") Long postId,
+                                @Param("rootId") Long rootId);
+
+    PostComment findActiveComment(@Param("commentId") Long commentId);
+
+    PostComment findActiveCommentForUpdate(@Param("commentId") Long commentId);
+
+    PostComment findCommentForUpdate(@Param("commentId") Long commentId);
+
+    PostCommentDto findDtoById(@Param("commentId") Long commentId,
+                               @Param("currentUserId") Long currentUserId);
+
+    PostCommentTranslationSource findVisibleTranslationSource(@Param("id") Long id);
+
+    PostCommentTranslationSource findVisibleTranslationSourceForUpdate(@Param("id") Long id);
+
+    int correctSourceLanguage(@Param("id") Long id,
+                              @Param("sourceLanguage") String sourceLanguage,
+                              @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    List<PostCommentLanguageBackfillRow> findUndeterminedLanguagesAfter(
+            @Param("afterId") Long afterId,
+            @Param("limit") int limit);
+
+    int updateDetectedLanguageIfUndetermined(
+            @Param("id") Long id,
+            @Param("sourceLanguage") String sourceLanguage,
+            @Param("content") String content,
+            @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    int insert(PostComment comment);
+
+    int updateContent(@Param("commentId") Long commentId,
+                      @Param("userId") Long userId,
+                      @Param("content") String content,
+                      @Param("sourceLanguage") String sourceLanguage);
+
+    int softDelete(@Param("commentId") Long commentId,
+                   @Param("userId") Long userId);
+
+    int insertLike(@Param("userId") Long userId,
+                   @Param("commentId") Long commentId);
+
+    int deleteLike(@Param("userId") Long userId,
+                   @Param("commentId") Long commentId);
+
+    int deleteAllLikesByUserId(@Param("userId") Long userId);
+}

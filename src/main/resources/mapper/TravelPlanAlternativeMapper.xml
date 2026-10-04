@@ -3,11 +3,11 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanAlternativeMapper">
 
     <!-- 한 A 일정의 대안 목록. 1 = B, 2 = C -->
     <select id="findByItemId"
-            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+            resultType="com.tripbora.model.TravelPlanItemAlternative">
         SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_item_alternatives
@@ -17,7 +17,7 @@
 
     <!-- 방 전체의 대안. 일정 수만큼 조회가 나가지 않도록 한 문장으로 읽는다 -->
     <select id="findByPlanId"
-            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+            resultType="com.tripbora.model.TravelPlanItemAlternative">
         SELECT a.id, a.travel_plan_item_id, a.alternative_order, a.condition_label, a.content,
                a.tag, a.created_by_member_id, a.version, a.created_at, a.updated_at
         FROM travel_plan_item_alternatives a
@@ -36,7 +36,7 @@
 
     <!-- 대안 1건. A 일정 소속까지 함께 확인한다 -->
     <select id="findByIdAndItemId"
-            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+            resultType="com.tripbora.model.TravelPlanItemAlternative">
         SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_item_alternatives
@@ -46,7 +46,7 @@
 
     <!-- 자리(B/C)로 찾는다. 승격 대상 대안을 집을 때 쓴다 -->
     <select id="findByItemIdAndOrder"
-            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+            resultType="com.tripbora.model.TravelPlanItemAlternative">
         SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_item_alternatives
@@ -59,7 +59,7 @@
       tag 는 아직 화면이 없어 항상 NULL 이고, version / created_at / updated_at 은 DB DEFAULT 를 쓴다.
     -->
     <insert id="insertAlternative"
-            parameterType="com.example.travlediary.model.TravelPlanItemAlternative"
+            parameterType="com.tripbora.model.TravelPlanItemAlternative"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plan_item_alternatives (
             travel_plan_item_id, alternative_order, condition_label, content, tag,

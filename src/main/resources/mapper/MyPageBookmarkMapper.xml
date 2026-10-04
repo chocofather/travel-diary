@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.bookmark.MyPageBookmarkMapper">
+<mapper namespace="com.tripbora.repository.bookmark.MyPageBookmarkMapper">
 
     <sql id="koreaRegionTree">
         WITH RECURSIVE korea_regions AS (
@@ -37,7 +37,7 @@
     </sql>
 
     <select id="findDestinationBookmarks"
-            resultType="com.example.travlediary.dto.MyPageDestinationBookmarkDto">
+            resultType="com.tripbora.dto.MyPageDestinationBookmarkDto">
         <include refid="koreaRegionTree"/>
         SELECT
             b.target_id AS targetId,
@@ -122,7 +122,7 @@
     </sql>
 
     <select id="findCommunityBookmarks"
-            resultType="com.example.travlediary.dto.MyPageCommunityBookmarkDto">
+            resultType="com.tripbora.dto.MyPageCommunityBookmarkDto">
         SELECT
             bookmarked_content.targetId,
             bookmarked_content.boardType,
@@ -166,7 +166,7 @@
     </sql>
 
     <select id="findTravelInfoBookmarks"
-            resultType="com.example.travlediary.dto.MyPageTravelInfoBookmarkDto">
+            resultType="com.tripbora.dto.MyPageTravelInfoBookmarkDto">
         SELECT
             b.target_id AS targetId,
             ti.title,

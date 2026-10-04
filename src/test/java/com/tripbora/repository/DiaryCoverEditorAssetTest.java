@@ -1,0 +1,317 @@
+package com.tripbora.repository;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * 표지 꾸미기는 페이지 다꾸의 엔진을 그대로 쓴다.
+ *
+ * <p>드래그/크기/회전/겹침/떼기를 표지용으로 다시 만들지 않는다. 엔진은 저장 주소를
+ * 요소의 data-* 에서 읽으므로 어느 화면인지 몰라도 되고, 열어 줄 자리만 한 곳 늘었다.
+ */
+class DiaryCoverEditorAssetTest {
+
+    private static final Path DRAG_JS =
+            Path.of("src/main/resources/static/js/diary-canvas-drag.js");
+    private static final Path PICKER_JS =
+            Path.of("src/main/resources/static/js/diary-sticker-picker.js");
+    private static final Path COVER_EDIT =
+            Path.of("src/main/resources/templates/diary/cover-design-edit.html");
+    private static final Path PAGE_DETAIL =
+            Path.of("src/main/resources/templates/diary/detail.html");
+
+    /** 엔진은 한 벌이다. 표지용 사본을 만들지 않는다. */
+    @Test
+    void theDragEngineIsSharedNotCopied() throws IOException {
+        try (var files = Files.list(Path.of("src/main/resources/static/js"))) {
+            assertThat(files.map(path -> path.getFileName().toString())
+                    .filter(name -> name.contains("canvas-drag")).toList())
+                    .as("드래그 엔진 파일").hasSize(1);
+        }
+        String drag = read(DRAG_JS);
+        // 꾸밀 수 있는 자리 두 곳 중 하나라도 열려 있으면 붙는다
+        assertThat(drag).contains(".diary-detail-page.is-edit-mode, .diary-cover-canvas.is-editable");
+        // 저장 주소는 요소가 들고 온다. 엔진 안에 주소를 적지 않는다
+        assertThat(drag).contains("item.dataset.positionUrl").contains("item.dataset.layerUrl");
+        assertThat(drag).doesNotContain("/diaries/cover-designs/");
+        assertThat(drag).doesNotContain("/pages/");
+    }
+
+    /** 스티커 붙이기도 같은 스크립트다. 붙일 자리만 한 곳 늘었다. */
+    @Test
+    void theStickerPickerKnowsBothPlacesToAttach() throws IOException {
+        String picker = read(PICKER_JS);
+
+        assertThat(picker).contains(".diary-book-single .diary-canvas");
+        assertThat(picker).contains(".diary-cover-canvas.is-editable .diary-cover-surface");
+        // 보낼 주소는 버튼이 알려 준다 (페이지든 표지든 같은 절차)
+        assertThat(picker).contains("button.dataset.createUrl");
+        assertThat(picker).doesNotContain("/diaries/cover-designs/");
+    }
+
+    /** 표지 요소는 엔진이 실제로 읽는 이름 그대로 값을 달고 나온다. */
+    @Test
+    void coverElementsCarryEveryAttributeTheEngineReads() throws IOException {
+        String template = read(COVER_EDIT);
+
+        for (String attribute : new String[]{
+                "data-element-id", "data-element-type", "data-sticker-kind",
+                "data-position-x", "data-position-y", "data-width", "data-height",
+                "data-rotation", "data-z-index",
+                "data-position-url", "data-size-url", "data-rotation-url", "data-layer-url"}) {
+            assertThat(template).as("%s", attribute).contains("th:" + attribute + "=");
+        }
+        // 되풀이해서 그리는 마스킹테이프 조각도 페이지 쪽과 같은 이름으로 싣는다
+        assertThat(template).contains("th:data-tape-left").contains("th:data-tape-center")
+                .contains("th:data-tape-right");
+        // 떼기는 요소 행만 지운다 (공용 asset 이라 그림 파일은 그대로 둔다)
+        assertThat(template).contains("/elements/{elementId}/sticker/delete");
+        // 손잡이/액션 줄도 페이지 다꾸와 같은 클래스를 쓴다
+        assertThat(template).contains("diary-rotate-handle").contains("diary-resize-handle")
+                .contains("diary-layer-action");
+    }
+
+    /**
+     * 조작 엔진이 기준 상자를 찾을 수 있어야 한다.
+     *
+     * <p>엔진은 요소의 기준 상자를 item.closest('.diary-canvas') 로 찾고, 못 찾으면
+     * 그 요소에는 조작을 아예 붙이지 않는다. (서버가 그린 것도, 나중에 붙인 것도 마찬가지)
+     * 그래서 표지의 자유배치 층도 같은 이름을 함께 달아 둔다.
+     */
+    @Test
+    void theCoverLayerCarriesTheNameTheEngineLooksFor() throws IOException {
+        String drag = read(DRAG_JS);
+        String template = read(COVER_EDIT);
+
+        assertThat(drag).contains("item.closest('.diary-canvas')");
+        assertThat(template).contains("class=\"diary-canvas diary-cover-surface\"");
+        // 나중에 붙인 요소도 같은 상자 안에 들어가야 조작이 붙는다
+        assertThat(read(PICKER_JS))
+                .contains(".diary-cover-canvas.is-editable .diary-cover-surface")
+                .contains("window.diaryCanvas?.register(item)");
+    }
+
+    /** 좁은 화면에서는 판이 화면 밖으로 나가지 않게 가운데를 기준으로 편다. */
+    @Test
+    void theStickerPickerStaysOnScreenOnNarrowWidths() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+
+        String narrow = css.substring(css.indexOf("@media (max-width: 780px) {"));
+        narrow = narrow.substring(0, narrow.indexOf("\n}\n\n@media"));
+        assertThat(narrow).contains(".diary-cover-tool-row .diary-sticker-popover")
+                .contains("transform: translateX(-50%);");
+    }
+
+    /** 사진도 스티커와 같은 엔진·같은 이름으로 다뤄진다. (크기 조절 때 비율을 지키는 근거) */
+    @Test
+    void coverPhotosUseTheSameEngineAndKeepTheirRatio() throws IOException {
+        String drag = read(DRAG_JS);
+        String template = read(COVER_EDIT);
+        String photoJs = read(Path.of("src/main/resources/static/js/diary-cover-photo.js"));
+
+        // 엔진은 이 값을 보고 원본 비율을 지킬지 정한다
+        assertThat(drag).contains("item.dataset.elementType === 'PHOTO'");
+        assertThat(template).contains("diary-canvas-photo diary-photo");
+        assertThat(photoJs).contains("item.dataset.elementType = 'PHOTO'");
+        // 나중에 붙인 사진도 같은 엔진에 넘긴다
+        assertThat(photoJs).contains("window.diaryCanvas?.register(item)");
+        // 사진은 올린 파일이라 지울 때 파일까지 정리하는 주소를 쓴다
+        assertThat(template).contains("/elements/{elementId}/photo/delete");
+        assertThat(photoJs).contains("photo.urls.delete");
+    }
+
+    /**
+     * 표지는 스크롤을 따라다니지 않는다.
+     *
+     * <p>왼쪽 표지와 오른쪽 설정이 같은 문서 흐름에 있어, 화면을 내리면 둘이 함께 올라간다.
+     * (따라다니게 하려고 두었던 자리 고정과 그 보정값은 모두 걷어냈다)
+     */
+    @Test
+    void theCoverScrollsAwayWithTheRestOfThePage() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+        String template = read(COVER_EDIT);
+
+        // 표지 편집 화면 어디에도 자리 고정이 남아 있지 않다
+        for (String selector : new String[]{
+                ".diary-cover-preview", ".diary-cover-design-editor", ".diary-cover-canvas"}) {
+            assertThat(rule(css, selector)).as("%s", selector)
+                    .doesNotContain("position: sticky")
+                    .doesNotContain("position: fixed");
+        }
+        assertThat(css).doesNotContain(".diary-cover-sticky");
+        assertThat(template).doesNotContain("cover-sticky");
+        // 스크롤을 보고 자리를 고치는 스크립트도 없다
+        assertThat(read(Path.of("src/main/resources/static/js/diary-cover-design.js")))
+                .doesNotContain("scroll");
+    }
+
+    /** 고르는 판은 도구 줄 위로 열린다. (도구가 화면 아래쪽에 있기 때문) */
+    @Test
+    void theStickerPickerOpensUpwardInTheCoverEditor() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+        String scoped = rule(css, ".diary-cover-tool-row .diary-sticker-popover");
+
+        assertThat(scoped).contains("bottom: calc(100% + 8px);").contains("top: auto;");
+        // 오른쪽 끝을 도구 줄에 맞춘다 (설정 카드 쪽으로 펴지 않는다)
+        assertThat(scoped).contains("right: 0;").contains("left: auto;");
+        // 화면이 낮아도 판이 위로 넘치지 않게 높이만 접는다
+        assertThat(scoped).contains("max-height: calc(100vh - 180px);");
+        // 판 크기와 미리보기 값은 페이지 다꾸와 같다 (아래로 여는 규칙도 그대로다)
+        assertThat(rule(css, ".diary-sticker-popover"))
+                .contains("top: calc(100% + 6px);").contains("left: 0;");
+        assertThat(scoped).doesNotContain("width").doesNotContain("z-index");
+    }
+
+    /** 꾸미기 도구는 표지 위가 아니라 오른쪽 설정과 같은 자리에 있다. */
+    @Test
+    void theDecoratingToolsSitWithTheSettingsNotOverTheCover() throws IOException {
+        String template = read(COVER_EDIT);
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+
+        // 도구가 한 줄에 같은 모양으로 놓인다
+        // (스티커 / 라벨기 / 사진 — 사진 칸은 th:each 로 일반·폴라로이드 두 개가 된다)
+        assertThat(template).contains("diary-cover-tool-row");
+        assertThat(template.split("class=\"diary-cover-tool\"", -1)).hasSize(4);
+        // 도구 묶음이 설정 카드 안에 있다 (표지 위에 떠 있지 않다)
+        assertThat(template.indexOf("diary-cover-design-panel"))
+                .isLessThan(template.indexOf("diary-cover-tools"));
+        // 세 칸의 크기와 글자를 한 규칙에서 정한다
+        assertThat(rule(css, ".diary-cover-tool")).contains("height: 60px;");
+    }
+
+    /** 표지 꾸미는 자리를 실제로 쓸 만한 크기로 둔다. */
+    @Test
+    void theCoverGetsMoreRoomThanTheSettings() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+
+        // 왼쪽(표지)이 남는 폭을 갖고 오른쪽(설정)은 좁게 고정한다
+        assertThat(rule(css, ".diary-cover-design-editor"))
+                .contains("grid-template-columns: minmax(0, 1fr) minmax(0, 300px);");
+        assertThat(css).contains("--diary-cover-base-width: 480px;");
+        assertThat(rule(css, ".diary-cover-preview"))
+                .contains("width: min(var(--diary-cover-base-width), 100%);");
+    }
+
+    /**
+     * 폴라로이드 프레임은 표지와 페이지가 한 규칙을 함께 쓴다.
+     * (같은 사진이면 두 화면에서 같은 모습이어야 한다)
+     */
+    @Test
+    void thePolaroidFrameIsOneRuleSharedByTheCoverAndThePages() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+
+        /*
+          프레임 두께는 요소 자신의 폭으로 잰다. (cqw — 요소를 container 로 두고 안쪽에서 쓴다)
+          padding 의 % 는 이 요소가 아니라 바깥 캔버스의 폭을 재므로 쓰지 않는다.
+          값은 DiaryPhotoFrame 의 SIDE / BOTTOM 과 같아야 사진 자리가 프레임과 맞는다.
+        */
+        String photo = rule(css, ".diary-photo");
+        assertThat(photo)
+                .contains("container-type: inline-size;")
+                .contains("--diary-photo-side: 3.5cqw;")
+                .contains("--diary-photo-bottom: 6cqw;")
+                .contains("padding: 0;")
+                .doesNotContain("padding: 3.5%");
+        // 표지 전용 프레임 값을 따로 두지 않는다
+        assertThat(css).doesNotContain(".diary-cover-surface .diary-photo.is-photo-polaroid");
+        // 사진은 자기 자리를 꽉 채운다. 사진 때문에 생기는 흰 자리는 없다
+        assertThat(rule(css, ".diary-photo img")).contains("object-fit: cover;");
+    }
+
+    /** 표지는 속지의 계산을 물려받지 않는다. */
+    @Test
+    void theCoverDoesNotBorrowThePaperMetrics() throws IOException {
+        String template = read(COVER_EDIT);
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+
+        assertThat(template).doesNotContain("--diary-page-unit").doesNotContain("--diary-line");
+        // 재질 변수를 나눠 쓰는 규칙이 앞에 한 번 더 나오므로, 표지 상자를 정하는 규칙에서 찾는다
+        String canvas = rule(css.substring(css.indexOf("표지 한 장. 여기가 곧 표지의 좌표계다")),
+                ".diary-cover-canvas");
+        assertThat(css).contains("--diary-cover-ratio: 148 / 210;");
+        assertThat(canvas).contains("aspect-ratio: var(--diary-cover-ratio);")
+                .contains("container-type: inline-size;")
+                .doesNotContain("41 / 38")
+                .doesNotContain("--diary-page-unit");
+    }
+
+    /** 편집과 보기용 표지는 같은 A5 캔버스와 같은 상대좌표를 쓴다. */
+    @Test
+    void editingAndReadOnlyCoversShareTheA5Geometry() throws IOException {
+        String edit = read(COVER_EDIT);
+        String preview = read(Path.of("src/main/resources/templates/diary/cover-preview.html"));
+
+        assertThat(edit).contains("class=\"diary-cover-canvas\"")
+                .contains("newDesign ? '' : 'is-editable '");
+        assertThat(preview).contains("class=\"diary-cover-canvas\"");
+        for (String relativeValue : new String[]{
+                "element.positionX * 100", "element.positionY * 100",
+                "element.width * 100", "element.height * 100"}) {
+            assertThat(edit).as("편집 표지: %s", relativeValue).contains(relativeValue);
+            assertThat(preview).as("보기 표지: %s", relativeValue).contains(relativeValue);
+        }
+    }
+
+    /** 좁은 화면에서도 별도 좌표계를 만들지 않고 같은 A5 표지의 폭만 줄인다. */
+    @Test
+    void mobileCoverKeepsTheSharedA5Geometry() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+        String narrow = css.substring(css.indexOf("@media (max-width: 780px) {"));
+
+        assertThat(narrow).contains(".diary-cover-preview {\n"
+                + "        width: min(var(--diary-cover-base-width), 100%);\n"
+                + "    }");
+    }
+
+    /**
+     * 표지 편집기의 스티커 붙이기·라벨기·드래그 엔진(떼기 포함)은 모두 window.DiarySaveTransport.post 로 저장한다.
+     * 이 통로 스크립트가 빠지면 세 기능이 함께 "undefined 의 post" 오류로 멈추므로,
+     * 그것을 쓰는 모듈마다 통로가 실제로 실리고 그보다 앞에 실리는지 고정한다.
+     */
+    @Test
+    void theCoverEditorLoadsTheSaveTransportBeforeEveryModuleThatSavesThroughIt() throws IOException {
+        String template = read(COVER_EDIT);
+        int transport = template.indexOf("src=\"/js/diary-save-transport.js\"");
+        assertThat(transport).as("표지 편집기가 저장 통로를 싣지 않습니다").isNotNegative();
+
+        for (String module : new String[]{
+                "diary-canvas-drag.js", "diary-sticker-picker.js", "diary-label-picker.js"}) {
+            String script = read(Path.of("src/main/resources/static/js/" + module));
+            assertThat(script).as(module + " 저장 통로").contains("window.DiarySaveTransport.post(");
+            int moduleTag = template.indexOf("src=\"/js/" + module + "\"");
+            assertThat(moduleTag).as(module + " 스크립트").isNotNegative();
+            // defer 스크립트는 적힌 순서대로 실행되므로, 통로가 먼저 적혀 있어야 한다
+            assertThat(transport).as(module + " 보다 먼저 실려야 합니다").isLessThan(moduleTag);
+        }
+    }
+
+    /** 페이지 다꾸는 예전 그대로다. (이번 기능 때문에 바뀐 곳이 없다) */
+    @Test
+    void thePageEditorIsUntouched() throws IOException {
+        String template = read(PAGE_DETAIL);
+
+        // 페이지 요소의 저장 주소와 캔버스 구조는 그대로다
+        assertThat(template).contains("/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position");
+        assertThat(template).contains("class=\"diary-canvas\"");
+        assertThat(template).contains("diary/detail :: sheetCanvas");
+        // 표지 전용 표시가 페이지 쪽으로 새어 들어가지 않았다
+        assertThat(template).doesNotContain("diary-cover-canvas")
+                .doesNotContain("diary-cover-surface");
+    }
+
+    private String read(Path path) throws IOException {
+        return Files.readString(path, StandardCharsets.UTF_8);
+    }
+
+    private String rule(String css, String selector) {
+        int start = css.indexOf("\n" + selector + " {");
+        assertThat(start).as("규칙을 찾지 못했습니다: " + selector).isNotNegative();
+        return css.substring(start, css.indexOf('}', start));
+    }
+}

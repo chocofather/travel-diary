@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.course.CourseMapper">
+<mapper namespace="com.tripbora.repository.course.CourseMapper">
 
-    <resultMap id="CourseDetailMap" type="com.example.travlediary.dto.CourseDetailDto">
+    <resultMap id="CourseDetailMap" type="com.tripbora.dto.CourseDetailDto">
         <id property="id" column="course_id"/>
         <result property="userId" column="course_user_id"/>
         <result property="title" column="course_title"/>
@@ -21,7 +21,7 @@
         <result property="bookmarked" column="bookmarked"/>
     </resultMap>
 
-    <resultMap id="CourseStopMap" type="com.example.travlediary.dto.CourseStopDto">
+    <resultMap id="CourseStopMap" type="com.tripbora.dto.CourseStopDto">
         <id property="courseDestinationId" column="course_destination_id"/>
         <result property="destinationId" column="destination_id"/>
         <result property="visitOrder" column="visit_order"/>
@@ -34,7 +34,7 @@
         <result property="imageUrl" column="image_url"/>
     </resultMap>
 
-    <resultMap id="HomePopularCourseMap" type="com.example.travlediary.dto.HomePopularCourseDto">
+    <resultMap id="HomePopularCourseMap" type="com.tripbora.dto.HomePopularCourseDto">
         <id property="courseId" column="course_id"/>
         <result property="title" column="course_title"/>
         <result property="nickname" column="writer_nickname"/>
@@ -43,7 +43,7 @@
         <result property="totalDestinationCount" column="destination_count"/>
     </resultMap>
 
-    <resultMap id="HomePopularCourseStopMap" type="com.example.travlediary.dto.HomePopularCourseStopDto">
+    <resultMap id="HomePopularCourseStopMap" type="com.tripbora.dto.HomePopularCourseStopDto">
         <result property="courseId" column="course_id"/>
         <result property="destinationId" column="destination_id"/>
         <result property="visitOrder" column="visit_order"/>
@@ -90,7 +90,7 @@
           AND c.deleted = 0
     </select>
 
-    <select id="findActiveCourse" resultType="com.example.travlediary.model.Course">
+    <select id="findActiveCourse" resultType="com.tripbora.model.Course">
         SELECT c.id,
                c.user_id,
                c.country_id,
@@ -106,7 +106,7 @@
           AND c.deleted = 0
     </select>
 
-    <select id="findActiveCourseForUpdate" resultType="com.example.travlediary.model.Course">
+    <select id="findActiveCourseForUpdate" resultType="com.tripbora.model.Course">
         SELECT id, user_id, country_id, title, title_source_language,
                content, content_source_language, updated_at
         FROM courses
@@ -126,7 +126,7 @@
     </sql>
 
     <select id="findVisibleTranslationSource"
-            resultType="com.example.travlediary.model.translation.CourseTranslationSource">
+            resultType="com.tripbora.model.translation.CourseTranslationSource">
         SELECT c.id AS content_id,
                c.title,
                c.title_source_language,
@@ -140,7 +140,7 @@
     </select>
 
     <select id="findVisibleTranslationSourceForUpdate"
-            resultType="com.example.travlediary.model.translation.CourseTranslationSource">
+            resultType="com.tripbora.model.translation.CourseTranslationSource">
         SELECT c.id AS content_id,
                c.title,
                c.title_source_language,
@@ -175,7 +175,7 @@
     </update>
 
     <select id="findUndeterminedCourseLanguagesAfter"
-            resultType="com.example.travlediary.model.translation.CourseLanguageBackfillRow">
+            resultType="com.tripbora.model.translation.CourseLanguageBackfillRow">
         SELECT id, title, content, title_source_language,
                content_source_language, updated_at
         FROM courses
@@ -308,7 +308,7 @@
     </select>
 
     <select id="findDestinationCountries"
-            resultType="com.example.travlediary.dto.CourseDestinationCountryDto">
+            resultType="com.tripbora.dto.CourseDestinationCountryDto">
         WITH RECURSIVE destination_regions AS (
             SELECT
                 d.id AS destination_id,
@@ -354,7 +354,7 @@
     </select>
 
     <!-- 코스 등록 -->
-    <insert id="insertCourse" parameterType="com.example.travlediary.model.Course" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertCourse" parameterType="com.tripbora.model.Course" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO courses (
             title, title_source_language, user_id, country_id,
             content, content_source_language, created_at, deleted
@@ -365,7 +365,7 @@
     </insert>
 
     <!-- 코스-여행지 연결 등록 -->
-    <insert id="insertCourseDestination" parameterType="com.example.travlediary.model.CourseDestination" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertCourseDestination" parameterType="com.tripbora.model.CourseDestination" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO course_destinations (
             course_id, destination_id, visit_order
         ) VALUES (
@@ -411,7 +411,7 @@
 
       필요한 것은 행 번호와 지금 방문 순서뿐이라 그 둘만 읽는다.
     -->
-    <select id="findCourseStopOrders" resultType="com.example.travlediary.model.CourseDestination">
+    <select id="findCourseStopOrders" resultType="com.tripbora.model.CourseDestination">
         SELECT id, visit_order AS visitOrder
         FROM course_destinations
         WHERE course_id = #{courseId}

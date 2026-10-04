@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverElementMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverElementMapper">
 
-    <resultMap id="DiaryCoverElementMap" type="com.example.travlediary.model.DiaryCoverElement">
+    <resultMap id="DiaryCoverElementMap" type="com.tripbora.model.DiaryCoverElement">
         <id     property="id"          column="id"/>
         <result property="coverId"     column="cover_id"/>
         <result property="elementType" column="element_type"/>
@@ -41,7 +41,7 @@
       디자인을 적용할 때는 원본 요소의 값을 그대로 옮겨 담는다.
       (TEXT 는 파일이 없으므로 글과 글꼴까지 값만 그대로 복사된다)
     -->
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverElement"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCoverElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_elements (
             cover_id, element_type, text_content, image_url, library_photo_asset_id,
@@ -157,7 +157,7 @@
       통제된 사진 응답 전용. 표지 행에는 소유자가 없으므로 다이어리까지 이어 user_id 로 본다.
       라이브러리 공유 사진은 자기 asset endpoint 가 따로 있으므로 여기서는 제외한다.
     -->
-    <select id="findPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+    <select id="findPhotoRef" resultType="com.tripbora.dto.DiaryPrivatePhotoRef">
         SELECT e.image_url AS image_url,
                d.id        AS diary_id,
                d.pin_hash  AS pin_hash

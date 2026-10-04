@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryItemMapper">
+<mapper namespace="com.tripbora.repository.diary.DiaryCoverLibraryItemMapper">
 
-    <resultMap id="LibraryItemMap" type="com.example.travlediary.model.DiaryCoverLibraryItem">
+    <resultMap id="LibraryItemMap" type="com.tripbora.model.DiaryCoverLibraryItem">
         <id property="id" column="id"/>
         <result property="creatorUserId" column="creator_user_id"/>
         <result property="creatorDisplayName" column="creator_display_name"/>
@@ -34,7 +34,7 @@
         created_at, updated_at
     </sql>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryItem"
+    <insert id="insert" parameterType="com.tripbora.model.DiaryCoverLibraryItem"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_library_items (
             creator_user_id, creator_display_name, source_cover_design_id,

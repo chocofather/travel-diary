@@ -3,9 +3,9 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelinfo.TravelInfoMapper">
+<mapper namespace="com.tripbora.repository.travelinfo.TravelInfoMapper">
 
-    <resultMap id="TravelInfoResultMap" type="com.example.travlediary.model.TravelInfo">
+    <resultMap id="TravelInfoResultMap" type="com.tripbora.model.TravelInfo">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
@@ -22,7 +22,7 @@
         <result property="userId" column="user_id"/>
     </resultMap>
 
-    <resultMap id="AdminListResultMap" type="com.example.travlediary.dto.AdminTravelInfoListItemDto">
+    <resultMap id="AdminListResultMap" type="com.tripbora.dto.AdminTravelInfoListItemDto">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="scope" column="scope"/>
@@ -37,7 +37,7 @@
         <result property="endDate" column="end_date"/>
     </resultMap>
 
-    <resultMap id="PublicListResultMap" type="com.example.travlediary.dto.TravelInfoListItemDto">
+    <resultMap id="PublicListResultMap" type="com.tripbora.dto.TravelInfoListItemDto">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="scope" column="scope"/>
@@ -51,7 +51,7 @@
         <result property="endDate" column="end_date"/>
     </resultMap>
 
-    <resultMap id="PublicDetailResultMap" type="com.example.travlediary.dto.TravelInfoDetailDto">
+    <resultMap id="PublicDetailResultMap" type="com.tripbora.dto.TravelInfoDetailDto">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="scope" column="scope"/>
@@ -66,7 +66,7 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
-    <resultMap id="InfoPeriodResultMap" type="com.example.travlediary.model.InfoPeriod">
+    <resultMap id="InfoPeriodResultMap" type="com.tripbora.model.InfoPeriod">
         <id property="id" column="id"/>
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
@@ -74,7 +74,7 @@
     </resultMap>
 
     <resultMap id="TravelInfoTranslationResultMap"
-               type="com.example.travlediary.model.TravelInfoTranslation">
+               type="com.tripbora.model.TravelInfoTranslation">
         <id property="id" column="id"/>
         <result property="travelInfoId" column="travel_info_id"/>
         <result property="languageCode" column="language_code"/>
@@ -83,7 +83,7 @@
         <result property="structuredText" column="structured_text"/>
     </resultMap>
 
-    <resultMap id="InfoImageResultMap" type="com.example.travlediary.model.InfoImage">
+    <resultMap id="InfoImageResultMap" type="com.tripbora.model.InfoImage">
         <id property="id" column="id"/>
         <result property="imageUrl" column="image_url"/>
         <result property="sourceType" column="source_type"/>
@@ -386,9 +386,9 @@
         ) AS thumbnail_url
     </sql>
 
-    <resultMap id="HomeFestivalResultMap" type="com.example.travlediary.dto.HomeFestivalDto"
+    <resultMap id="HomeFestivalResultMap" type="com.tripbora.dto.HomeFestivalDto"
                extends="PublicListResultMap">
-        <association property="festivalInfo" javaType="com.example.travlediary.model.FestivalInfo">
+        <association property="festivalInfo" javaType="com.tripbora.model.FestivalInfo">
             <id property="infoId" column="festival_info_id"/>
             <result property="address" column="address"/>
             <result property="eventPlace" column="event_place"/>
@@ -397,7 +397,7 @@
 
     <!-- Home 전용: DB 시계 대신 애플리케이션 날짜. 복수 기간도 행사당 한 건만 남긴다. -->
     <select id="findHomeFestivals" resultMap="HomeFestivalResultMap">
-        <bind name="contentType" value="@com.example.travlediary.model.TravelInfoContentType@FESTIVAL"/>
+        <bind name="contentType" value="@com.tripbora.model.TravelInfoContentType@FESTIVAL"/>
         SELECT page.*, <include refid="PublicListThumbnail"/>,
                fi.info_id AS festival_info_id, fi.address, fi.event_place
         FROM (
@@ -429,7 +429,7 @@
       GENERAL 로 묶어 둔다(GUIDE 도 같은 규칙). 순서가 같으면 id 차례다.
     -->
     <select id="findHomeHeroItems" resultMap="PublicListResultMap">
-        <bind name="contentType" value="@com.example.travlediary.model.TravelInfoContentType@GENERAL"/>
+        <bind name="contentType" value="@com.tripbora.model.TravelInfoContentType@GENERAL"/>
         SELECT page.id,
                page.title,
                page.scope,
@@ -546,7 +546,7 @@
         FOR UPDATE
     </select>
 
-    <insert id="insertTravelInfo" parameterType="com.example.travlediary.model.TravelInfo"
+    <insert id="insertTravelInfo" parameterType="com.tripbora.model.TravelInfo"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_info (
             title, content, content_format, structured_content,
@@ -557,7 +557,7 @@
         )
     </insert>
 
-    <update id="updateTravelInfo" parameterType="com.example.travlediary.model.TravelInfo">
+    <update id="updateTravelInfo" parameterType="com.tripbora.model.TravelInfo">
         UPDATE travel_info
         SET title = #{title},
             content = #{content},
@@ -616,7 +616,7 @@
         ORDER BY start_date ASC, end_date ASC, id ASC
     </select>
 
-    <insert id="insertPeriod" parameterType="com.example.travlediary.model.InfoPeriod"
+    <insert id="insertPeriod" parameterType="com.tripbora.model.InfoPeriod"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO info_periods (start_date, end_date, info_id)
         VALUES (#{startDate}, #{endDate}, #{infoId})
@@ -655,7 +655,7 @@
         ORDER BY order_index ASC, id ASC
     </select>
 
-    <insert id="insertInfoImage" parameterType="com.example.travlediary.model.InfoImage"
+    <insert id="insertInfoImage" parameterType="com.tripbora.model.InfoImage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO info_images (
             image_url, source_type, source_name, external_content_id, source_title,
@@ -720,7 +720,7 @@
     </select>
 
     <insert id="insertTranslation"
-            parameterType="com.example.travlediary.model.TravelInfoTranslation"
+            parameterType="com.tripbora.model.TravelInfoTranslation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_info_translations (
             travel_info_id, language_code, title, content, structured_text
@@ -730,7 +730,7 @@
     </insert>
 
     <update id="updateTranslation"
-            parameterType="com.example.travlediary.model.TravelInfoTranslation">
+            parameterType="com.tripbora.model.TravelInfoTranslation">
         UPDATE travel_info_translations
         SET title = #{title},
             content = #{content},

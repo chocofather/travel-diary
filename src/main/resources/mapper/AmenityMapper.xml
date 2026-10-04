@@ -3,27 +3,27 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.amenity.AmenityMapper">
+<mapper namespace="com.tripbora.repository.amenity.AmenityMapper">
 
     <!-- 전체 편의시설 조회 -->
-    <select id="findAll" resultType="com.example.travlediary.model.Amenity">
+    <select id="findAll" resultType="com.tripbora.model.Amenity">
         SELECT * FROM amenities ORDER BY id ASC
     </select>
 
     <!-- 타입별 편의시설 (코드 기준) 예시: type이 attraction이면 attraction_amenities 참조 -->
-    <select id="findByType" parameterType="string" resultType="com.example.travlediary.model.Amenity">
+    <select id="findByType" parameterType="string" resultType="com.tripbora.model.Amenity">
         SELECT a.* FROM amenities a
                             JOIN ${type}_amenities ta ON ta.amenity_id = a.id
         -- 필요시 group by 또는 distinct
     </select>
 
     <!-- 번역: 특정 amenity의 번역 전체 -->
-    <select id="findTranslationsByAmenityId" resultType="com.example.travlediary.model.AmenityTranslation">
+    <select id="findTranslationsByAmenityId" resultType="com.tripbora.model.AmenityTranslation">
         SELECT * FROM amenity_translations WHERE amenity_id = #{amenityId} ORDER BY id ASC
     </select>
 
     <!-- 번역: 특정 언어로 모든 amenity -->
-    <select id="findTranslationsByLang" resultType="com.example.travlediary.model.AmenityTranslation">
+    <select id="findTranslationsByLang" resultType="com.tripbora.model.AmenityTranslation">
         SELECT * FROM amenity_translations WHERE language_code = #{languageCode}
     </select>
 
@@ -57,7 +57,7 @@
         VALUES (#{shopId}, #{amenityId})
     </insert>
 
-    <select id="findTranslationsByTypeAndLang" resultType="com.example.travlediary.model.AmenityTranslation">
+    <select id="findTranslationsByTypeAndLang" resultType="com.tripbora.model.AmenityTranslation">
         SELECT t.*
         FROM amenities a
                  JOIN ${type}_amenities ta ON ta.amenity_id = a.id
@@ -67,7 +67,7 @@
 
     <!-- 여행지 유형별 편의시설 마스터 목록 (amenity_destination_types 기준) -->
     <select id="findTranslationsByDestinationTypeAndLang"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         SELECT t.*, a.code
         FROM amenity_destination_types adt
                  JOIN amenities a ON a.id = adt.amenity_id
@@ -79,7 +79,7 @@
 
     <!-- 편의시설 ↔ 여행지 유형 마스터 매핑 전체 (화면 필터 태그용) -->
     <select id="findAmenityDestinationTypes"
-            resultType="com.example.travlediary.model.AmenityDestinationType">
+            resultType="com.tripbora.model.AmenityDestinationType">
         SELECT amenity_id, destination_type
         FROM amenity_destination_types
         ORDER BY amenity_id, destination_type
@@ -105,7 +105,7 @@
 
     <!-- 관광지 -->
     <select id="findAttractionAmenityTranslationsByDestinationId"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         <include refid="AmenityTranslationColumns"/>
         FROM attraction_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
@@ -116,7 +116,7 @@
 
     <!-- 숙소  -->
     <select id="findAccommodationAmenityTranslationsByDestinationId"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         <include refid="AmenityTranslationColumns"/>
         FROM accommodation_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
@@ -127,7 +127,7 @@
 
     <!-- 음식점 / 카페 -->
     <select id="findRestaurantAmenityTranslationsByDestinationId"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         <include refid="AmenityTranslationColumns"/>
         FROM restaurant_amenities ra
                  JOIN amenities a ON a.id = ra.amenity_id
@@ -138,7 +138,7 @@
 
     <!-- 엑티비티 -->
     <select id="findActivityAmenityTranslationsByDestinationId"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         <include refid="AmenityTranslationColumns"/>
         FROM activity_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
@@ -149,7 +149,7 @@
 
     <!-- 쇼핑 -->
     <select id="findShopAmenityTranslationsByDestinationId"
-            resultType="com.example.travlediary.model.AmenityTranslation">
+            resultType="com.tripbora.model.AmenityTranslation">
         <include refid="AmenityTranslationColumns"/>
         FROM shop_amenities sa
                  JOIN amenities a ON a.id = sa.amenity_id
@@ -183,23 +183,23 @@
         DELETE FROM shop_amenities WHERE shop_id = #{shopId}
     </delete>
 
-    <insert id="insertAmenity" parameterType="com.example.travlediary.model.Amenity" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertAmenity" parameterType="com.tripbora.model.Amenity" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO amenities (code)
         VALUES (#{code})
     </insert>
 
-    <insert id="insertAmenityTranslation" parameterType="com.example.travlediary.model.AmenityTranslation" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertAmenityTranslation" parameterType="com.tripbora.model.AmenityTranslation" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO amenity_translations (amenity_id, language_code, name)
         VALUES (#{amenityId}, #{languageCode}, #{name})
     </insert>
 
-    <select id="findTranslation" resultType="com.example.travlediary.model.AmenityTranslation">
+    <select id="findTranslation" resultType="com.tripbora.model.AmenityTranslation">
         SELECT * FROM amenity_translations
         WHERE amenity_id = #{amenityId} AND language_code = #{languageCode}
     </select>
 
     <!-- 단건 편의시설 조회 (수정 화면 복원용) -->
-    <select id="selectAmenityById" resultType="com.example.travlediary.model.Amenity">
+    <select id="selectAmenityById" resultType="com.tripbora.model.Amenity">
         SELECT id, code, icon_url FROM amenities WHERE id = #{id}
     </select>
 
@@ -213,7 +213,7 @@
       ko 번역을 LEFT JOIN 하므로 번역이 없는 편의시설도 목록에서 빠지지 않는다.
       정렬은 기존 findAll 과 동일하게 id 오름차순.
     -->
-    <select id="findAdminAmenityRows" resultType="com.example.travlediary.dto.AmenityDto">
+    <select id="findAdminAmenityRows" resultType="com.tripbora.dto.AmenityDto">
         SELECT a.id, a.code, a.icon_url, t.name
         FROM amenities a
                  LEFT JOIN amenity_translations t
@@ -227,7 +227,7 @@
     </select>
 
     <!-- 번역 이름 변경 -->
-    <update id="updateAmenityTranslation" parameterType="com.example.travlediary.model.AmenityTranslation">
+    <update id="updateAmenityTranslation" parameterType="com.tripbora.model.AmenityTranslation">
         UPDATE amenity_translations
         SET name = #{name}
         WHERE amenity_id = #{amenityId} AND language_code = #{languageCode}
@@ -241,7 +241,7 @@
 
     <!-- 편의시설 1건의 적용 가능한 여행지 유형 (수정 화면 체크 복원용) -->
     <select id="findAmenityDestinationTypesByAmenityId"
-            resultType="com.example.travlediary.model.AmenityDestinationType">
+            resultType="com.tripbora.model.AmenityDestinationType">
         SELECT amenity_id, destination_type
         FROM amenity_destination_types
         WHERE amenity_id = #{amenityId}

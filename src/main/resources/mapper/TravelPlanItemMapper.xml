@@ -3,10 +3,10 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanItemMapper">
+<mapper namespace="com.tripbora.repository.travelplan.TravelPlanItemMapper">
 
     <!-- DAY 의 A 일정 목록 -->
-    <select id="findByDayId" resultType="com.example.travlediary.model.TravelPlanItem">
+    <select id="findByDayId" resultType="com.tripbora.model.TravelPlanItem">
         SELECT id, travel_plan_day_id, content, tag, display_order,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_items
@@ -15,7 +15,7 @@
     </select>
 
     <!-- 방 전체의 A 일정. DAY 수만큼 조회가 나가지 않도록 한 문장으로 읽는다 -->
-    <select id="findByPlanId" resultType="com.example.travlediary.model.TravelPlanItem">
+    <select id="findByPlanId" resultType="com.tripbora.model.TravelPlanItem">
         SELECT i.id, i.travel_plan_day_id, i.content, i.tag, i.display_order,
                i.created_by_member_id, i.version, i.created_at, i.updated_at
         FROM travel_plan_items i
@@ -35,7 +35,7 @@
       A 일정 1건 등록.
       tag 는 아직 화면이 없어 항상 NULL 이고, version / created_at / updated_at 은 DB DEFAULT 를 쓴다.
     -->
-    <insert id="insertItem" parameterType="com.example.travlediary.model.TravelPlanItem"
+    <insert id="insertItem" parameterType="com.tripbora.model.TravelPlanItem"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plan_items (
             travel_plan_day_id, content, tag, display_order, created_by_member_id
@@ -45,7 +45,7 @@
     </insert>
 
     <!-- 일정 1건. DAY 소속까지 함께 확인한다 -->
-    <select id="findByIdAndDayId" resultType="com.example.travlediary.model.TravelPlanItem">
+    <select id="findByIdAndDayId" resultType="com.tripbora.model.TravelPlanItem">
         SELECT id, travel_plan_day_id, content, tag, display_order,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_items
@@ -86,7 +86,7 @@
     </update>
 
     <!-- 바로 위 일정 -->
-    <select id="findPreviousItem" resultType="com.example.travlediary.model.TravelPlanItem">
+    <select id="findPreviousItem" resultType="com.tripbora.model.TravelPlanItem">
         SELECT id, travel_plan_day_id, content, tag, display_order,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_items
@@ -97,7 +97,7 @@
     </select>
 
     <!-- 바로 아래 일정 -->
-    <select id="findNextItem" resultType="com.example.travlediary.model.TravelPlanItem">
+    <select id="findNextItem" resultType="com.tripbora.model.TravelPlanItem">
         SELECT id, travel_plan_day_id, content, tag, display_order,
                created_by_member_id, version, created_at, updated_at
         FROM travel_plan_items

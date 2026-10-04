@@ -3,7 +3,7 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.comment.MyPageCommentMapper">
+<mapper namespace="com.tripbora.repository.comment.MyPageCommentMapper">
 
     <sql id="unifiedMyCommentSelect">
         SELECT
@@ -66,7 +66,7 @@
         </if>
     </sql>
 
-    <select id="findMyComments" resultType="com.example.travlediary.dto.MyPageCommentDto">
+    <select id="findMyComments" resultType="com.tripbora.dto.MyPageCommentDto">
         SELECT
             my_comments.commentId,
             my_comments.commentType,

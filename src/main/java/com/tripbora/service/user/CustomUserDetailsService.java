@@ -1,0 +1,80 @@
+package com.tripbora.service.user;
+
+import com.tripbora.model.User;
+import com.tripbora.model.UserStatus;
+import com.tripbora.repository.user.UserMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomUserDetailsService.class);
+
+    private final UserMapper userMapper;
+    private final UserSanctionService userSanctionService;
+
+    @Autowired
+    public CustomUserDetailsService(UserMapper userMapper,
+                                    UserSanctionService userSanctionService) {
+        this.userMapper = userMapper;
+        this.userSanctionService = userSanctionService;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        final String normalizedEmail;
+        try {
+            normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        } catch (RegistrationValidationException exception) {
+            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
+        }
+
+        User user = userMapper.findForAuthenticationByEmail(normalizedEmail);
+        if (user == null) {
+            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
+        }
+        if (user.getUserPassword() == null) {
+            throw new BadCredentialsException("비밀번호가 설정되지 않았습니다.");
+        }
+        if (user.getStatus() == UserStatus.RESTRICTED) {
+            // 이용제한 회원도 인증 자체는 허용한다. 접근 통제는 RestrictedAccountFilter 가 맡는다.
+            // 배치가 아직 처리하지 못한 기간제한은 로그인 시점에 만료 처리한다.
+            userSanctionService.releaseIfExpired(user.getId());
+        } else if (user.getStatus() == UserStatus.WITHDRAWAL_PENDING) {
+            // 탈퇴 유예 회원도 인증까지만 허용한다. 서비스 이용 권한이 돌아오는 것은 아니고,
+            // 접근 통제와 안내 화면 이동은 WithdrawalPendingAccountFilter 가 맡는다.
+            log.debug("Withdrawal pending account authenticated for the notice screen only");
+        } else if (user.getStatus() == UserStatus.INACTIVE) {
+            // 이메일 인증 대기 회원도 자격증명 확인까지는 허용한다. 오타로 잘못된 주소를 넣은
+            // 사람이 다시 들어와 이메일을 고칠 수 있어야 하기 때문이다.
+            // 로그인으로 이어지지는 않는다. CustomLoginSuccessHandler 가 인증을 곧바로 비우고
+            // 인증 대기 화면으로만 보낸다.
+            log.debug("Email verification pending account authenticated for the waiting screen only");
+        } else if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BadCredentialsException(inactiveMessage(user.getStatus()));
+        }
+
+        /* ★ 변경된 부분: id 포함 CustomUserDetails 반환 */
+        return new com.tripbora.security.CustomUserDetails(user);
+    }
+
+    /**
+     * RESTRICTED / WITHDRAWAL_PENDING / INACTIVE 는 인증을 허용하므로 여기로 오지 않는다.
+     * 최종 탈퇴(DEACTIVATED)와 휴면(SUSPENDED)은 그대로 차단한다.
+     */
+    private String inactiveMessage(UserStatus status) {
+        return switch (status) {
+            case DEACTIVATED -> "탈퇴한 계정입니다.";
+            case SUSPENDED -> "휴면 상태의 계정입니다. 고객센터로 문의해주세요.";
+            default -> "로그인할 수 없는 계정입니다.";
+        };
+    }
+}

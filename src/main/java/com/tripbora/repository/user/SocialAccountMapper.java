@@ -1,0 +1,30 @@
+package com.tripbora.repository.user;
+
+import com.tripbora.model.SocialAccount;
+import com.tripbora.model.SocialProvider;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+@Mapper
+public interface SocialAccountMapper {
+
+    SocialAccount findByProviderAndProviderUserId(
+            @Param("provider") SocialProvider provider,
+            @Param("providerUserId") String providerUserId);
+
+    SocialAccount findByUserIdAndProvider(@Param("userId") Long userId,
+                                           @Param("provider") SocialProvider provider);
+
+    List<SocialAccount> findAllByUserId(@Param("userId") Long userId);
+
+    List<SocialAccount> findAllByUserIdForUpdate(@Param("userId") Long userId);
+
+    int insert(SocialAccount socialAccount);
+
+    int deleteByUserIdAndProvider(@Param("userId") Long userId,
+                                  @Param("provider") SocialProvider provider);
+
+    int deleteAllByUserId(@Param("userId") Long userId);
+}

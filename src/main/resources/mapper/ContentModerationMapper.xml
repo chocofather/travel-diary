@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.moderation.ContentModerationMapper">
+<mapper namespace="com.tripbora.repository.moderation.ContentModerationMapper">
 
     <resultMap id="ContentModerationResultMap"
-               type="com.example.travlediary.model.ContentModeration">
+               type="com.tripbora.model.ContentModeration">
         <id property="id" column="id"/>
         <result property="targetType" column="target_type"/>
         <result property="targetId" column="target_id"/>
@@ -62,7 +62,7 @@
           AND deleted = 1
     </update>
 
-    <insert id="insert" parameterType="com.example.travlediary.model.ContentModeration"
+    <insert id="insert" parameterType="com.tripbora.model.ContentModeration"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO content_moderations (target_type, target_id, target_user_id, status,
                                          reason, admin_note, created_by)
@@ -102,7 +102,7 @@
 
     <!-- 조치된 콘텐츠 관리 목록 -->
     <resultMap id="ModeratedContentResultMap"
-               type="com.example.travlediary.dto.ModeratedContentDto">
+               type="com.tripbora.dto.ModeratedContentDto">
         <id property="moderationId" column="moderation_id"/>
         <result property="targetType" column="target_type"/>
         <result property="targetId" column="target_id"/>

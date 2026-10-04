@@ -1,0 +1,527 @@
+package com.tripbora.controller.user;
+
+import com.tripbora.security.AccountAbuseGuard;
+import com.tripbora.dto.SocialSignupForm;
+import com.tripbora.service.policy.SignupPolicyFixtures;
+import com.tripbora.service.policy.SignupPolicyService;
+import com.tripbora.model.PendingSocialLoginLink;
+import com.tripbora.model.PendingSocialSignup;
+import com.tripbora.model.SocialProvider;
+import com.tripbora.model.User;
+import com.tripbora.model.UserRole;
+import com.tripbora.model.UserStatus;
+import com.tripbora.security.CustomUserDetails;
+import com.tripbora.service.user.SocialSignupAuthenticationService;
+import com.tripbora.service.user.SocialSignupFlowException;
+import com.tripbora.service.user.SocialSignupPersistenceException;
+import com.tripbora.service.user.SocialEmailAccountResolver;
+import com.tripbora.service.user.SocialLoginLinkService;
+import com.tripbora.service.user.SocialSignupOutcome;
+import com.tripbora.service.user.SocialSignupService;
+import com.tripbora.service.user.SocialSignupValidationException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.ui.ConcurrentModel;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+
+import java.time.Instant;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class SocialSignupControllerTest {
+
+    @Mock
+    private SocialSignupService socialSignupService;
+    @Mock
+    private SocialSignupAuthenticationService authenticationService;
+    @Mock
+    private SocialEmailAccountResolver socialEmailAccountResolver;
+    @Mock
+    private SocialLoginLinkService socialLoginLinkService;
+
+    @Mock
+    private SignupPolicyService signupPolicyService;
+
+    /** 가입 인증메일의 IP 제한. 이 테스트의 관심사가 아니라 통과시키는 가짜를 쓴다. */
+    @Mock private AccountAbuseGuard accountAbuseGuard;
+
+    private SocialSignupController controller;
+
+    @BeforeEach
+    void setUp() {
+        // provider 표시명은 messages 번들에서 온다(브랜드명이라 번역되지 않는 값).
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
+        messages.setFallbackToSystemLocale(false);
+        // 화면 렌더링 경로가 정책 세트를 함께 담는지 보기 위해 활성 세트를 준다.
+        lenient().when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(SignupPolicyFixtures.activeSignupPolicies());
+        controller = new SocialSignupController(
+                socialSignupService, authenticationService,
+                socialEmailAccountResolver, socialLoginLinkService,
+                signupPolicyService, messages, accountAbuseGuard);
+    }
+
+    private RedirectAttributes redirectAttributes() {
+        return new RedirectAttributesModelMap();
+    }
+
+    @Test
+    void validPendingSignupShowsCompletionFormWithoutProviderIdentityInModel() {
+        MockHttpSession session = sessionWith(pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590)));
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.signupPage(null, session, model);
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(model.getAttribute("provider")).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(model.getAttribute("providerEmail")).isEqualTo("new@example.com");
+        assertThat(model.getAttribute("socialSignupForm")).isInstanceOf(SocialSignupForm.class);
+        assertThat(model.asMap()).doesNotContainKeys("providerUserId", "flowId");
+    }
+
+    @Test
+    void validKakaoPendingWithoutEmailUsesTheSameCompletionForm() {
+        Instant now = Instant.now();
+        PendingSocialSignup kakaoPending = new PendingSocialSignup(
+                "kakao-flow", SocialProvider.KAKAO, "kakao-sub",
+                null, null, now.minusSeconds(10), now.plusSeconds(590));
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.signupPage(
+                null, sessionWith(kakaoPending), model);
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(model.getAttribute("provider")).isEqualTo(SocialProvider.KAKAO);
+        assertThat(model.getAttribute("providerEmail")).isNull();
+        assertThat(model.getAttribute("providerDisplayName")).isEqualTo("카카오");
+        assertThat(model.asMap()).doesNotContainKeys("providerUserId", "flowId");
+    }
+
+    @Test
+    void validNaverPendingUsesTheSameCompletionForm() {
+        Instant now = Instant.now();
+        PendingSocialSignup naverPending = new PendingSocialSignup(
+                "naver-flow", SocialProvider.NAVER, "naver-id",
+                "naver@example.com", null,
+                now.minusSeconds(10), now.plusSeconds(590));
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.signupPage(
+                null, sessionWith(naverPending), model);
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(model.getAttribute("provider")).isEqualTo(SocialProvider.NAVER);
+        assertThat(model.getAttribute("providerEmail")).isEqualTo("naver@example.com");
+        assertThat(model.getAttribute("providerDisplayName")).isEqualTo("네이버");
+        assertThat(model.asMap()).doesNotContainKeys("providerUserId", "flowId");
+    }
+
+    @Test
+    void expiredOrMissingPendingIsRemovedAndReturnsToLogin() {
+        MockHttpSession expiredSession = sessionWith(pending(
+                Instant.now().minusSeconds(700), Instant.now().minusSeconds(100)));
+
+        assertThat(controller.signupPage(null, expiredSession, new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+        assertThat(expiredSession.getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(controller.signupPage(null, new MockHttpSession(), new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+    }
+
+    @Test
+    void malformedPendingIsRejected() {
+        PendingSocialSignup malformed = new PendingSocialSignup(
+                "", SocialProvider.GOOGLE, "", null, null,
+                Instant.now(), Instant.now().plusSeconds(600));
+        MockHttpSession session = sessionWith(malformed);
+
+        assertThat(controller.signupPage(null, session, new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+        assertThat(session.getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    void alreadyAuthenticatedMemberDoesNotEnterSocialSignup() {
+        assertThat(controller.signupPage(authentication(), new MockHttpSession(),
+                new ConcurrentModel())).isEqualTo("redirect:/");
+    }
+
+    @Test
+    void postUsesOnlyServerPendingAndAuthenticatesReturnedUser() throws Exception {
+        PendingSocialSignup pending = pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590));
+        MockHttpServletRequest request = requestWith(pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        SocialSignupForm form = acceptedForm("새여행자");
+        when(socialSignupService.complete(pending, form))
+                .thenReturn(new SocialSignupOutcome(41L, "new@example.com", null));
+
+        String view = controller.completeSignup(
+                form, binding(form), null, request, response,
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(view).isNull();
+        verify(socialSignupService).complete(pending, form);
+        verify(authenticationService).authenticate(41L, request, response);
+        ArgumentCaptor<PendingSocialSignup> pendingCaptor =
+                ArgumentCaptor.forClass(PendingSocialSignup.class);
+        verify(socialSignupService).complete(pendingCaptor.capture(), any());
+        assertThat(pendingCaptor.getValue().providerUserId()).isEqualTo("new-google-sub");
+    }
+
+    @Test
+    void bindingAndServiceValidationRerenderFormAndKeepPending() throws Exception {
+        PendingSocialSignup pending = pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590));
+        MockHttpServletRequest request = requestWith(pending);
+        SocialSignupForm form = acceptedForm("입력닉네임");
+        BeanPropertyBindingResult binding = binding(form);
+        binding.rejectValue("agreedPolicyVersionIds", "required",
+                "서비스 이용약관에 동의해주세요.");
+
+        String bindingView = controller.completeSignup(
+                form, binding, null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(bindingView).isEqualTo("social-signup");
+        assertThat(form.getNickname()).isEqualTo("입력닉네임");
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isSameAs(pending);
+        verify(socialSignupService, never()).complete(any(), any());
+
+        BeanPropertyBindingResult serviceBinding = binding(form);
+        doThrow(new SocialSignupValidationException("nickname", "이미 사용 중인 닉네임입니다."))
+                .when(socialSignupService).complete(pending, form);
+        String serviceView = controller.completeSignup(
+                form, serviceBinding, null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+        assertThat(serviceView).isEqualTo("social-signup");
+        assertThat(serviceBinding.getFieldError("nickname").getDefaultMessage())
+                .isEqualTo("이미 사용 중인 닉네임입니다.");
+    }
+
+    @Test
+    void reusedOrInvalidFlowIsRemovedAndReturnsToLogin() throws Exception {
+        PendingSocialSignup pending = pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590));
+        MockHttpServletRequest request = requestWith(pending);
+        SocialSignupForm form = acceptedForm("새여행자");
+        doThrow(new SocialSignupFlowException("internal flow details"))
+                .when(socialSignupService).complete(pending, form);
+
+        String view = controller.completeSignup(
+                form, binding(form), null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(view).isEqualTo("redirect:/login?socialSignupExpired=true");
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        verify(authenticationService, never()).authenticate(any(), any(), any());
+    }
+
+    @Test
+    void persistenceFailureRerendersGenericErrorWithoutExposingInternalDetails()
+            throws Exception {
+        PendingSocialSignup pending = pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590));
+        MockHttpServletRequest request = requestWith(pending);
+        SocialSignupForm form = acceptedForm("새여행자");
+        BeanPropertyBindingResult binding = binding(form);
+        doThrow(new SocialSignupPersistenceException("SQL provider_user_id secret"))
+                .when(socialSignupService).complete(pending, form);
+
+        String view = controller.completeSignup(
+                form, binding, null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(binding.getGlobalError().getDefaultMessage())
+                .isEqualTo("가입 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.")
+                .doesNotContain("SQL", "provider_user_id");
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isSameAs(pending);
+    }
+
+    private BeanPropertyBindingResult binding(SocialSignupForm form) {
+        return new BeanPropertyBindingResult(form, "socialSignupForm");
+    }
+
+    private SocialSignupForm acceptedForm(String nickname) {
+        SocialSignupForm form = new SocialSignupForm();
+        // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
+        form.setBirthDate("2000-01-01");
+        form.setNickname(nickname);
+        form.setAgreedPolicyVersionIds(SignupPolicyFixtures.requiredConsentIds());
+        return form;
+    }
+
+    /** Naver 가 준 연락처 이메일은 입력 칸의 초기값으로 채워 주되 고칠 수 있어야 한다. */
+    @Test
+    void naverProviderEmailIsPrefilledIntoTheEditableEmailField() {
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.signupPage(null, sessionWith(naverPending("naver@example.com")), model);
+
+        SocialSignupForm form = (SocialSignupForm) model.getAttribute("socialSignupForm");
+        assertThat(form.getUserEmail()).isEqualTo("naver@example.com");
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(true);
+    }
+
+    @Test
+    void naverWithoutAProviderEmailShowsAnEmptyEditableEmailField() {
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.signupPage(null, sessionWith(naverPending(null)), model);
+
+        assertThat(((SocialSignupForm) model.getAttribute("socialSignupForm")).getUserEmail())
+                .isNull();
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(true);
+    }
+
+    @Test
+    void kakaoWithoutAProviderEmailShowsAnEmptyEditableEmailField() {
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.signupPage(null, sessionWith(kakaoPending()), model);
+
+        assertThat(((SocialSignupForm) model.getAttribute("socialSignupForm")).getUserEmail())
+                .isNull();
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(true);
+    }
+
+    /** Google 은 provider 가 인증한 이메일을 쓰므로 입력 칸을 띄우지 않는다. */
+    @Test
+    void googleKeepsTheExistingFormWithoutAnEmailField() {
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.signupPage(null, sessionWith(pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590))), model);
+
+        assertThat(((SocialSignupForm) model.getAttribute("socialSignupForm")).getUserEmail())
+                .isNull();
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(false);
+    }
+
+    /** 이메일 인증이 필요한 가입은 자동 로그인 없이 기존 인증 대기 화면으로 간다. */
+    @Test
+    void aSignupNeedingEmailVerificationSendsTheVerificationMailAndWaitsInsteadOfSigningIn()
+            throws Exception {
+        PendingSocialSignup pending = kakaoPending();
+        MockHttpServletRequest request = requestWith(pending);
+        SocialSignupForm form = acceptedForm("카카오여행자");
+        form.setUserEmail("member@example.com");
+        SocialSignupOutcome outcome =
+                new SocialSignupOutcome(52L, "member@example.com", "verification-token");
+        when(socialSignupService.complete(pending, form)).thenReturn(outcome);
+        when(socialSignupService.sendVerificationEmail(outcome)).thenReturn(true);
+
+        String view = controller.completeSignup(
+                form, binding(form), null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(view).isEqualTo("redirect:/users/register/verify-waiting");
+        verify(socialSignupService).sendVerificationEmail(outcome);
+        verify(authenticationService, never()).authenticate(any(), any(), any());
+        // 인증 대기 화면과 재발송은 일반 회원가입과 같은 세션 값을 본다.
+        assertThat(request.getSession().getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE))
+                .isEqualTo("member@example.com");
+        assertThat(request.getSession().getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE))
+                .isNull();
+    }
+
+    /** 메일 발송이 실패해도 가입을 되돌리지 않고 재발송할 수 있는 화면으로 보낸다. */
+    @Test
+    void aFailedVerificationMailStillLandsOnTheWaitingScreen() throws Exception {
+        PendingSocialSignup pending = kakaoPending();
+        MockHttpServletRequest request = requestWith(pending);
+        SocialSignupForm form = acceptedForm("카카오여행자");
+        form.setUserEmail("member@example.com");
+        SocialSignupOutcome outcome =
+                new SocialSignupOutcome(52L, "member@example.com", "verification-token");
+        when(socialSignupService.complete(pending, form)).thenReturn(outcome);
+        when(socialSignupService.sendVerificationEmail(outcome))
+                .thenThrow(new IllegalStateException("smtp down"));
+
+        String view = controller.completeSignup(
+                form, binding(form), null, request, new MockHttpServletResponse(),
+                redirectAttributes(), new ConcurrentModel());
+
+        assertThat(view).isEqualTo("redirect:/users/register/verify-waiting");
+        verify(authenticationService, never()).authenticate(any(), any(), any());
+    }
+
+    @Test
+    void emailStatusIsAnsweredOnlyInsideALiveKakaoOrNaverSignupFlow() {
+        when(socialEmailAccountResolver.classifyEnteredEmail("member@example.com"))
+                .thenReturn(new SocialEmailAccountResolver.EnteredEmail(
+                        SocialEmailAccountResolver.EnteredEmailStatus.AVAILABLE,
+                        "member@example.com"));
+
+        assertThat(controller.checkEmailStatus(
+                "member@example.com", sessionWith(kakaoPending())))
+                .containsEntry("status", "AVAILABLE");
+        // Google 흐름과 문맥이 없는 요청에는 답하지 않는다.
+        assertThat(controller.checkEmailStatus("member@example.com", sessionWith(pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590)))))
+                .containsEntry("status", "UNKNOWN");
+        assertThat(controller.checkEmailStatus("member@example.com", new MockHttpSession()))
+                .containsEntry("status", "UNKNOWN");
+    }
+
+    @Test
+    void emailStatusReportsEveryClassificationAndTreatsABlankInputAsInvalid() {
+        when(socialEmailAccountResolver.classifyEnteredEmail("taken@example.com"))
+                .thenReturn(new SocialEmailAccountResolver.EnteredEmail(
+                        SocialEmailAccountResolver.EnteredEmailStatus.EXISTING_ACTIVE,
+                        "taken@example.com"));
+        when(socialEmailAccountResolver.classifyEnteredEmail("held@example.com"))
+                .thenReturn(new SocialEmailAccountResolver.EnteredEmail(
+                        SocialEmailAccountResolver.EnteredEmailStatus.UNAVAILABLE,
+                        "held@example.com"));
+
+        assertThat(controller.checkEmailStatus("taken@example.com", sessionWith(kakaoPending())))
+                .containsEntry("status", "EXISTING_ACTIVE");
+        assertThat(controller.checkEmailStatus("held@example.com", sessionWith(kakaoPending())))
+                .containsEntry("status", "UNAVAILABLE");
+        assertThat(controller.checkEmailStatus("  ", sessionWith(kakaoPending())))
+                .containsEntry("status", "INVALID");
+        assertThat(controller.checkEmailStatus(null, sessionWith(kakaoPending())))
+                .containsEntry("status", "INVALID");
+    }
+
+
+    // ---------- 기존 계정으로 로그인하여 연결 ----------
+
+    @Test
+    void startingAnExistingAccountLinkMovesTheIdentityIntoTheServerSessionOnly() {
+        PendingSocialSignup pending = kakaoPending();
+        MockHttpServletRequest request = requestWith(pending);
+        PendingSocialLoginLink link = loginLink();
+        when(socialLoginLinkService.begin(pending, "member@example.com")).thenReturn(link);
+
+        String view = controller.beginExistingAccountLink(
+                "member@example.com", null, request, new ConcurrentModel());
+
+        assertThat(view).isEqualTo("redirect:/login");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isSameAs(link);
+        // 가입 문맥은 정리하고 새 users 는 만들지 않는다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        verify(socialSignupService, never()).complete(any(), any());
+    }
+
+    /** AJAX 가 EXISTING_ACTIVE 였어도 POST 시점 재확인에서 막히면 시작하지 않는다. */
+    @Test
+    void anEmailThatNoLongerQualifiesReturnsToTheFormWithoutAPendingLink() {
+        PendingSocialSignup pending = naverPending("naver@example.com");
+        MockHttpServletRequest request = requestWith(pending);
+        when(socialLoginLinkService.begin(pending, "member@example.com")).thenReturn(null);
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.beginExistingAccountLink(
+                "member@example.com", null, request, model);
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isNull();
+        // 가입 문맥은 남겨 사용자가 다른 이메일로 이어갈 수 있게 한다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isSameAs(pending);
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(true);
+    }
+
+    /** Google 과 만료된 문맥은 이 경로를 쓸 수 없다. */
+    @Test
+    void googleAndExpiredContextsCannotStartAnExistingAccountLink() {
+        MockHttpServletRequest google = requestWith(pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590)));
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", null, google, new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", null, new MockHttpServletRequest(), new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+
+        verify(socialLoginLinkService, never()).begin(any(), any());
+    }
+
+    @Test
+    void anAlreadySignedInMemberCannotStartAnExistingAccountLink() {
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", authentication(),
+                requestWith(kakaoPending()), new ConcurrentModel()))
+                .isEqualTo("redirect:/");
+        verify(socialLoginLinkService, never()).begin(any(), any());
+    }
+
+    private PendingSocialLoginLink loginLink() {
+        Instant now = Instant.now();
+        return new PendingSocialLoginLink(
+                "link-flow", SocialProvider.KAKAO, "kakao-sub", null, null,
+                25L, "member@example.com", now, now.plusSeconds(600));
+    }
+
+    private PendingSocialSignup kakaoPending() {
+        Instant now = Instant.now();
+        return new PendingSocialSignup(
+                "kakao-flow", SocialProvider.KAKAO, "kakao-sub", null, null,
+                now.minusSeconds(10), now.plusSeconds(590));
+    }
+
+    private PendingSocialSignup naverPending(String providerEmail) {
+        Instant now = Instant.now();
+        return new PendingSocialSignup(
+                "naver-flow", SocialProvider.NAVER, "naver-id", providerEmail, null,
+                now.minusSeconds(10), now.plusSeconds(590));
+    }
+
+    private MockHttpServletRequest requestWith(PendingSocialSignup pending) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE, pending);
+        return request;
+    }
+
+    private MockHttpSession sessionWith(PendingSocialSignup pending) {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE, pending);
+        return session;
+    }
+
+    private PendingSocialSignup pending(Instant createdAt, Instant expiresAt) {
+        return new PendingSocialSignup(
+                "flow-123", SocialProvider.GOOGLE, "new-google-sub",
+                "new@example.com", true, createdAt, expiresAt);
+    }
+
+    private UsernamePasswordAuthenticationToken authentication() {
+        User user = new User();
+        user.setId(7L);
+        user.setUserRole(UserRole.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        CustomUserDetails principal = new CustomUserDetails(user);
+        return UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+    }
+}

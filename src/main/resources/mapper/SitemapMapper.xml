@@ -3,13 +3,13 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.travlediary.repository.seo.SitemapMapper">
+<mapper namespace="com.tripbora.repository.seo.SitemapMapper">
 
-    <resultMap id="TravelInfoSitemapMap" type="com.example.travlediary.seo.SitemapTravelInfo">
+    <resultMap id="TravelInfoSitemapMap" type="com.tripbora.seo.SitemapTravelInfo">
         <constructor>
             <arg column="id" javaType="java.lang.Long"/>
             <arg column="content_type"
-                 javaType="com.example.travlediary.model.TravelInfoContentType"/>
+                 javaType="com.tripbora.model.TravelInfoContentType"/>
         </constructor>
     </resultMap>
 

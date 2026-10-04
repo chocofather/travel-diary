@@ -1,0 +1,83 @@
+package com.tripbora.controller.notice;
+
+import com.tripbora.config.i18n.SupportedLanguage;
+import com.tripbora.dto.NoticeDetailDto;
+import com.tripbora.dto.NoticeListItemDto;
+import com.tripbora.service.notice.NoticeService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+
+@Controller
+@RequiredArgsConstructor
+public class NoticeController {
+
+    private static final int PAGE_SIZE = 10;
+
+    private final NoticeService noticeService;
+    private final MessageSource messageSource;
+
+    @GetMapping("/support/notices")
+    public String list(@RequestParam(required = false) String page, Model model) {
+        int requestedPage = parsePage(page);
+        long totalCount = noticeService.countPublicList();
+        int totalPages = totalCount == 0 ? 0 : (int) Math.ceil((double) totalCount / PAGE_SIZE);
+        int currentPage = totalPages == 0 ? 1 : Math.min(requestedPage, totalPages);
+        long offset = (long) (currentPage - 1) * PAGE_SIZE;
+        List<NoticeListItemDto> notices = noticeService.getPublicList(offset, PAGE_SIZE);
+        noticeService.localizePublicList(notices, requestedLanguage());
+
+        int pageStart = Math.max(1, currentPage - 2);
+        int pageEnd = Math.min(totalPages, pageStart + 4);
+        pageStart = Math.max(1, pageEnd - 4);
+
+        model.addAttribute("notices", notices);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", PAGE_SIZE);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("pageStart", pageStart);
+        model.addAttribute("pageEnd", pageEnd);
+        model.addAttribute("pageTitle", message("support.notice.pageTitle"));
+        return "support/notices/list";
+    }
+
+    @GetMapping("/support/notices/{id:\\d+}")
+    public String detail(@PathVariable Long id, Model model) {
+        NoticeDetailDto notice = noticeService.getPublicDetail(id);
+        noticeService.localizePublicDetail(notice, requestedLanguage());
+        model.addAttribute("notice", notice);
+        model.addAttribute("pageTitle",
+                message("support.notice.detail.pageTitle", notice.getTitle()));
+        return "support/notices/detail";
+    }
+
+    /** 화면 문구는 다른 공개 화면과 같은 방식으로 메시지 번들에서 가져온다. */
+    private String message(String code, Object... args) {
+        return messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
+    }
+
+    /** 다른 공개 화면과 같은 방식으로 요청 언어를 정한다. (쿠키 locale, 기본 한국어) */
+    private SupportedLanguage requestedLanguage() {
+        return SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+    }
+
+    private int parsePage(String page) {
+        if (page == null || page.isBlank()) {
+            return 1;
+        }
+        try {
+            return Math.max(Integer.parseInt(page.strip()), 1);
+        } catch (NumberFormatException ignored) {
+            return 1;
+        }
+    }
+}
