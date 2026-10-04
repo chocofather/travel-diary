@@ -1,7 +1,9 @@
+name: tripbora-dev
+
 services:
   mysql:
     image: mysql:9.2.0
-    container_name: tripbora-mysql
+    container_name: tripbora-dev-mysql
     restart: unless-stopped
 
     ports:
@@ -29,7 +31,8 @@ services:
       context: .
       dockerfile: Dockerfile
 
-    container_name: tripbora-app
+    image: tripbora-dev-app:local
+    container_name: tripbora-dev-app
     restart: unless-stopped
 
     depends_on:
@@ -69,3 +72,4 @@ services:
 
 volumes:
   tripbora_mysql92_data:
+    name: tripbora_dev_mysql92_data
