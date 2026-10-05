@@ -6,7 +6,8 @@
  * 슬라이더의 현재 장과는 따로 움직인다.
  *
  * <ul>
- *   <li>닫기: 큰 사진 다시 누르기, 어두운 바탕 누르기, 닫기 버튼, Esc</li>
+ *   <li>닫기: 모바일은 닫기 버튼만, 데스크톱은 사진·바탕 클릭과 Esc도 지원</li>
+ *   <li>모바일 이동: 좌우 터치 또는 가로 스와이프. 세로 드래그·다중 터치는 제외한다.</li>
  *   <li>이동: 이전/다음 버튼, ← →. 처음과 끝은 이어진다. 사진이 한 장이면 버튼을 숨긴다.</li>
  *   <li>큰 사진 아래에 제목·설명·출처를 보여 준다. 출처는 본문에 그려진 출처 줄을 그대로 복사한다.
  *       (라벨 언어, 링크 규칙, target / rel 이 본문과 같다)</li>
@@ -35,6 +36,15 @@
         let currentIndex = 0;
         let returnFocus = null;
         let previousOverflow = '';
+        const mobileViewport = window.matchMedia('(max-width: 720px)');
+        const CONTROL_SELECTOR = 'button, a, input, select, textarea, [role="button"], [data-gallery-meta]';
+        let gesture = null;
+        let ignoredTouch = false;
+        let suppressClickUntil = 0;
+
+        function isMobile() {
+            return mobileViewport.matches;
+        }
 
         // 스크립트가 붙은 뒤에만 본문 사진을 누를 수 있는 버튼처럼 만든다. (alt 가 없으면 이름을 붙인다)
         images.forEach(image => {
@@ -84,7 +94,7 @@
         function onKeydown(event) {
             if (event.key === 'Escape') {
                 event.preventDefault();
-                close();
+                if (!isMobile()) close();
             } else if (event.key === 'ArrowLeft') {
                 event.preventDefault();
                 move(-1);
@@ -97,6 +107,9 @@
         function open(index) {
             if (index < 0) return;
             currentIndex = index;
+            gesture = null;
+            ignoredTouch = false;
+            suppressClickUntil = 0;
             returnFocus = images[index];
             render();
             if (!isOpen()) {
@@ -121,6 +134,7 @@
         function close() {
             if (!isOpen()) return;
             modal.classList.remove('is-open');
+            gesture = null;
             document.removeEventListener('keydown', onKeydown);
             if (typeof modal.close === 'function' && modal.open) modal.close();
             else modal.removeAttribute('open');
@@ -143,6 +157,14 @@
             open(images.indexOf(image));
         });
 
+        // 드래그 뒤 합성 click을 캡처 단계에서 막아 버튼이나 좌우 터치와 중복 실행되지 않게 한다.
+        modal.addEventListener('click', event => {
+            if (isMobile() && Date.now() < suppressClickUntil) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+
         // 모달 안: 버튼은 이동·닫기만 하고 바탕 닫기로 번지지 않는다.
         const button = (selector, handler) => modal.querySelector(selector).addEventListener('click', event => {
             event.stopPropagation();
@@ -151,14 +173,76 @@
         button('[data-gallery-prev]', () => move(-1));
         button('[data-gallery-next]', () => move(1));
         button('[data-gallery-close]', close);
-        // 큰 사진을 다시 누르거나 어두운 바탕(dialog 자신)을 누르면 닫는다. 제목·설명·출처 영역과 링크는 닫지 않는다.
+        // 모바일은 화면 좌우 절반을 터치 영역으로 쓴다. 컨트롤·설명·출처 링크는 제외한다.
         modal.addEventListener('click', event => {
+            if (isMobile()) {
+                if (!isOpen() || event.target.closest(CONTROL_SELECTOR) || event.detail === 0) return;
+                const bounds = modal.getBoundingClientRect();
+                move(event.clientX < bounds.left + bounds.width / 2 ? -1 : 1);
+                return;
+            }
+            // 데스크톱의 사진·바탕 클릭 닫기는 유지한다.
             if (event.target === modalImage || event.target === modal) close();
         });
+
+        modal.addEventListener('touchstart', event => {
+            gesture = null;
+            ignoredTouch = false;
+            suppressClickUntil = 0;
+            if (!isMobile() || !isOpen() || event.target.closest(CONTROL_SELECTOR)) return;
+            if (event.touches.length !== 1) {
+                ignoredTouch = true;
+                suppressClickUntil = Date.now() + 800;
+                return;
+            }
+            const touch = event.touches[0];
+            gesture = {id: touch.identifier, x: touch.clientX, y: touch.clientY, maxDistance: 0, vertical: false};
+        }, {passive: true});
+
+        modal.addEventListener('touchmove', event => {
+            if (!gesture) return;
+            if (event.touches.length !== 1) {
+                gesture = null;
+                ignoredTouch = true;
+                suppressClickUntil = Date.now() + 800;
+                return;
+            }
+            const touch = event.touches[0];
+            const dx = Math.abs(touch.clientX - gesture.x);
+            const dy = Math.abs(touch.clientY - gesture.y);
+            gesture.maxDistance = Math.max(gesture.maxDistance, dx, dy);
+            if (dy > 10 && dy > dx) gesture.vertical = true;
+        }, {passive: true});
+
+        modal.addEventListener('touchend', event => {
+            if (ignoredTouch) {
+                suppressClickUntil = Date.now() + 800;
+                if (event.touches.length === 0) ignoredTouch = false;
+                return;
+            }
+            const current = gesture;
+            gesture = null;
+            if (!current || !isMobile() || !isOpen()) return;
+            const touch = Array.from(event.changedTouches).find(item => item.identifier === current.id);
+            if (!touch) return;
+            const dx = touch.clientX - current.x;
+            const dy = touch.clientY - current.y;
+            const distance = Math.max(current.maxDistance, Math.abs(dx), Math.abs(dy));
+            if (distance <= 10) return; // 작은 움직임은 일반 터치로 처리한다.
+            suppressClickUntil = Date.now() + 800;
+            if (!current.vertical && Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+                move(dx < 0 ? 1 : -1);
+            }
+        }, {passive: true});
+
+        modal.addEventListener('touchcancel', () => {
+            gesture = null;
+            suppressClickUntil = Date.now() + 800;
+        }, {passive: true});
         // 브라우저 기본 Esc(cancel)·다른 경로로 닫혀도 같은 정리를 거친다.
         modal.addEventListener('cancel', event => {
             event.preventDefault();
-            close();
+            if (!isMobile()) close();
         });
         modal.addEventListener('close', close);
     }

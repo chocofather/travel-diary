@@ -485,11 +485,11 @@ class HomeControllerTest {
                     assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
                             .isEqualTo("https://tripbora.com/about");
                     assertThat(document.select("main .about-page h1")).hasSize(1);
-                    assertThat(document.select(".about-guide-step")).hasSize(5);
-                    assertThat(document.select(".about-guide-step a").eachAttr("href"))
+                    assertThat(document.select(".about-feature")).hasSize(7);
+                    assertThat(document.select(".about-feature .about-feature-link").eachAttr("href"))
                             .containsExactly(
-                                    "/destinations", "/travel-info", "/board/list?boardType=course",
-                                    "/travel-plans", "/diaries/demo");
+                                    "/destinations", "/travel-info", "/travel-info?contentType=FESTIVAL",
+                                    "/board/list?boardType=course", "/diaries/demo", "/travel-plans", "/board/list");
                 });
     }
 

@@ -3,13 +3,14 @@
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/about.css?v=20261006-features" />
+  <link rel="stylesheet" href="/css/about.css?v=20261006-layout" />
+  <script defer src="/js/about.js?v=20261006-layout"></script>
 </th:block>
 
 <th:block th:fragment="body">
   <!--
     TripBora 소개 / 시작 가이드. 실제 서비스 화면(/images/about/*.png)으로 기능 일곱 가지를 여행 순서대로 보여 준다.
-    01~04 는 [글 | 화면] 한 줄씩 빠르게 지나가고, 05~07 은 화면 여러 장으로 조금 더 자세히 보여 준다.
+    공통 교차 배치와 원본 비율 갤러리로 기능을 소개한다.
     글은 모두 messages(about.*) 이고, 스크린샷은 원본 비율 그대로 둔다. (width / height 로 자리를 미리 잡는다)
     첫 화면 바로 아래 01 화면만 바로 읽고, 나머지는 늦게 읽는다.
   -->
@@ -37,17 +38,17 @@
         <div class="about-feature-text">
           <span class="about-feature-number" aria-hidden="true">01</span>
           <h2 id="about-destination-title" th:text="#{about.destination.title}">여행지 발견</h2>
-          <p th:text="#{about.destination.description}">국내외 여행지의 사진과 위치, 정보를 살펴보고 가고 싶은 곳을 발견해보세요.</p>
+          <p th:text="#{about.destination.description}">국내외 여행지의 핵심 정보와 위치를 확인하고, 원하는 여행지를 쉽게 찾아보세요.</p>
           <ul class="about-feature-points">
-            <li th:text="#{about.destination.point.detail}">여행지 상세 정보</li>
-            <li th:text="#{about.destination.point.gallery}">사진 갤러리</li>
-            <li th:text="#{about.destination.point.save}">저장 / 여행일기 연계</li>
+            <li th:text="#{about.destination.point.detail}">여행지 핵심 정보</li>
+            <li th:text="#{about.destination.point.explore}">지역 · 계절별 탐색</li>
+            <li th:text="#{about.destination.point.location}">지도와 위치 정보</li>
           </ul>
           <a class="about-feature-link" href="/destinations" th:text="#{about.destination.cta}">여행지 둘러보기 →</a>
         </div>
         <figure class="about-shot">
           <img th:src="@{/images/about/destination.png}" src="/images/about/destination.png"
-               width="1249" height="827" decoding="async"
+               width="1443" height="901" decoding="async"
                alt="TripBora 여행지 경복궁 상세 화면" th:alt="#{about.destination.imageAlt}" />
         </figure>
       </div>
@@ -59,12 +60,12 @@
         <div class="about-feature-text">
           <span class="about-feature-number" aria-hidden="true">02</span>
           <h2 id="about-info-title" th:text="#{about.info.title}">여행정보</h2>
-          <p th:text="#{about.info.description}">여행 준비에 필요한 정보와 가이드를 읽기 좋은 콘텐츠로 만나보세요.</p>
+          <p th:text="#{about.info.description}">지역별 여행 정보와 가이드로 가볼 곳을 살펴보고, 나에게 맞는 여행을 준비하세요.</p>
           <a class="about-feature-link" href="/travel-info" th:text="#{about.info.cta}">여행정보 보기 →</a>
         </div>
-        <figure class="about-shot is-portrait">
+        <figure class="about-shot">
           <img th:src="@{/images/about/travel-info.png}" src="/images/about/travel-info.png"
-               width="979" height="1255" loading="lazy" decoding="async"
+               width="1440" height="900" loading="lazy" decoding="async"
                alt="여행정보 서울 고궁 투어 상세 화면" th:alt="#{about.info.imageAlt}" />
         </figure>
       </div>
@@ -80,9 +81,9 @@
           <a class="about-feature-link" href="/travel-info?contentType=FESTIVAL"
              th:text="#{about.festival.cta}">축제·행사 보기 →</a>
         </div>
-        <figure class="about-shot is-square">
+        <figure class="about-shot">
           <img th:src="@{/images/about/festival.png}" src="/images/about/festival.png"
-               width="1220" height="1147" loading="lazy" decoding="async"
+               width="1442" height="900" loading="lazy" decoding="async"
                alt="TripBora 축제·행사 목록 화면" th:alt="#{about.festival.imageAlt}" />
         </figure>
       </div>
@@ -98,9 +99,9 @@
           <a class="about-feature-link" href="/board/list?boardType=course"
              th:text="#{about.course.cta}">여행코스 보기 →</a>
         </div>
-        <figure class="about-shot is-square">
+        <figure class="about-shot">
           <img th:src="@{/images/about/travel-course.png}" src="/images/about/travel-course.png"
-               width="1220" height="1100" loading="lazy" decoding="async"
+               width="1439" height="893" loading="lazy" decoding="async"
                alt="여행코스 동선 화면" th:alt="#{about.course.imageAlt}" />
         </figure>
       </div>
@@ -119,9 +120,9 @@
                th:href="${isLoggedIn} ? @{/diaries} : @{/diaries/demo}"
                th:text="#{about.diary.cta}">여행일기 시작하기 →</a>
           </div>
-          <figure class="about-shot is-portrait is-diary-read">
+          <figure class="about-shot">
             <img th:src="@{/images/about/diary-read.png}" src="/images/about/diary-read.png"
-                 width="592" height="830" loading="lazy" decoding="async"
+                 width="1440" height="899" loading="lazy" decoding="async"
                  alt="경복궁 사진과 스티커로 꾸민 여행일기 작성 예시" th:alt="#{about.diary.imageAlt}" />
           </figure>
         </div>
@@ -130,7 +131,7 @@
             <figure class="about-tool">
               <div class="about-tool-frame">
                 <img th:src="@{/images/about/diary-cover.png}" src="/images/about/diary-cover.png"
-                     width="390" height="517" loading="lazy" decoding="async"
+                     width="1438" height="896" loading="lazy" decoding="async"
                      alt="여행일기 표지" th:alt="#{about.diary.cover.imageAlt}" />
               </div>
               <figcaption th:text="#{about.diary.cover.label}">나만의 표지</figcaption>
@@ -140,7 +141,7 @@
             <figure class="about-tool">
               <div class="about-tool-frame">
                 <img th:src="@{/images/about/diary-cover-library.png}" src="/images/about/diary-cover-library.png"
-                     width="1329" height="743" loading="lazy" decoding="async"
+                     width="1439" height="897" loading="lazy" decoding="async"
                      alt="표지 디자인 라이브러리" th:alt="#{about.diary.library.imageAlt}" />
               </div>
               <figcaption th:text="#{about.diary.library.label}">표지 라이브러리</figcaption>
@@ -150,7 +151,7 @@
             <figure class="about-tool">
               <div class="about-tool-frame">
                 <img th:src="@{/images/about/diary-cover-editor.png}" src="/images/about/diary-cover-editor.png"
-                     width="1186" height="880" loading="lazy" decoding="async"
+                     width="1437" height="899" loading="lazy" decoding="async"
                      alt="여행일기 표지 꾸미기 화면" th:alt="#{about.diary.editor.imageAlt}" />
               </div>
               <figcaption th:text="#{about.diary.editor.label}">표지 꾸미기</figcaption>
@@ -160,7 +161,7 @@
             <figure class="about-tool">
               <div class="about-tool-frame">
                 <img th:src="@{/images/about/diary-pdf.png}" src="/images/about/diary-pdf.png"
-                     width="898" height="870" loading="lazy" decoding="async"
+                     width="1433" height="896" loading="lazy" decoding="async"
                      alt="여행일기 PDF 저장 화면" th:alt="#{about.diary.pdf.imageAlt}" />
               </div>
               <figcaption th:text="#{about.diary.pdf.label}">PDF 저장</figcaption>
@@ -170,126 +171,110 @@
       </div>
     </section>
 
-    <!-- 06 함께 계획하기: 일정 → 채팅 → 투표 만들기 → 결과. 작은 화면은 원본 크기보다 키우지 않는다 -->
-    <section class="about-feature is-tinted about-plan" id="about-plan" aria-labelledby="about-plan-title">
-      <div class="about-content">
-        <div class="about-feature-intro">
+    <!-- 06 함께 계획하기: 일정 → 채팅 → 투표 만들기 → 결과 -->
+    <section class="about-feature is-tinted is-reverse about-plan" id="about-plan" aria-labelledby="about-plan-title">
+      <div class="about-content about-feature-row">
+        <div class="about-feature-text">
           <span class="about-feature-number" aria-hidden="true">06</span>
           <h2 id="about-plan-title" th:text="#{about.plan.title}">함께 계획하기</h2>
           <p th:text="#{about.plan.description}">친구와 여행 일정을 함께 만들고, 채팅으로 의견을 나누고, 투표를 통해 여행 계획을 결정하세요.</p>
           <a class="about-feature-link" href="/travel-plans" th:text="#{about.plan.cta}">함께 계획하기 →</a>
         </div>
         <ol class="about-plan-steps">
-          <li class="about-plan-step is-main">
-            <div class="about-plan-step-text">
-              <span class="about-step-index" aria-hidden="true">01</span>
-              <h3 th:text="#{about.plan.step.schedule.title}">함께 일정 만들기</h3>
-              <p th:text="#{about.plan.step.schedule.description}">날짜별 일정을 함께 채워 갑니다.</p>
-            </div>
+          <li>
             <figure class="about-shot">
               <img th:src="@{/images/about/plan-main.png}" src="/images/about/plan-main.png"
-                   width="940" height="793" loading="lazy" decoding="async"
+                   width="1437" height="892" loading="lazy" decoding="async"
                    alt="함께 계획하기 여행 일정 화면" th:alt="#{about.plan.step.schedule.imageAlt}" />
+              <figcaption th:text="#{about.plan.step.schedule.title}">함께 일정 만들기</figcaption>
             </figure>
           </li>
-          <li class="about-plan-step">
-            <div class="about-plan-step-text">
-              <span class="about-step-index" aria-hidden="true">02</span>
-              <h3 th:text="#{about.plan.step.chat.title}">채팅으로 의견 나누기</h3>
-              <p th:text="#{about.plan.step.chat.description}">동행과 바로 이야기를 나눕니다.</p>
-            </div>
-            <figure class="about-shot is-small">
+          <li>
+            <figure class="about-shot">
               <img th:src="@{/images/about/plan-chat.png}" src="/images/about/plan-chat.png"
-                   width="438" height="512" loading="lazy" decoding="async"
+                   width="1441" height="900" loading="lazy" decoding="async"
                    alt="함께 계획하기 채팅" th:alt="#{about.plan.step.chat.imageAlt}" />
+              <figcaption th:text="#{about.plan.step.chat.title}">채팅으로 의견 나누기</figcaption>
             </figure>
           </li>
-          <li class="about-plan-step">
-            <div class="about-plan-step-text">
-              <span class="about-step-index" aria-hidden="true">03</span>
-              <h3 th:text="#{about.plan.step.vote.title}">투표 만들기</h3>
-              <p th:text="#{about.plan.step.vote.description}">고민되는 선택지를 투표에 올립니다.</p>
-            </div>
-            <figure class="about-shot is-small">
+          <li>
+            <figure class="about-shot">
               <img th:src="@{/images/about/plan-vote-create.png}" src="/images/about/plan-vote-create.png"
-                   width="420" height="533" loading="lazy" decoding="async"
+                   width="1439" height="897" loading="lazy" decoding="async"
                    alt="여행 투표 만들기 화면" th:alt="#{about.plan.step.vote.imageAlt}" />
+              <figcaption th:text="#{about.plan.step.vote.title}">투표 만들기</figcaption>
             </figure>
           </li>
-          <li class="about-plan-step">
-            <div class="about-plan-step-text">
-              <span class="about-step-index" aria-hidden="true">04</span>
-              <h3 th:text="#{about.plan.step.result.title}">결과로 결정하기</h3>
-              <p th:text="#{about.plan.step.result.description}">모두의 선택으로 계획을 정합니다.</p>
-            </div>
-            <figure class="about-shot is-small">
+          <li>
+            <figure class="about-shot">
               <img th:src="@{/images/about/plan-vote-result.png}" src="/images/about/plan-vote-result.png"
-                   width="458" height="427" loading="lazy" decoding="async"
+                   width="1439" height="897" loading="lazy" decoding="async"
                    alt="여행 투표 결과" th:alt="#{about.plan.step.result.imageAlt}" />
+              <figcaption th:text="#{about.plan.step.result.title}">결과로 결정하기</figcaption>
             </figure>
           </li>
         </ol>
       </div>
     </section>
 
-    <!-- 07 언어가 달라도 함께: 원문과 번역된 내용을 같은 크기 틀에 나란히 -->
+    <!-- 07 언어가 달라도 함께: 원문과 번역된 내용을 나란히 -->
     <section class="about-feature about-translate" id="about-translate" aria-labelledby="about-translate-title">
-      <div class="about-content">
-        <div class="about-feature-intro">
+      <div class="about-content about-feature-row">
+        <div class="about-feature-text">
           <span class="about-feature-number" aria-hidden="true">07</span>
           <h2 id="about-translate-title" th:text="#{about.translate.title}">언어가 달라도 함께</h2>
           <p th:text="#{about.translate.description}">게시글과 댓글을 다른 언어로 번역해 여행 경험을 언어의 제약 없이 나눌 수 있습니다.</p>
           <a class="about-feature-link" href="/board/list" th:text="#{about.translate.cta}">커뮤니티 둘러보기 →</a>
         </div>
 
-        <div class="about-compare about-compare--community">
+        <div class="about-translation-gallery">
+        <div class="about-compare">
           <h3 th:text="#{about.translate.community.title}">커뮤니티 글</h3>
           <div class="about-compare-pair">
             <figure class="about-compare-item">
-              <figcaption th:text="#{about.translate.original}">원문</figcaption>
               <div class="about-compare-frame">
                 <img th:src="@{/images/about/translate-community-original.png}"
                      src="/images/about/translate-community-original.png"
-                     width="1043" height="581" loading="lazy" decoding="async"
+                     width="1435" height="896" loading="lazy" decoding="async"
                      alt="커뮤니티 원문" th:alt="#{about.translate.community.originalAlt}" />
               </div>
+              <figcaption th:text="#{about.translate.original}">원문</figcaption>
             </figure>
-            <span class="about-compare-arrow" aria-hidden="true"></span>
             <figure class="about-compare-item">
-              <figcaption th:text="#{about.translate.translated}">번역된 내용</figcaption>
               <div class="about-compare-frame">
                 <img th:src="@{/images/about/translate-community-translated.png}"
                      src="/images/about/translate-community-translated.png"
-                     width="987" height="569" loading="lazy" decoding="async"
+                     width="1438" height="895" loading="lazy" decoding="async"
                      alt="커뮤니티 번역 화면" th:alt="#{about.translate.community.translatedAlt}" />
               </div>
+              <figcaption th:text="#{about.translate.translated}">번역된 내용</figcaption>
             </figure>
           </div>
         </div>
 
-        <div class="about-compare about-compare--comment">
+        <div class="about-compare">
           <h3 th:text="#{about.translate.comment.title}">댓글</h3>
           <div class="about-compare-pair">
             <figure class="about-compare-item">
-              <figcaption th:text="#{about.translate.original}">원문</figcaption>
               <div class="about-compare-frame">
                 <img th:src="@{/images/about/translate-comment-original.png}"
                      src="/images/about/translate-comment-original.png"
-                     width="1061" height="279" loading="lazy" decoding="async"
+                     width="1436" height="899" loading="lazy" decoding="async"
                      alt="댓글 원문" th:alt="#{about.translate.comment.originalAlt}" />
               </div>
+              <figcaption th:text="#{about.translate.original}">원문</figcaption>
             </figure>
-            <span class="about-compare-arrow" aria-hidden="true"></span>
             <figure class="about-compare-item">
-              <figcaption th:text="#{about.translate.translated}">번역된 내용</figcaption>
               <div class="about-compare-frame">
                 <img th:src="@{/images/about/translate-comment-translated.png}"
                      src="/images/about/translate-comment-translated.png"
-                     width="1009" height="284" loading="lazy" decoding="async"
+                     width="1438" height="897" loading="lazy" decoding="async"
                      alt="댓글 번역 화면" th:alt="#{about.translate.comment.translatedAlt}" />
               </div>
+              <figcaption th:text="#{about.translate.translated}">번역된 내용</figcaption>
             </figure>
           </div>
+        </div>
         </div>
       </div>
     </section>

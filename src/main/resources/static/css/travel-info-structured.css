@@ -674,11 +674,14 @@
     /* 확대 모달: 사진을 화면 폭 가까이 쓰고, 좌우 버튼은 사진 가장자리 위에 옅은 어두운 바탕으로 둔다. */
     .structured-gallery {
         padding: 60px 12px 16px;
+        /* 세로 읽기와 핀치 확대는 허용하고 가로 이동은 갤러리가 처리한다. */
+        touch-action: pan-y pinch-zoom;
     }
 
     .structured-gallery-image {
         max-width: calc(100vw - 24px);
         max-height: calc(100vh - 160px);
+        cursor: default;
     }
 
     .structured-gallery-nav {

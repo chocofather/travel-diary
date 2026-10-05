@@ -9,6 +9,20 @@ class PostContentSanitizerTest {
     private final PostContentSanitizer sanitizer = new PostContentSanitizer();
 
     @Test
+    void preservesMultilingualTextAndSupplementaryEmojiInPostAndCourseContent() {
+        for (String text : new String[]{
+                "경복궁 정말 예뻐요",
+                "景福宮はとても美しいです",
+                "景福宫真的很漂亮",
+                "😊 ✈️ ❤️ 👍",
+                "景福宮はとても美しいです 😊✈️"
+        }) {
+            assertThat(sanitizer.sanitize("<p>" + text + "</p><script>alert(1)</script>"))
+                    .isEqualTo("<p>" + text + "</p>");
+        }
+    }
+
+    @Test
     void nullContentBecomesEmptyString() {
         assertThat(sanitizer.sanitize(null)).isEmpty();
     }

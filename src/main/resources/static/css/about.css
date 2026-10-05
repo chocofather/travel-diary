@@ -1,184 +1,170 @@
-/*
-  TripBora 소개 / 시작 가이드.
-  흰 바탕과 아주 옅은 회색 바탕을 번갈아 써서 긴 페이지의 구분만 준다. 섹션을 카드로 감싸지 않는다.
-  보라색은 작은 번호·링크 같은 포인트에만 쓴다.
-  스크린샷은 실제 화면 그대로가 주인공이다. 원본 비율(object-fit: contain), 얇은 테두리와 옅은 그림자만 두고
-  가짜 브라우저 틀·기울임·확대 효과는 쓰지 않는다.
-*/
+/* 소개 페이지 전용. 스크린샷은 고정 높이 없이 원본 비율로 표시한다. */
 .about-page {
     --about-ink: #20252b;
     --about-text: #59616c;
     --about-muted: #6b7280;
-    --about-line: rgba(32, 37, 43, 0.1);
-    --about-tint: #f7f8f9;
+    --about-line: #e6e7eb;
+    --about-tint: #f8f9fb;
     --about-accent: var(--tripbora-primary, #7657c8);
     color: var(--about-ink);
     background: #fff;
 }
 
-.about-page *,
-.about-page *::before,
-.about-page *::after {
+.about-page *, .about-page *::before, .about-page *::after {
     box-sizing: border-box;
 }
 
 .about-content {
-    width: min(1120px, calc(100% - 40px));
-    margin: 0 auto;
+    width: min(1200px, calc(100% - 48px));
+    margin-inline: auto;
 }
 
-/* ---- Hero ---- */
+/* Hero와 기능 탐색 */
 .about-hero {
-    padding: 84px 0 72px;
-    background: #f8f8f7;
+    padding: 56px 0 36px;
 }
 
 .about-eyebrow {
     display: block;
-    color: var(--about-muted);
+    color: var(--about-accent);
     font-size: 12px;
     font-weight: 750;
-    letter-spacing: 0.12em;
+    letter-spacing: .14em;
 }
 
 .about-hero h1 {
-    max-width: 1040px;
-    margin: 18px 0 20px;
-    font-size: clamp(34px, 4.6vw, 56px);
+    max-width: 1080px;
+    margin: 14px 0 18px;
+    font-size: clamp(32px, 4vw, 52px);
     font-weight: 750;
-    letter-spacing: -0.055em;
-    line-height: 1.18;
-    word-break: keep-all;
-}
-
-.about-hero p {
-    max-width: 680px;
-    margin: 0;
-    color: var(--about-text);
-    font-size: 18px;
-    line-height: 1.75;
+    letter-spacing: -.055em;
+    line-height: 1.25;
     word-break: keep-all;
     overflow-wrap: anywhere;
 }
 
-/* 기능 바로가기: 작은 글자 링크 한 줄. 좁은 화면에서는 줄을 바꿔 이어진다. */
+.about-hero p {
+    max-width: 740px;
+    margin: 0;
+    color: var(--about-text);
+    font-size: 17px;
+    line-height: 1.8;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
 .about-jump {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 0;
-    margin-top: 32px;
-    font-size: 14px;
+    gap: 2px 8px;
+    margin-top: 28px;
+    padding-block: 8px;
+    border-block: 1px solid var(--about-line);
 }
 
 .about-jump a {
+    padding: 8px 12px;
+    border-radius: 4px;
     color: var(--about-text);
+    font-size: 14px;
+    font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
 }
 
-.about-jump a + a::before {
-    content: "·";
-    margin: 0 10px;
-    color: #b6bcc4;
-}
-
 .about-jump a:hover {
     color: var(--about-accent);
+    background: var(--about-tint);
 }
 
-/* ---- 기능 섹션 공통 ---- */
+/* 반대 방향에서도 이미지 열은 60%를 유지한다. */
 .about-feature {
-    padding: 88px 0;
+    padding: 56px 0;
     background: #fff;
-    scroll-margin-top: 72px;
+    scroll-margin-top: 88px;
 }
 
 .about-feature.is-tinted {
     background: var(--about-tint);
 }
 
-/* 01~04: [글 | 화면]. is-reverse 는 화면을 왼쪽으로 보내 스크롤이 단조롭지 않게 한다. */
 .about-feature-row {
     display: grid;
-    grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+    grid-template-columns: minmax(0, .4fr) minmax(0, .6fr);
     align-items: center;
-    gap: clamp(40px, 6vw, 80px);
+    gap: 36px;
+}
+
+.about-feature.is-reverse .about-feature-row {
+    grid-template-columns: minmax(0, .6fr) minmax(0, .4fr);
 }
 
 .about-feature.is-reverse .about-feature-row > .about-feature-text {
     order: 2;
 }
 
-.about-feature-text,
-.about-feature-intro {
+.about-feature-text {
     min-width: 0;
-    max-width: 460px;
 }
 
-.about-feature-intro {
-    max-width: 640px;
-    margin-bottom: 48px;
-}
-
-.about-feature-number,
-.about-step-index {
-    display: block;
+.about-feature-number {
+    display: inline-block;
+    padding-bottom: 7px;
+    border-bottom: 2px solid var(--about-accent);
     color: var(--about-accent);
     font-size: 13px;
     font-weight: 750;
-    letter-spacing: 0.08em;
+    letter-spacing: .08em;
     font-variant-numeric: tabular-nums;
 }
 
 .about-feature h2 {
     margin: 12px 0 14px;
-    font-size: clamp(26px, 3vw, 36px);
+    font-size: clamp(26px, 2.8vw, 34px);
     font-weight: 750;
-    letter-spacing: -0.045em;
-    line-height: 1.28;
+    letter-spacing: -.045em;
+    line-height: 1.3;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
-.about-feature-text p,
-.about-feature-intro p {
+.about-feature-text p {
     margin: 0;
     color: var(--about-text);
     font-size: 16px;
-    line-height: 1.75;
+    line-height: 1.8;
     word-break: keep-all;
     overflow-wrap: anywhere;
 }
 
 .about-feature-text .about-feature-detail {
     margin-top: 12px;
-    color: var(--about-muted);
     font-size: 15px;
 }
 
 .about-feature-points {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     margin: 20px 0 0;
     padding: 0;
     list-style: none;
-    color: var(--about-ink);
     font-size: 15px;
+    line-height: 1.6;
 }
 
 .about-feature-points li::before {
-    content: "";
+    content: '';
     display: inline-block;
-    width: 5px;
-    height: 5px;
-    margin: 0 10px 2px 0;
+    width: 4px;
+    height: 4px;
+    margin: 0 10px 3px 0;
     border-radius: 50%;
     background: var(--about-accent);
-    vertical-align: middle;
 }
 
 .about-feature-link {
     display: inline-block;
-    margin-top: 24px;
+    margin-top: 22px;
     color: var(--about-accent);
     font-size: 14px;
     font-weight: 700;
@@ -190,211 +176,80 @@
     text-underline-offset: 4px;
 }
 
-.about-feature-link:focus-visible,
-.about-jump a:focus-visible,
-.about-final-button:focus-visible {
-    outline: 3px solid rgba(118, 87, 200, 0.3);
+.about-page a:focus-visible {
+    outline: 2px solid var(--about-accent);
     outline-offset: 4px;
 }
 
-/* ---- 스크린샷 ---- */
-.about-shot {
+/* 화면과 캡션. 별도의 모형 프레임이나 자르기는 사용하지 않는다. */
+.about-shot, .about-tool, .about-compare-item {
     min-width: 0;
     margin: 0;
 }
 
-.about-shot img,
-.about-tool-frame img,
-.about-compare-frame img {
+.about-shot img, .about-tool-frame img, .about-compare-frame img {
     display: block;
+    width: 100%;
     max-width: 100%;
     height: auto;
-    object-fit: contain;
-}
-
-.about-shot img {
-    width: 100%;
     border: 1px solid var(--about-line);
-    border-radius: 8px;
+    border-radius: 6px;
     background: #fff;
-    box-shadow: 0 10px 24px rgba(32, 37, 43, 0.07);
+    box-shadow: 0 3px 12px rgb(32 37 43 / 4%);
 }
 
-/* 세로로 긴 화면은 폭을 줄여 한 섹션이 너무 길어지지 않게 한다 */
-.about-shot.is-portrait {
-    justify-self: center;
-    width: 100%;
-    max-width: 520px;
+.about-diary-tools, .about-plan-steps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 24px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.about-shot.is-square {
-    justify-self: center;
-    width: 100%;
-    max-width: 640px;
-}
-
-.about-shot.is-diary-read {
-    max-width: 460px;
-}
-
-/* 작은 채팅·투표 화면은 원본 크기보다 키우지 않는다 */
-.about-shot.is-small img {
-    width: auto;
-    margin-inline: auto;
-}
-
-/* ---- 05 여행일기: 대표 화면 + 보조 화면 넷 ---- */
 .about-diary-tools {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
-    margin: 56px 0 0;
-    padding: 0;
-    list-style: none;
+    margin-top: 28px;
 }
 
-.about-tool {
-    margin: 0;
-}
-
-/* 비율이 서로 다른 화면을 같은 틀에 담는다. 잘라내지 않고 틀 안에 맞춘다. */
-.about-tool-frame {
-    display: grid;
-    aspect-ratio: 4 / 3;
-    place-items: center;
-    padding: 10px;
-    border: 1px solid var(--about-line);
-    border-radius: 8px;
-    background: var(--about-tint);
-}
-
-.about-tool-frame img {
-    max-height: 100%;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(32, 37, 43, 0.08);
-}
-
-.about-tool figcaption {
-    margin-top: 10px;
-    color: var(--about-ink);
-    font-size: 14px;
-    font-weight: 650;
-    text-align: center;
-}
-
-/* ---- 06 함께 계획하기: 01 은 크게, 02~04 는 한 줄 셋 ---- */
 .about-plan-steps {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 48px 32px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.about-plan-step {
-    display: grid;
-    align-content: start;
-    gap: 18px;
     min-width: 0;
 }
 
-.about-plan-step.is-main {
-    grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr);
-    align-items: center;
-    gap: clamp(32px, 5vw, 64px);
+.about-page figcaption {
+    margin-top: 7px;
+    color: var(--about-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
-.about-plan-step.is-main .about-shot {
-    max-width: 760px;
+.about-translation-gallery {
+    min-width: 0;
 }
 
-.about-plan-step h3,
-.about-compare h3 {
-    margin: 6px 0 6px;
-    color: var(--about-ink);
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    word-break: keep-all;
-}
-
-.about-plan-step p {
-    margin: 0;
-    color: var(--about-text);
-    font-size: 15px;
-    line-height: 1.65;
-    word-break: keep-all;
-}
-
-/* ---- 07 번역: 원문 → 번역된 내용. 한 비교 안의 두 틀은 크기가 같다 ---- */
 .about-compare + .about-compare {
-    margin-top: 56px;
+    margin-top: 24px;
 }
 
 .about-compare h3 {
-    margin: 0 0 16px;
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 650;
 }
 
 .about-compare-pair {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
-    align-items: center;
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
 }
 
-.about-compare-item {
-    min-width: 0;
-    margin: 0;
-}
-
-.about-compare-item figcaption {
-    margin-bottom: 8px;
-    color: var(--about-muted);
-    font-size: 13px;
-    font-weight: 650;
-}
-
-.about-compare-frame {
-    display: grid;
-    place-items: center;
-    padding: 12px;
-    border: 1px solid var(--about-line);
-    border-radius: 8px;
-    background: #fff;
-    box-shadow: 0 6px 18px rgba(32, 37, 43, 0.05);
-}
-
-.about-compare--community .about-compare-frame {
-    aspect-ratio: 16 / 9;
-}
-
-.about-compare--comment .about-compare-frame {
-    aspect-ratio: 7 / 2;
-}
-
-.about-compare-frame img {
-    max-height: 100%;
-}
-
-.about-compare-arrow {
-    align-self: center;
-    margin-top: 22px;
-    color: #a0a6ae;
-    font-size: 20px;
-    text-align: center;
-}
-
-.about-compare-arrow::before {
-    content: "→";
-}
-
-/* ---- 마지막 안내 ---- */
 .about-final {
-    padding: 80px 0 88px;
-    background: var(--about-ink);
-    color: #fff;
+    padding: 48px 0;
+    background: var(--about-tint);
+    border-top: 1px solid var(--about-line);
 }
 
 .about-final .about-content {
@@ -403,135 +258,114 @@
 
 .about-final h2 {
     margin: 0 0 12px;
-    font-size: clamp(26px, 3.2vw, 36px);
-    font-weight: 750;
-    letter-spacing: -0.045em;
-    line-height: 1.3;
+    font-size: clamp(24px, 3vw, 32px);
+    letter-spacing: -.045em;
+    line-height: 1.4;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .about-final p {
     margin: 0;
-    color: #cbd0d6;
+    color: var(--about-text);
     font-size: 16px;
     line-height: 1.7;
-    word-break: keep-all;
 }
 
 .about-final-actions {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 12px;
-    margin-top: 30px;
+    gap: 10px;
+    margin-top: 24px;
 }
 
 .about-final-button {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0 22px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    border-radius: 999px;
-    color: #fff;
-    font-size: 15px;
+    justify-content: center;
+    min-height: 42px;
+    padding: 8px 20px;
+    border: 1px solid var(--about-line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--about-ink);
+    font-size: 14px;
     font-weight: 700;
     text-decoration: none;
 }
 
 .about-final-button:hover {
-    border-color: rgba(255, 255, 255, 0.7);
+    border-color: var(--about-accent);
 }
 
 .about-final-button.is-primary {
     border-color: var(--about-accent);
     background: var(--about-accent);
+    color: #fff;
 }
 
-.about-final-button.is-primary:hover {
-    filter: brightness(1.06);
-}
-
-/* ---- 태블릿 ---- */
+/* 태블릿부터 DOM 순서 그대로 글 → 화면. */
 @media (max-width: 1024px) {
-    .about-diary-tools {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .about-plan-step.is-main {
+    .about-feature-row, .about-feature.is-reverse .about-feature-row {
         grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-/* ---- 휴대폰 / 좁은 태블릿: 모두 한 열, 글 → 화면 순서 ---- */
-@media (max-width: 860px) {
-    .about-content {
-        width: min(calc(100% - 32px), 1120px);
-    }
-
-    .about-hero {
-        padding: 64px 0 56px;
-    }
-
-    .about-hero h1 {
-        font-size: clamp(30px, 9vw, 44px);
-    }
-
-    .about-hero p {
-        font-size: 16px;
-    }
-
-    .about-feature {
-        padding: 64px 0;
-    }
-
-    .about-feature-row {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 32px;
+        gap: 28px;
     }
 
     .about-feature.is-reverse .about-feature-row > .about-feature-text {
         order: 0;
     }
 
-    .about-feature-text,
-    .about-feature-intro {
-        max-width: none;
-    }
-
-    .about-feature-intro {
-        margin-bottom: 36px;
-    }
-
-    .about-plan-steps {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 40px;
-    }
-
-    .about-diary-tools {
-        margin-top: 40px;
-    }
-
-    .about-compare-pair {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .about-compare-arrow {
-        margin-top: 0;
-    }
-
-    .about-compare-arrow::before {
-        content: "↓";
+    .about-feature {
+        padding: 44px 0;
     }
 }
 
-@media (max-width: 520px) {
-    .about-diary-tools {
+@media (max-width: 600px) {
+    .about-content {
+        width: calc(100% - 32px);
+    }
+
+    .about-hero {
+        padding: 36px 0 24px;
+    }
+
+    .about-hero h1 {
+        font-size: clamp(28px, 7.5vw, 36px);
+    }
+
+    .about-hero p {
+        font-size: 16px;
+    }
+
+    .about-jump {
+        gap: 0 2px;
+        margin-top: 22px;
+    }
+
+    .about-jump a {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .about-feature {
+        padding: 36px 0;
+    }
+
+    .about-feature-row {
+        gap: 24px;
+    }
+
+    .about-diary-tools, .about-plan-steps, .about-compare-pair {
         grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .about-final {
+        padding: 36px 0;
     }
 
     .about-final-button {
-        justify-content: center;
         width: 100%;
     }
 }
