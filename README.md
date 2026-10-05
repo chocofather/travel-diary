@@ -43,11 +43,18 @@
 
 ### 01. 여행지 · 여행정보 · 축제
 
-<p>
-  <img src="./src/main/resources/static/images/about/destination.png" alt="TripBora 여행지 상세" width="32%">
-  <img src="./src/main/resources/static/images/about/travel-info.png" alt="TripBora 여행정보 상세" width="32%">
-  <img src="./src/main/resources/static/images/about/festival.png" alt="TripBora 축제정보" width="32%">
-</p>
+<table>
+  <tr>
+    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/destination.png" alt="TripBora 여행지 상세" width="100%"></td>
+    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/travel-info.png" alt="TripBora 여행정보 상세" width="100%"></td>
+    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/festival.png" alt="TripBora 축제정보" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>여행지</sub></td>
+    <td align="center"><sub>여행정보</sub></td>
+    <td align="center"><sub>축제 · 행사</sub></td>
+  </tr>
+</table>
 
 - 여행지 유형별 상세정보 및 카테고리/편의시설 관리
 - 여행정보 `QUILL / STRUCTURED` 이중 콘텐츠 포맷
@@ -67,15 +74,27 @@
 ### 03. 여행일기
 
 <p align="center">
-  <img src="./src/main/resources/static/images/about/diary-read.png" alt="TripBora 여행일기 읽기 화면" width="72%">
+  <img src="./src/main/resources/static/images/about/diary-read.png" alt="TripBora 여행일기 읽기 화면" width="88%">
 </p>
 
-<p>
-  <img src="./src/main/resources/static/images/about/diary-cover.png" alt="TripBora 다이어리 표지" width="24%">
-  <img src="./src/main/resources/static/images/about/diary-cover-library.png" alt="TripBora 표지 라이브러리" width="24%">
-  <img src="./src/main/resources/static/images/about/diary-cover-editor.png" alt="TripBora 표지 꾸미기" width="24%">
-  <img src="./src/main/resources/static/images/about/diary-pdf.png" alt="TripBora 다이어리 PDF 저장" width="24%">
-</p>
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover.png" alt="TripBora 다이어리 표지" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover-library.png" alt="TripBora 표지 라이브러리" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>다이어리 표지</sub></td>
+    <td align="center"><sub>표지 라이브러리</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover-editor.png" alt="TripBora 표지 꾸미기" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-pdf.png" alt="TripBora 다이어리 PDF 저장" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>표지 꾸미기</sub></td>
+    <td align="center"><sub>PDF 저장</sub></td>
+  </tr>
+</table>
 
 - TEXT / PHOTO / STICKER / NOTE 요소를 자유롭게 배치
 - 상대좌표 기반 위치·크기·회전·z-index 저장
@@ -87,14 +106,24 @@
 
 ### 04. 함께 계획하기
 
-<p>
-  <img src="./src/main/resources/static/images/about/plan-main.png" alt="TripBora 함께 계획하기" width="49%">
-  <img src="./src/main/resources/static/images/about/plan-chat.png" alt="TripBora 함께 계획하기 채팅" width="49%">
-</p>
-<p>
-  <img src="./src/main/resources/static/images/about/plan-vote-create.png" alt="TripBora 함께 계획하기 투표" width="49%">
-  <img src="./src/main/resources/static/images/about/plan-vote-result.png" alt="TripBora 함께 계획하기 투표 결과" width="49%">
-</p>
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-main.png" alt="TripBora 함께 계획하기" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-chat.png" alt="TripBora 함께 계획하기 채팅" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>공동 여행계획</sub></td>
+    <td align="center"><sub>실시간 채팅</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-vote-create.png" alt="TripBora 함께 계획하기 투표" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-vote-result.png" alt="TripBora 함께 계획하기 투표 결과" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>투표 생성</sub></td>
+    <td align="center"><sub>투표 결과</sub></td>
+  </tr>
+</table>
 
 - 여행계획별 멤버·권한·초대 관리
 - 날짜별 일정과 대안 일정 구성
@@ -105,14 +134,24 @@
 
 ### 05. 번역으로 소통하기
 
-<p>
-  <img src="./src/main/resources/static/images/about/translate-community-original.png" alt="커뮤니티 원문" width="49%">
-  <img src="./src/main/resources/static/images/about/translate-community-translated.png" alt="커뮤니티 번역본" width="49%">
-</p>
-<p>
-  <img src="./src/main/resources/static/images/about/translate-comment-original.png" alt="댓글 원문" width="49%">
-  <img src="./src/main/resources/static/images/about/translate-comment-translated.png" alt="댓글 번역본" width="49%">
-</p>
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-community-original.png" alt="커뮤니티 원문" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-community-translated.png" alt="커뮤니티 번역본" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>커뮤니티 원문</sub></td>
+    <td align="center"><sub>커뮤니티 번역</sub></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-comment-original.png" alt="댓글 원문" width="100%"></td>
+    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-comment-translated.png" alt="댓글 번역본" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>댓글 원문</sub></td>
+    <td align="center"><sub>댓글 번역</sub></td>
+  </tr>
+</table>
 
 - 사용자 콘텐츠의 원문 언어 감지
 - Google Cloud Translation 연동
@@ -260,7 +299,7 @@ JPA 대신 **MyBatis XML Mapper**를 사용해 SQL과 조회 정책을 명시적
 ## Database / ERD
 
 개발 DB 기준 전체 스키마는 **116개 테이블**로 구성되어 있습니다.  
-README에서는 채용 검토 시 관계를 빠르게 파악할 수 있도록 **핵심 도메인만 분리해 표현**했습니다.
+메인 README에서는 전체 테이블을 나열하기보다 **서비스 핵심 도메인의 관계가 한눈에 보이도록 요약 ERD**만 보여줍니다.
 
 ### Travel Content
 
@@ -279,42 +318,13 @@ erDiagram
     INFO_CATEGORIES ||--o{ TRAVEL_INFO : classifies
     TRAVEL_INFO ||--o{ TRAVEL_INFO_TRANSLATIONS : translated
     TRAVEL_INFO ||--o{ INFO_IMAGES : has
-    TRAVEL_INFO ||--o| FESTIVAL_INFO : festival_detail
+    TRAVEL_INFO ||--o| FESTIVAL_INFO : festival
     TRAVEL_INFO ||--o{ INFO_PERIODS : periods
-
-    USERS {
-        bigint id PK
-        varchar user_email
-        varchar nickname
-        varchar user_role
-        varchar status
-    }
-
-    DESTINATIONS {
-        bigint id PK
-        bigint user_id FK
-        bigint region_id FK
-        varchar type
-        varchar source_type
-        varchar external_content_id
-    }
-
-    COURSES {
-        bigint id PK
-        bigint user_id FK
-        varchar title
-        bigint country_id FK
-    }
-
-    TRAVEL_INFO {
-        bigint id PK
-        bigint user_id FK
-        bigint category_id FK
-        varchar content_type
-        varchar content_format
-        json structured_content
-    }
 ```
+
+- `destinations`를 중심으로 번역·이미지·코스가 연결됩니다.
+- `travel_info`는 일반 여행정보·가이드·축제를 하나의 공통 콘텐츠 모델로 관리합니다.
+- 번역 데이터와 공통 구조를 분리해 다국어 콘텐츠의 중복을 줄였습니다.
 
 ### Travel Diary
 
@@ -332,38 +342,11 @@ erDiagram
 
     USERS ||--o{ DIARY_COVER_LIBRARY_ITEMS : publishes
     DIARY_COVER_DESIGNS ||--o{ DIARY_COVER_LIBRARY_ITEMS : source
-
-    DIARIES {
-        bigint id PK
-        bigint user_id FK
-        varchar title
-        date start_date
-        date end_date
-        varchar cover_style
-        varchar notebook_type
-    }
-
-    DIARY_PAGES {
-        bigint id PK
-        bigint diary_id FK
-        date page_date
-        int page_order
-        varchar background_type
-        varchar paper_color
-    }
-
-    DIARY_ELEMENTS {
-        bigint id PK
-        bigint page_id FK
-        varchar element_type
-        decimal position_x
-        decimal position_y
-        decimal width
-        decimal height
-        decimal rotation
-        int z_index
-    }
 ```
+
+- `diaries → diary_pages → diary_elements`로 한 권의 일기와 자유배치 요소를 계층화했습니다.
+- 페이지 요소와 표지 요소는 별도 테이블로 분리해 서로 독립적으로 편집할 수 있습니다.
+- 표지 디자인 원본과 실제 다이어리에 적용된 표지는 복사본으로 분리해 기존 기록이 변하지 않게 했습니다.
 
 ### Collaborative Travel Plan
 
@@ -373,56 +356,23 @@ erDiagram
     TRAVEL_PLANS ||--o{ TRAVEL_PLAN_MEMBERS : has
     USERS ||--o{ TRAVEL_PLAN_MEMBERS : joins
 
-    TRAVEL_PLANS ||--o{ TRAVEL_PLAN_DAYS : contains
-    TRAVEL_PLAN_DAYS ||--o{ TRAVEL_PLAN_ITEMS : contains
-    TRAVEL_PLAN_MEMBERS ||--o{ TRAVEL_PLAN_ITEMS : creates
+    TRAVEL_PLANS ||--o{ TRAVEL_PLAN_DAYS : days
+    TRAVEL_PLAN_DAYS ||--o{ TRAVEL_PLAN_ITEMS : items
 
-    TRAVEL_PLANS ||--o{ TRAVEL_PLAN_POLLS : has
+    TRAVEL_PLANS ||--o{ TRAVEL_PLAN_POLLS : polls
     TRAVEL_PLAN_POLLS ||--o{ TRAVEL_PLAN_POLL_OPTIONS : options
     TRAVEL_PLAN_POLLS ||--o{ TRAVEL_PLAN_POLL_VOTES : votes
-    TRAVEL_PLAN_POLL_VOTES ||--o{ TRAVEL_PLAN_POLL_VOTE_SELECTIONS : selects
 
     TRAVEL_PLANS ||--o{ TRAVEL_PLAN_CHAT_MESSAGES : chat
 
     TRAVEL_PLANS ||--o| TRAVEL_PLAN_FINAL_SNAPSHOTS : finalized
-    TRAVEL_PLAN_FINAL_SNAPSHOTS ||--o{ TRAVEL_PLAN_FINAL_MEMBERS : members
     TRAVEL_PLAN_FINAL_SNAPSHOTS ||--o{ TRAVEL_PLAN_FINAL_DAYS : days
     TRAVEL_PLAN_FINAL_DAYS ||--o{ TRAVEL_PLAN_FINAL_ITEMS : items
-
-    TRAVEL_PLANS {
-        bigint id PK
-        bigint created_by_user_id FK
-        varchar title
-        date start_date
-        date end_date
-        varchar status
-    }
-
-    TRAVEL_PLAN_MEMBERS {
-        bigint id PK
-        bigint travel_plan_id FK
-        bigint user_id FK
-        varchar role
-        varchar status
-    }
-
-    TRAVEL_PLAN_POLLS {
-        bigint id PK
-        bigint travel_plan_id FK
-        varchar selection_type
-        varchar result_visibility
-        varchar close_type
-        varchar status
-    }
-
-    TRAVEL_PLAN_CHAT_MESSAGES {
-        bigint id PK
-        bigint travel_plan_id FK
-        bigint sender_member_id FK
-        varchar message_type
-        text content
-    }
 ```
+
+- 공동 일정, 채팅, 투표를 하나의 여행계획 도메인 안에서 관리합니다.
+- WebSocket/STOMP는 실시간 상호작용을 담당하고 DB는 확정 상태와 이력을 보존합니다.
+- 계획 확정 시 별도 Snapshot을 만들어 이후 수정과 최종 결과를 분리합니다.
 
 ---
 
