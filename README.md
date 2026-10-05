@@ -43,16 +43,20 @@
 
 ### 01. 여행지 · 여행정보 · 축제
 
-<table>
+<table width="100%">
   <tr>
-    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/destination.png" alt="TripBora 여행지 상세" width="100%"></td>
-    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/travel-info.png" alt="TripBora 여행정보 상세" width="100%"></td>
-    <td width="33%" align="center"><img src="./src/main/resources/static/images/about/festival.png" alt="TripBora 축제정보" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>여행지</sub></td>
-    <td align="center"><sub>여행정보</sub></td>
-    <td align="center"><sub>축제 · 행사</sub></td>
+    <td width="33.33%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/destination.png" alt="TripBora 여행지 상세" width="100%"><br>
+      <sub>여행지</sub>
+    </td>
+    <td width="33.33%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/travel-info.png" alt="TripBora 여행정보 상세" width="100%"><br>
+      <sub>여행정보</sub>
+    </td>
+    <td width="33.33%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/festival.png" alt="TripBora 축제정보" width="100%"><br>
+      <sub>축제·행사</sub>
+    </td>
   </tr>
 </table>
 
@@ -74,25 +78,29 @@
 ### 03. 여행일기
 
 <p align="center">
-  <img src="./src/main/resources/static/images/about/diary-read.png" alt="TripBora 여행일기 읽기 화면" width="88%">
+  <img src="./src/main/resources/static/images/about/diary-read.png" alt="TripBora 여행일기 읽기 화면" width="100%">
 </p>
 
-<table>
+<table width="100%">
   <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover.png" alt="TripBora 다이어리 표지" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover-library.png" alt="TripBora 표지 라이브러리" width="100%"></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/diary-cover.png" alt="TripBora 다이어리 표지" width="100%"><br>
+      <sub>다이어리 표지</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/diary-cover-library.png" alt="TripBora 표지 라이브러리" width="100%"><br>
+      <sub>표지 라이브러리</sub>
+    </td>
   </tr>
   <tr>
-    <td align="center"><sub>다이어리 표지</sub></td>
-    <td align="center"><sub>표지 라이브러리</sub></td>
-  </tr>
-  <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-cover-editor.png" alt="TripBora 표지 꾸미기" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/diary-pdf.png" alt="TripBora 다이어리 PDF 저장" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>표지 꾸미기</sub></td>
-    <td align="center"><sub>PDF 저장</sub></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/diary-cover-editor.png" alt="TripBora 표지 꾸미기" width="100%"><br>
+      <sub>표지 꾸미기</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/diary-pdf.png" alt="TripBora 다이어리 PDF 저장" width="100%"><br>
+      <sub>PDF 저장</sub>
+    </td>
   </tr>
 </table>
 
@@ -106,22 +114,26 @@
 
 ### 04. 함께 계획하기
 
-<table>
+<table width="100%">
   <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-main.png" alt="TripBora 함께 계획하기" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-chat.png" alt="TripBora 함께 계획하기 채팅" width="100%"></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/plan-main.png" alt="TripBora 함께 계획하기" width="100%"><br>
+      <sub>공동 여행계획</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/plan-chat.png" alt="TripBora 함께 계획하기 채팅" width="100%"><br>
+      <sub>실시간 채팅</sub>
+    </td>
   </tr>
   <tr>
-    <td align="center"><sub>공동 여행계획</sub></td>
-    <td align="center"><sub>실시간 채팅</sub></td>
-  </tr>
-  <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-vote-create.png" alt="TripBora 함께 계획하기 투표" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/plan-vote-result.png" alt="TripBora 함께 계획하기 투표 결과" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>투표 생성</sub></td>
-    <td align="center"><sub>투표 결과</sub></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/plan-vote-create.png" alt="TripBora 함께 계획하기 투표" width="100%"><br>
+      <sub>투표 생성</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/plan-vote-result.png" alt="TripBora 함께 계획하기 투표 결과" width="100%"><br>
+      <sub>투표 결과</sub>
+    </td>
   </tr>
 </table>
 
@@ -134,22 +146,26 @@
 
 ### 05. 번역으로 소통하기
 
-<table>
+<table width="100%">
   <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-community-original.png" alt="커뮤니티 원문" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-community-translated.png" alt="커뮤니티 번역본" width="100%"></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/translate-community-original.png" alt="커뮤니티 원문" width="100%"><br>
+      <sub>커뮤니티 원문</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/translate-community-translated.png" alt="커뮤니티 번역본" width="100%"><br>
+      <sub>커뮤니티 번역</sub>
+    </td>
   </tr>
   <tr>
-    <td align="center"><sub>커뮤니티 원문</sub></td>
-    <td align="center"><sub>커뮤니티 번역</sub></td>
-  </tr>
-  <tr>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-comment-original.png" alt="댓글 원문" width="100%"></td>
-    <td width="50%" align="center"><img src="./src/main/resources/static/images/about/translate-comment-translated.png" alt="댓글 번역본" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>댓글 원문</sub></td>
-    <td align="center"><sub>댓글 번역</sub></td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/translate-comment-original.png" alt="댓글 원문" width="100%"><br>
+      <sub>댓글 원문</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <img src="./src/main/resources/static/images/about/translate-comment-translated.png" alt="댓글 번역본" width="100%"><br>
+      <sub>댓글 번역</sub>
+    </td>
   </tr>
 </table>
 
@@ -305,6 +321,8 @@ JPA 대신 **MyBatis XML Mapper**를 사용해 SQL과 조회 정책을 명시적
 
 ```mermaid
 erDiagram
+    direction TB
+
     USERS ||--o{ DESTINATIONS : creates
     COUNTRY_CATEGORIES ||--o{ DESTINATIONS : region
     DESTINATIONS ||--o{ DESTINATION_TRANSLATIONS : translated
@@ -330,6 +348,8 @@ erDiagram
 
 ```mermaid
 erDiagram
+    direction TB
+
     USERS ||--o{ DIARIES : owns
     DIARIES ||--o{ DIARY_PAGES : contains
     DIARY_PAGES ||--o{ DIARY_ELEMENTS : contains
@@ -340,8 +360,8 @@ erDiagram
     DIARIES ||--o| DIARY_COVERS : applies
     DIARY_COVERS ||--o{ DIARY_COVER_ELEMENTS : contains
 
-    USERS ||--o{ DIARY_COVER_LIBRARY_ITEMS : publishes
-    DIARY_COVER_DESIGNS ||--o{ DIARY_COVER_LIBRARY_ITEMS : source
+    USERS |o--o{ DIARY_COVER_LIBRARY_ITEMS : publishes
+    DIARY_COVER_DESIGNS |o--o{ DIARY_COVER_LIBRARY_ITEMS : source
 ```
 
 - `diaries → diary_pages → diary_elements`로 한 권의 일기와 자유배치 요소를 계층화했습니다.
@@ -352,6 +372,8 @@ erDiagram
 
 ```mermaid
 erDiagram
+    direction TB
+
     USERS ||--o{ TRAVEL_PLANS : creates
     TRAVEL_PLANS ||--o{ TRAVEL_PLAN_MEMBERS : has
     USERS ||--o{ TRAVEL_PLAN_MEMBERS : joins
@@ -371,7 +393,7 @@ erDiagram
 ```
 
 - 공동 일정, 채팅, 투표를 하나의 여행계획 도메인 안에서 관리합니다.
-- WebSocket/STOMP는 실시간 상호작용을 담당하고 DB는 확정 상태와 이력을 보존합니다.
+- 멤버와 날짜별 일정은 계획에 각각 연결해 참여자 관리와 일정 편집을 분리했습니다.
 - 계획 확정 시 별도 Snapshot을 만들어 이후 수정과 최종 결과를 분리합니다.
 
 ---
