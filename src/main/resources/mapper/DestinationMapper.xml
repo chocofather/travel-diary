@@ -143,14 +143,20 @@
         WHERE destination_id = #{destinationId} AND language_code = #{languageCode}
     </select>
 
-    <select id="findExternalContentIds" resultType="string">
-        SELECT external_content_id
-        FROM destinations
-        WHERE source_type = #{sourceType}
-          AND external_content_id IN
-        <foreach collection="externalContentIds" item="externalContentId" open="(" separator="," close=")">
-            #{externalContentId}
-        </foreach>
+    <!-- 외부 후보 중복 판별 색인. 이름 정규화·좌표 거리·지역 계층 비교는 서비스가 한다. -->
+    <select id="findDuplicateIndex" resultType="com.tripbora.model.DestinationDuplicateIndexRow">
+        SELECT d.id                  AS destinationId,
+               d.region_id           AS regionId,
+               d.latitude            AS latitude,
+               d.longitude           AS longitude,
+               d.source_type         AS sourceType,
+               d.external_content_id AS externalContentId,
+               d.google_place_id     AS googlePlaceId,
+               t.language_code       AS languageCode,
+               t.name                AS name
+        FROM destinations d
+                 LEFT JOIN destination_translations t ON t.destination_id = d.id
+        ORDER BY d.id
     </select>
 
     <insert id="insertTranslation" parameterType="com.tripbora.model.DestinationTranslation">

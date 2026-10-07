@@ -13,6 +13,9 @@ import com.tripbora.service.destination.DestinationImageService;
 import com.tripbora.service.destination.DestinationNotFoundException;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.destination.DestinationSaveOrchestrationService;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DuplicateDestinationException;
+import com.tripbora.service.destination.DuplicateTourApiDestinationException;
 import com.tripbora.service.destination.DuplicateWikidataDestinationException;
 import com.tripbora.service.destination.InvalidMainCategoryException;
 import com.tripbora.service.file.UnsupportedImageFormatException;
@@ -223,10 +226,17 @@ public class AdminDestinationController {
                     form, userDetails.getId(), selectedKtoPhotos);
         } catch (DuplicateWikidataDestinationException exception) {
             return duplicateWikidataForm(form, model, response, lang);
+        } catch (DuplicateDestinationException exception) {
+            return duplicateDestinationForm(form, exception.getCheck(), model, response, lang);
+        } catch (DuplicateTourApiDestinationException exception) {
+            return duplicateTourApiForm(form, model, response, lang);
         } catch (DuplicateKeyException exception) {
             if (form.getWikidataQid() != null
                     && destinationService.findWikidataDestinationId(form.getWikidataQid()) != null) {
                 return duplicateWikidataForm(form, model, response, lang);
+            }
+            if (destinationService.findTourApiDestinationId(form.getKtoContentId()) != null) {
+                return duplicateTourApiForm(form, model, response, lang);
             }
             throw exception;
         } catch (InvalidKtoSelectedPhotosException exception) {
@@ -297,6 +307,37 @@ public class AdminDestinationController {
         model.addAttribute("registrationError", "이미 등록된 Wikidata 여행지입니다.");
         model.addAttribute("existingWikidataDestinationId",
                 destinationService.findWikidataDestinationId(form.getWikidataQid()));
+        prepareCreateFormModel(model, form, lang);
+        return "admin/destinations/create";
+    }
+
+    /**
+     * 저장 직전 공통 중복 판별에 걸린 외부 후보. 확정 중복이면 기존 여행지로 안내하고,
+     * 중복 가능성이면 근거를 보여주고 '다른 여행지 확인'을 체크해 다시 등록할 수 있게 한다.
+     */
+    private String duplicateDestinationForm(DestinationForm form, DestinationDuplicateCheck check, Model model,
+                                            HttpServletResponse response, String lang) {
+        response.setStatus(HttpStatus.CONFLICT.value());
+        String existing = "#" + check.destinationId()
+                + (check.destinationName() == null ? "" : " " + check.destinationName());
+        model.addAttribute("registrationError", check.confirmed()
+                ? "이미 등록된 여행지입니다: " + existing + " (" + check.message() + ")."
+                : "기존 여행지 " + existing + "와 같은 곳일 수 있습니다 (" + check.message() + ").");
+        model.addAttribute("existingDestinationId", check.destinationId());
+        if (check.needsReview()) {
+            model.addAttribute("possibleDuplicate", check);
+        }
+        prepareCreateFormModel(model, form, lang);
+        return "admin/destinations/create";
+    }
+
+    /** 고른 TourAPI 후보(contentId)가 이미 등록돼 있으면 저장하지 않고 기존 여행지로 안내한다. */
+    private String duplicateTourApiForm(DestinationForm form, Model model,
+                                        HttpServletResponse response, String lang) {
+        response.setStatus(HttpStatus.CONFLICT.value());
+        model.addAttribute("registrationError", "이미 등록된 TourAPI 여행지입니다.");
+        model.addAttribute("existingDestinationId",
+                destinationService.findTourApiDestinationId(form.getKtoContentId()));
         prepareCreateFormModel(model, form, lang);
         return "admin/destinations/create";
     }

@@ -37,6 +37,7 @@ class DestinationSaveOrchestrationServiceTest {
 
     @Mock private KtoPhotoImportService ktoPhotoImportService;
     @Mock private DestinationSavePersistenceService persistenceService;
+    @Mock private DestinationDuplicateService duplicateService;
 
     private DestinationSaveOrchestrationService service;
 
@@ -44,6 +45,79 @@ class DestinationSaveOrchestrationServiceTest {
     void setUp() {
         service = new DestinationSaveOrchestrationService(
                 ktoPhotoImportService, persistenceService);
+        ReflectionTestUtils.setField(service, "duplicateService", duplicateService);
+        // 따로 정하지 않으면 저장 직전 공통 판별은 미등록이다.
+        org.mockito.Mockito.lenient().when(duplicateService.check(any()))
+                .thenReturn(DestinationDuplicateCheck.NOT_REGISTERED);
+    }
+
+    /** 등록폼에서 Wikidata 단건 후보를 골라 저장할 때도 목록과 같은 공통 판별을 외부 재검증 전에 한다. */
+    @Test
+    void aWikidataSingleRegistrationIsCheckedBeforeExternalRevalidation() {
+        WikidataRegistrationService wikidata = org.mockito.Mockito.mock(WikidataRegistrationService.class);
+        ReflectionTestUtils.setField(service, "wikidataRegistrationService", wikidata);
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid(" q484637 ");
+        form.getTranslations().get(0).setName("경복궁");
+        form.setRegionId(11L);
+        when(duplicateService.check(any())).thenReturn(possible(5L));
+
+        assertThatThrownBy(() -> service.registerDestination(form, 7L, List.of()))
+                .isInstanceOf(DuplicateDestinationException.class)
+                .satisfies(exception -> org.assertj.core.api.Assertions.assertThat(
+                        ((DuplicateDestinationException) exception).getCheck().destinationId()).isEqualTo(5L));
+
+        org.mockito.ArgumentCaptor<DestinationDuplicateQuery> query =
+                org.mockito.ArgumentCaptor.forClass(DestinationDuplicateQuery.class);
+        verify(duplicateService).check(query.capture());
+        org.assertj.core.api.Assertions.assertThat(query.getValue().sourceType())
+                .isEqualTo(DestinationService.WIKIDATA_SOURCE_TYPE);
+        org.assertj.core.api.Assertions.assertThat(query.getValue().externalContentId()).isEqualTo("Q484637");
+        org.assertj.core.api.Assertions.assertThat(query.getValue().names()).contains("경복궁");
+        org.assertj.core.api.Assertions.assertThat(query.getValue().regionId()).isEqualTo(11L);
+        verifyNoInteractions(wikidata);
+        verify(persistenceService, never()).registerWikidataDestination(any(), any(), any(), any());
+    }
+
+    /** '다른 여행지 확인'을 체크한 중복 확인 후보는 저장하고, 확정 중복은 체크해도 막는다. */
+    @Test
+    void anAcknowledgedPossibleDuplicateIsSavedButAConfirmedDuplicateIsNever() {
+        DestinationForm acknowledged = new DestinationForm();
+        acknowledged.setKtoContentId("126508");
+        acknowledged.setAllowPossibleDuplicate(true);
+        DestinationForm confirmed = new DestinationForm();
+        confirmed.setKtoContentId("126509");
+        confirmed.setAllowPossibleDuplicate(true);
+        when(duplicateService.check(org.mockito.ArgumentMatchers.argThat(query -> query != null
+                && "126508".equals(query.externalContentId())))).thenReturn(possible(5L));
+        when(duplicateService.check(org.mockito.ArgumentMatchers.argThat(query -> query != null
+                && "126509".equals(query.externalContentId())))).thenReturn(new DestinationDuplicateCheck(
+                DestinationDuplicateStatus.REGISTERED, DestinationDuplicateReason.EXTERNAL_CONTENT_ID,
+                6L, "창덕궁", null, "같은 외부 콘텐츠 ID"));
+
+        service.registerDestination(acknowledged, 7L, List.of());
+        assertThatThrownBy(() -> service.registerDestination(confirmed, 7L, List.of()))
+                .isInstanceOf(DuplicateDestinationException.class);
+
+        verify(persistenceService).registerDestination(acknowledged, 7L, "126508", List.of());
+        verify(persistenceService, never()).registerDestination(confirmed, 7L, "126509", List.of());
+    }
+
+    /** 외부 후보 없이 직접 입력한 등록은 이름이 겹쳐도 막지 않는다(기존 동작). */
+    @Test
+    void aFullyManualRegistrationIsNotCheckedByName() {
+        DestinationForm form = new DestinationForm();
+        form.getTranslations().get(0).setName("경복궁");
+
+        service.registerDestination(form, 7L, List.of());
+
+        verify(duplicateService, never()).check(any());
+        verify(persistenceService).registerDestination(form, 7L, List.of());
+    }
+
+    private DestinationDuplicateCheck possible(Long destinationId) {
+        return new DestinationDuplicateCheck(DestinationDuplicateStatus.POSSIBLE_DUPLICATE,
+                DestinationDuplicateReason.NAME_AND_NEARBY, destinationId, "경복궁", 70, "같은 이름 · 가까운 위치 (약 70m)");
     }
 
     @Test
@@ -130,6 +204,35 @@ class DestinationSaveOrchestrationServiceTest {
 
         verify(persistenceService).registerDestination(form, 7L, List.of());
         verifyNoInteractions(ktoPhotoImportService);
+    }
+
+    /** 등록폼에서 TourAPI 후보를 고른 경우 contentId 를 저장 경로까지 넘긴다(KTO_TOURAPI + contentId). */
+    @Test
+    void aSelectedTourApiContentIdIsKeptUntilTheSave() {
+        DestinationForm form = new DestinationForm();
+        form.setKtoContentId(" 126508 ");
+
+        service.registerDestination(form, 7L, List.of());
+
+        verify(persistenceService).registerDestination(form, 7L, "126508", List.of());
+        verify(persistenceService, never()).registerDestination(form, 7L, List.of());
+    }
+
+    @Test
+    void anInvalidOrConflictingTourApiContentIdIsRejectedBeforeAnySave() {
+        DestinationForm invalid = new DestinationForm();
+        invalid.setKtoContentId("126508<script>");
+        DestinationForm withWikidata = new DestinationForm();
+        withWikidata.setKtoContentId("126508");
+        withWikidata.setWikidataQid("Q243");
+
+        assertThatThrownBy(() -> service.registerDestination(invalid, 7L, List.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("contentId");
+        assertThatThrownBy(() -> service.registerDestination(withWikidata, 7L, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verifyNoInteractions(persistenceService, ktoPhotoImportService);
     }
 
     @Test

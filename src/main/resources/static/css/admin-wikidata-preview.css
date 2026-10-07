@@ -41,6 +41,12 @@
 .admin-wikidata-qid { margin-left: 8px; color: #596784; font-size: 0.8rem; }
 .admin-wikidata-candidate-text p { margin: 4px 0; font-size: 0.87rem; }
 .admin-wikidata-candidate-text small { color: #66738a; }
+/* 공통 중복 판별: 등록됨은 흐리게(선택 불가), 중복 확인은 경고 테두리. 배지·링크는 TourAPI 검색과 같은 클래스를 쓴다. */
+.admin-wikidata-candidate.is-registered { background: #f5f6f9; }
+.admin-wikidata-candidate.is-registered .admin-wikidata-candidate-text strong { color: #8a93a6; }
+.admin-wikidata-candidate.is-review { border-color: #f0c36d; }
+.admin-wikidata-candidate-text .admin-wikidata-duplicate-note { display: block; margin-top: 2px; color: #8a93a6; }
+.admin-wikidata-candidate-text .admin-kto-tour-existing { display: inline-block; margin: 2px 0 0; }
 .admin-wikidata-detail { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid #e3e8f1; }
 .admin-wikidata-detail[hidden] { display: none; }
 .admin-wikidata-detail h3, .admin-wikidata-language h4 { margin: 0; color: #27375f; }

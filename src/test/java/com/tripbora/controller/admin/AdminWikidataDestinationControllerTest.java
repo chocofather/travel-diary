@@ -7,7 +7,11 @@ import com.tripbora.dto.wikidata.WikidataDestinationCandidate;
 import com.tripbora.dto.wikidata.WikidataDestinationPreview;
 import com.tripbora.repository.user.UserMapper;
 import com.tripbora.service.wikidata.WikidataApiException;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DestinationDuplicateReason;
+import com.tripbora.service.destination.DestinationDuplicateStatus;
 import com.tripbora.service.wikidata.WikidataDestinationService;
+import com.tripbora.service.wikidata.WikidataDuplicateMarker;
 import com.tripbora.service.wikidata.WikipediaDescriptionService;
 import com.tripbora.dto.wikidata.WikipediaDescriptionPreview;
 import com.tripbora.dto.wikidata.CommonsPhotoPreview;
@@ -38,6 +42,7 @@ class AdminWikidataDestinationControllerTest {
     @MockitoBean private WikidataDestinationService destinationService;
     @MockitoBean private WikipediaDescriptionService wikipediaDescriptionService;
     @MockitoBean private CommonsPhotoPreviewService commonsPhotoPreviewService;
+    @MockitoBean private WikidataDuplicateMarker duplicateMarker;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean private UserMapper userMapper;
@@ -47,9 +52,14 @@ class AdminWikidataDestinationControllerTest {
         when(destinationService.quickSearch("에펠탑")).thenReturn(List.of(
                 new WikidataDestinationCandidate("Q243", "에펠탑", "ko", "파리의 탑", "ko",
                         null, null, null, null)));
-        when(destinationService.searchDetails(List.of("Q243", "Q90"))).thenReturn(List.of(
+        List<WikidataDestinationCandidate> details = List.of(
                 new WikidataDestinationCandidate("Q243", "에펠탑", "ko", "파리의 탑", "ko",
-                        "프랑스", "파리", null, null)));
+                        "프랑스", "파리", null, null));
+        when(destinationService.searchDetails(List.of("Q243", "Q90"))).thenReturn(details);
+        // 단건 검색 상세에도 일괄 등록과 같은 공통 중복 판별 결과를 붙인다.
+        when(duplicateMarker.mark(details)).thenReturn(List.of(details.get(0).withDuplicate(
+                new DestinationDuplicateCheck(DestinationDuplicateStatus.REGISTERED,
+                        DestinationDuplicateReason.EXTERNAL_CONTENT_ID, 42L, "에펠탑", null, "같은 외부 콘텐츠 ID"))));
         when(destinationService.previewForAutofill("Q243")).thenReturn(new WikidataDestinationPreview(
                 "Q243", Map.of("ko", "에펠탑", "en", "Eiffel Tower"), Map.of("en", "tower"),
                 "Q142", "프랑스", List.of("파리"), 48.858296, 2.294479,
@@ -70,7 +80,10 @@ class AdminWikidataDestinationControllerTest {
         mockMvc.perform(get("/admin/api/wikidata/destinations/search-details")
                         .param("qids", "Q243", "Q90").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].country").value("프랑스"));
+                .andExpect(jsonPath("$[0].country").value("프랑스"))
+                .andExpect(jsonPath("$[0].duplicate.status").value("REGISTERED"))
+                .andExpect(jsonPath("$[0].duplicate.destinationId").value(42))
+                .andExpect(jsonPath("$[0].duplicate.message").value("같은 외부 콘텐츠 ID"));
         mockMvc.perform(get("/admin/api/wikidata/destinations/preview")
                         .param("qid", "Q243").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())

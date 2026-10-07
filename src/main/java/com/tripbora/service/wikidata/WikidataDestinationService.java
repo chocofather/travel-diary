@@ -145,6 +145,34 @@ public class WikidataDestinationService {
         return List.copyOf(candidates);
     }
 
+    /** 중복 판별용 언어별 이름과 좌표. 이름은 등록폼과 같은 5개 언어 라벨이다. */
+    public record PlaceHints(List<String> names, Double latitude, Double longitude) {
+    }
+
+    /**
+     * 후보의 중복 판별 단서. {@link #searchDetails(List)}가 받아 둔 자동입력 캐시 엔티티를 그대로 읽는다.
+     * 엔티티가 없는 QID는 결과에서 빠진다.
+     */
+    public Map<String, PlaceHints> placeHints(List<String> qids) {
+        if (qids == null || qids.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, JsonNode> entities = autofillCache.entities(qids);
+        Map<String, PlaceHints> hints = new LinkedHashMap<>();
+        for (String qid : qids) {
+            JsonNode entity = entities.get(qid);
+            if (entity == null) {
+                continue;
+            }
+            JsonNode coordinate = claimValue(entity, "P625");
+            hints.put(qid, new PlaceHints(
+                    List.copyOf(localizedValues(entity, "labels", LANGUAGE_CODES).values()),
+                    coordinate.path("latitude").isNumber() ? coordinate.path("latitude").asDouble() : null,
+                    coordinate.path("longitude").isNumber() ? coordinate.path("longitude").asDouble() : null));
+        }
+        return Map.copyOf(hints);
+    }
+
     /** 저장 전 재검증용. 캐시 없이 항상 Wikidata에서 새로 조회한다. */
     public WikidataDestinationPreview preview(String qid) {
         String normalizedQid = qid == null ? "" : qid.strip().toUpperCase();

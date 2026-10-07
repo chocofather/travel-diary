@@ -2,6 +2,7 @@ package com.tripbora.controller.admin;
 
 import com.tripbora.service.wikidata.WikidataApiException;
 import com.tripbora.service.wikidata.WikidataDestinationService;
+import com.tripbora.service.wikidata.WikidataDuplicateMarker;
 import com.tripbora.service.wikidata.WikipediaDescriptionService;
 import com.tripbora.service.wikidata.CommonsPhotoPreviewService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AdminWikidataDestinationController {
     private final WikidataDestinationService destinationService;
     private final WikipediaDescriptionService wikipediaDescriptionService;
     private final CommonsPhotoPreviewService commonsPhotoPreviewService;
+    private final WikidataDuplicateMarker duplicateMarker;
 
     /** 검색 결과 목록을 바로 보여주기 위한 최소 정보(QID·이름·설명). */
     @GetMapping("/search")
@@ -41,11 +43,14 @@ public class AdminWikidataDestinationController {
         }
     }
 
-    /** 검색 결과의 국가·지역·이미지와 장소 여부. 목록 표시 뒤에 따로 불러온다. */
+    /**
+     * 검색 결과의 국가·지역·이미지와 장소 여부. 목록 표시 뒤에 따로 불러온다.
+     * 후보마다 이미 등록된 여행지인지 해외 일괄 등록과 같은 공통 판별 결과(duplicate)를 붙인다.
+     */
     @GetMapping("/search-details")
     public ResponseEntity<?> searchDetails(@RequestParam(required = false) List<String> qids) {
         try {
-            return timed(() -> destinationService.searchDetails(qids));
+            return timed(() -> duplicateMarker.mark(destinationService.searchDetails(qids)));
         } catch (IllegalArgumentException exception) {
             return error(HttpStatus.BAD_REQUEST, exception.getMessage());
         } catch (WikidataApiException exception) {

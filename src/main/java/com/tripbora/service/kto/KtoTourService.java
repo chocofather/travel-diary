@@ -240,7 +240,10 @@ public class KtoTourService {
                 title,
                 join(item.addr1(), item.addr2()),
                 firstNonBlank(normalize(item.firstimage2()), normalize(item.firstimage())),
-                false
+                normalize(item.mapx()),
+                normalize(item.mapy()),
+                false,
+                null
         );
     }
 

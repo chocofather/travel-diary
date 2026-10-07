@@ -3,6 +3,7 @@
     import com.tripbora.dto.CategoryDestinationCount;
     import com.tripbora.model.Destination;
     import com.tripbora.model.DestinationCategory;
+    import com.tripbora.model.DestinationDuplicateIndexRow;
     import com.tripbora.model.DestinationImage;
     import com.tripbora.model.DestinationImageCommonsSource;
     import com.tripbora.model.DestinationTranslation;
@@ -25,9 +26,8 @@
                 @Param("destinationId") Long destinationId,
                 @Param("languageCode") String languageCode);
 
-        /** 후보 목록의 1차 중복 표시용. 넘긴 contentId 중 이미 등록된 것만 돌려준다. */
-        List<String> findExternalContentIds(@Param("sourceType") String sourceType,
-                                            @Param("externalContentIds") Collection<String> externalContentIds);
+        /** 외부 후보와 기존 여행지의 중복 판별 색인. 여행지별 언어별 이름 한 줄씩(이름이 없으면 한 줄). */
+        List<DestinationDuplicateIndexRow> findDuplicateIndex();
 
         void insertTranslation(DestinationTranslation translation);
 

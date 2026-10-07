@@ -6,6 +6,10 @@ import com.tripbora.dto.kto.KtoTourAreaCandidateResponse;
 import com.tripbora.dto.kto.KtoTourAutofillResponse;
 import com.tripbora.dto.kto.KtoTourBulkImportRequest;
 import com.tripbora.dto.kto.KtoTourBulkImportResponse;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DestinationDuplicateQuery;
+import com.tripbora.service.destination.DestinationDuplicateService;
+import com.tripbora.service.destination.DestinationDuplicateStatus;
 import com.tripbora.service.destination.DestinationSavePersistenceService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.destination.DuplicateTourApiDestinationException;
@@ -25,7 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 지역별 TourAPI 여행지 후보 조회 → contentId 중복 확인 → 선택 항목 등록.
+ * 지역별 TourAPI 여행지 후보 조회 → 공통 중복 판별(contentId·이름·좌표·지역) → 선택 항목 등록.
  * 조회 결과를 그 자리에서 저장하지 않고, 관리자가 고른 항목만 {@link #importSelected} 로 저장한다.
  *
  * <p>항목별로 독립 트랜잭션을 쓰므로 한 건이 실패해도 나머지 등록은 그대로 남는다.
@@ -48,13 +52,15 @@ public class KtoTourBulkImportService {
     private final KtoPhotoImportService ktoPhotoImportService;
     private final DestinationService destinationService;
     private final DestinationSavePersistenceService destinationSavePersistenceService;
+    private final KtoTourDuplicateMarker duplicateMarker;
+    private final DestinationDuplicateService duplicateService;
 
     /**
      * 후보 조회. 순서가 중요하다.
      * <ol>
      *   <li>선택한 유형(또는 전체 4종)의 후보를 TourAPI 페이지 끝까지 모아 합친다</li>
      *   <li>contentId 기준 중복 제거 후 제목순 정렬</li>
-     *   <li>contentId 로 DB 등록 여부 판정 (1차 중복 확인)</li>
+     *   <li>공통 중복 판별로 등록됨·중복 확인·미등록 판정 (1차 중복 확인)</li>
      *   <li>등록상태 필터 적용</li>
      *   <li>마지막에 우리 서버 기준으로 페이징</li>
      * </ol>
@@ -67,17 +73,13 @@ public class KtoTourBulkImportService {
         List<KtoTourAreaCandidateResponse> merged =
                 mergedCandidates(regionCode, subRegionCode, contentTypeId);
 
-        Set<String> registeredContentIds = destinationService.findRegisteredTourApiContentIds(
-                merged.stream().map(KtoTourAreaCandidateResponse::contentId).toList());
-        List<KtoTourAreaCandidateResponse> withRegistration = merged.stream()
-                .map(candidate -> candidate.withRegistered(
-                        registeredContentIds.contains(candidate.contentId())))
-                .toList();
+        // contentId 뿐 아니라 이름·좌표·지역으로 관리자 직접 등록 여행지까지 함께 찾는다.
+        List<KtoTourAreaCandidateResponse> withRegistration = duplicateMarker.markAreaCandidates(merged);
 
-        int registeredCount = (int) withRegistration.stream()
-                .filter(KtoTourAreaCandidateResponse::registered).count();
+        int registeredCount = countStatus(withRegistration, DestinationDuplicateStatus.REGISTERED);
+        int possibleDuplicateCount = countStatus(withRegistration, DestinationDuplicateStatus.POSSIBLE_DUPLICATE);
         List<KtoTourAreaCandidateResponse> filtered = withRegistration.stream()
-                .filter(candidate -> filter.accepts(candidate.registered()))
+                .filter(candidate -> filter.accepts(candidate.duplicateStatus()))
                 .toList();
 
         int fromIndex = Math.min((pageNo - 1) * numOfRows, filtered.size());
@@ -87,9 +89,14 @@ public class KtoTourBulkImportService {
                 numOfRows,
                 filtered.size(),
                 withRegistration.size(),
-                withRegistration.size() - registeredCount,
+                withRegistration.size() - registeredCount - possibleDuplicateCount,
                 registeredCount,
+                possibleDuplicateCount,
                 filtered.subList(fromIndex, toIndex));
+    }
+
+    private int countStatus(List<KtoTourAreaCandidateResponse> candidates, DestinationDuplicateStatus status) {
+        return (int) candidates.stream().filter(candidate -> candidate.duplicateStatus() == status).count();
     }
 
     /**
@@ -133,13 +140,14 @@ public class KtoTourBulkImportService {
             if (!handledContentIds.add(contentId)) {
                 continue;
             }
-            results.add(importOne(contentId, item.contentTypeId().strip(), userId));
+            results.add(importOne(contentId, item.contentTypeId().strip(),
+                    item.possibleDuplicateAllowed(), userId));
         }
         return KtoTourBulkImportResponse.of(results);
     }
 
     private KtoTourBulkImportResponse.ItemResult importOne(String contentId, String contentTypeId,
-                                                           Long userId) {
+                                                           boolean possibleDuplicateAllowed, Long userId) {
         // 1차: 상세조회 전에 이미 등록된 항목이면 바깥 API 호출도 하지 않는다.
         if (destinationService.existsTourApiDestination(contentId)) {
             return KtoTourBulkImportResponse.ItemResult.duplicate(contentId, null);
@@ -162,6 +170,16 @@ public class KtoTourBulkImportService {
             form = ktoTourDestinationFormMapper.toForm(detail, detail.regionMatch().deepestRegionId());
         } catch (KtoTourBulkImportException exception) {
             return KtoTourBulkImportResponse.ItemResult.failed(contentId, title, exception.getMessage());
+        }
+
+        // 최종 확인: 목록을 본 뒤 다른 관리자가 같은 곳을 등록했을 수 있어, 사진을 받기 전에 같은 규칙으로 다시 본다.
+        DestinationDuplicateCheck duplicate = duplicateService.check(DestinationDuplicateQuery.fromForm(
+                form, DestinationService.KTO_TOUR_API_SOURCE_TYPE, contentId));
+        if (duplicate.confirmed()) {
+            return KtoTourBulkImportResponse.ItemResult.duplicate(contentId, title, duplicate.destinationId());
+        }
+        if (duplicate.needsReview() && !possibleDuplicateAllowed) {
+            return KtoTourBulkImportResponse.ItemResult.possibleDuplicate(contentId, title, duplicate);
         }
 
         List<PreparedKtoPhoto> preparedPhotos = ktoTourImageImportService.preparePhotos(contentId, title);

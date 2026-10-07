@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 후보 구성 → 등록여부 판정 → 등록상태 필터 → 페이징은 모두 서버가 한다.
     // 화면은 서버가 준 한 페이지만 그리고, 건수도 서버 값을 그대로 쓴다.
     let pageItems = [];
-    let counts = {ALL: 0, NEW: 0, REGISTERED: 0};
+    let counts = {ALL: 0, NEW: 0, POSSIBLE_DUPLICATE: 0, REGISTERED: 0};
     let registrationFilter = "NEW";
     let pageNo = 1;
     let totalCount = 0;
@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             counts = {
                 ALL: Number(payload.allCount) || 0,
                 NEW: Number(payload.newCount) || 0,
+                POSSIBLE_DUPLICATE: Number(payload.possibleDuplicateCount) || 0,
                 REGISTERED: Number(payload.registeredCount) || 0
             };
             renderRows();
@@ -138,8 +139,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function filterLabel() {
         if (registrationFilter === "NEW") return "미등록";
+        if (registrationFilter === "POSSIBLE_DUPLICATE") return "중복 확인";
         if (registrationFilter === "REGISTERED") return "등록완료";
         return "전체";
+    }
+
+    /** 서버 공통 중복 판별 결과. REGISTERED · POSSIBLE_DUPLICATE · NOT_REGISTERED */
+    function duplicateStatus(item) {
+        return item.duplicate?.status || (item.registered ? "REGISTERED" : "NOT_REGISTERED");
     }
 
     function describeRange() {
@@ -151,13 +158,19 @@ document.addEventListener("DOMContentLoaded", () => {
         selected.set(item.contentId, {
             contentId: item.contentId,
             contentTypeId: item.contentTypeId,
-            title: item.title
+            title: item.title,
+            // 중복 확인 후보는 관리자가 하나씩 확인하고 고른 경우에만 서버가 저장한다.
+            allowPossibleDuplicate: duplicateStatus(item) === "POSSIBLE_DUPLICATE"
         });
     }
 
-    /** 현재 페이지 기준 선택 상태. 등록완료 항목은 고를 수 없으므로 대상이 아니다. */
+    /**
+     * 현재 페이지 기준 선택 상태. 등록완료 항목은 고를 수 없고,
+     * 중복 확인 항목은 일괄 선택 대상에서 빼고 하나씩 확인해서만 고른다.
+     */
     function currentPageSelection() {
-        return pageSelection(pageItems, item => !item.registered, item => selected.has(item.contentId));
+        return pageSelection(pageItems, item => duplicateStatus(item) === "NOT_REGISTERED",
+            item => selected.has(item.contentId));
     }
 
     /** 현재 페이지의 미등록 후보만 고르거나 푼다. 다른 페이지에서 고른 항목은 그대로 둔다. */
@@ -178,18 +191,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function buildRow(item) {
+        const status = duplicateStatus(item);
+        const registered = status === "REGISTERED";
+        const review = status === "POSSIBLE_DUPLICATE";
         const row = document.createElement("tr");
-        row.classList.toggle("is-registered", item.registered);
+        row.classList.toggle("is-registered", registered);
+        row.classList.toggle("is-review", review);
 
         const checkCell = document.createElement("td");
         checkCell.className = "is-check";
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         // 이미 등록된 항목은 고를 수 없다.
-        checkbox.disabled = item.registered;
-        checkbox.checked = selected.has(item.contentId);
+        checkbox.disabled = registered;
+        checkbox.checked = !registered && selected.has(item.contentId);
         checkbox.setAttribute("aria-label", `${item.title} 선택`);
         checkbox.addEventListener("change", () => {
+            if (checkbox.checked && review && !confirmPossibleDuplicate(item)) {
+                checkbox.checked = false;
+                return;
+            }
             if (checkbox.checked) remember(item);
             else selected.delete(item.contentId);
             updateSelection();
@@ -212,10 +233,6 @@ document.addEventListener("DOMContentLoaded", () => {
             thumbCell.append(empty);
         }
 
-        const badge = document.createElement("span");
-        badge.className = `admin-kto-import-badge ${item.registered ? "is-registered" : "is-new"}`;
-        badge.textContent = item.registered ? "등록완료" : "미등록";
-
         row.append(
             checkCell,
             thumbCell,
@@ -223,8 +240,45 @@ document.addEventListener("DOMContentLoaded", () => {
             textCell(item.address),
             textCell(item.contentTypeName),
             textCell(item.contentId),
-            cellWith(badge));
+            statusCell(item, status));
         return row;
+    }
+
+    /** 등록 여부 배지와, 같은 곳으로 본 기존 여행지 링크·근거. */
+    function statusCell(item, status) {
+        const cell = document.createElement("td");
+        const badge = document.createElement("span");
+        const [className, label] = status === "REGISTERED" ? ["is-registered", "등록완료"]
+            : status === "POSSIBLE_DUPLICATE" ? ["is-review", "중복 확인"] : ["is-new", "미등록"];
+        badge.className = `admin-kto-import-badge ${className}`;
+        badge.textContent = label;
+        cell.append(badge);
+        const existingId = item.duplicate?.destinationId;
+        if (existingId) {
+            cell.append(existingLink(existingId, item.duplicate.destinationName));
+            const reason = document.createElement("span");
+            reason.className = "admin-kto-import-reason";
+            reason.textContent = item.duplicate.message || "";
+            cell.append(reason);
+        }
+        return cell;
+    }
+
+    function existingLink(destinationId, name) {
+        const link = document.createElement("a");
+        link.className = "admin-kto-import-existing";
+        link.href = `/admin/destinations/edit/${encodeURIComponent(destinationId)}`;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = `#${destinationId}${name ? ` ${name}` : ""}`;
+        return link;
+    }
+
+    function confirmPossibleDuplicate(item) {
+        const duplicate = item.duplicate || {};
+        return window.confirm(`'${item.title}'은(는) 기존 여행지 #${duplicate.destinationId}`
+            + ` ${duplicate.destinationName || ""}와 같은 곳일 수 있습니다 (${duplicate.message || "중복 확인"}).\n`
+            + "다른 여행지가 맞다면 확인을 눌러 등록 대상에 넣어 주세요.");
     }
 
     function textCell(value) {
@@ -272,7 +326,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function importSelected() {
         const items = Array.from(selected.values())
-            .map(item => ({contentId: item.contentId, contentTypeId: item.contentTypeId}));
+            .map(item => ({
+                contentId: item.contentId,
+                contentTypeId: item.contentTypeId,
+                allowPossibleDuplicate: item.allowPossibleDuplicate === true
+            }));
         if (!items.length) return;
 
         setBusy(true, `선택한 ${items.length}건을 등록하고 있습니다.`);
@@ -283,14 +341,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({items})
             });
             renderResult(payload);
-            // 등록되었거나 중복으로 확인된 항목만 선택에서 뺀다. 실패 항목은 그대로 남긴다.
+            // 등록되었거나 중복으로 건너뛴 항목은 선택에서 뺀다. 실패 항목은 그대로 남긴다.
+            // 저장 직전에 새로 중복 확인이 필요해진 항목도 빼서, 목록에서 근거를 보고 다시 고르게 한다.
             (payload.results || [])
-                .filter(result => result.status === "SUCCESS" || result.status === "DUPLICATE")
+                .filter(result => ["SUCCESS", "DUPLICATE", "POSSIBLE_DUPLICATE"].includes(result.status))
                 .forEach(result => selected.delete(result.contentId));
             // 등록 여부와 건수를 서버 기준으로 다시 받는다 (같은 조건이면 TourAPI 재호출은 없다).
             await loadCandidates();
-            setStatus(`성공 ${payload.successCount}건, 중복으로 건너뜀 ${payload.duplicateCount}건,`
-                + ` 실패 ${payload.failureCount}건`);
+            setStatus(resultSummaryText(payload));
         } catch (error) {
             setStatus(error.message, true);
         } finally {
@@ -298,20 +356,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function resultSummaryText(payload) {
+        return `성공 ${payload.successCount}건 · 중복으로 건너뜀 ${payload.duplicateCount}건`
+            + (payload.possibleDuplicateCount ? ` · 중복 확인 필요 ${payload.possibleDuplicateCount}건` : "")
+            + ` · 실패 ${payload.failureCount}건`;
+    }
+
     function renderResult(payload) {
         resultSection.hidden = false;
-        resultSummary.textContent = `성공 ${payload.successCount}건 · 중복으로 건너뜀`
-            + ` ${payload.duplicateCount}건 · 실패 ${payload.failureCount}건`;
+        resultSummary.textContent = resultSummaryText(payload);
         resultList.replaceChildren();
         (payload.results || [])
             .filter(result => result.status !== "SUCCESS")
             .forEach(result => {
                 const entry = document.createElement("li");
                 entry.classList.toggle("is-failed", result.status === "FAILED");
-                const label = result.status === "FAILED" ? "실패" : "중복";
+                entry.classList.toggle("is-review", result.status === "POSSIBLE_DUPLICATE");
+                const label = result.status === "FAILED" ? "실패"
+                    : result.status === "POSSIBLE_DUPLICATE" ? "중복 확인" : "중복";
                 entry.textContent = `[${label}] ${result.title || "이름 없음"}`
                     + ` (contentId ${result.contentId})`
                     + (result.message ? ` - ${result.message}` : "");
+                if (result.destinationId && result.status !== "FAILED") {
+                    entry.append(" ", existingLink(result.destinationId, null));
+                }
                 resultList.append(entry);
             });
     }

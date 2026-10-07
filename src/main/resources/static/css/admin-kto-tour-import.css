@@ -115,6 +115,33 @@
     background: #eef0f5;
 }
 
+/* 중복 확인: 이름·위치가 같은 기존 여행지가 있어 관리자 확인이 필요하다. */
+.admin-kto-import-badge.is-review {
+    color: #9a5b00;
+    background: #fff3d6;
+}
+
+.admin-kto-import-table tr.is-review td {
+    background: #fffbf0;
+}
+
+.admin-kto-import-existing {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+
+.admin-kto-import-reason {
+    display: block;
+    color: #8a93a6;
+    font-size: 0.7rem;
+}
+
+.admin-kto-import-result-list li.is-review {
+    color: #9a5b00;
+}
+
 .admin-kto-import-paging {
     display: flex;
     align-items: center;

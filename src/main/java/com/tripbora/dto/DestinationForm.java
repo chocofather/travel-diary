@@ -24,6 +24,16 @@ public class DestinationForm {
     private Long destinationId; // 여행지 기본키
     /** Wikidata 후보를 명시적으로 선택했을 때만 설정한다. 서버에서 다시 조회한다. */
     private String wikidataQid;
+    /**
+     * 등록폼에서 TourAPI 검색 후보를 골랐을 때의 contentId. 값이 있으면 TourAPI 일괄등록과 같이
+     * source_type=KTO_TOURAPI, external_content_id=contentId 로 저장해 이후 중복 판별에 쓴다. 신규 등록에서만 쓴다.
+     */
+    private String ktoContentId;
+    /**
+     * 고른 외부 후보가 '중복 확인'(이름·위치가 같은 기존 여행지 있음)일 때 관리자가 다른 곳임을 확인했는지.
+     * 확정 중복(같은 contentId·QID·Place ID)은 이 값과 상관없이 저장하지 않는다.
+     */
+    private boolean allowPossibleDuplicate;
     /** 슬롯별 미리보기 판본. 원문 출처는 서버가 다시 조회하며 이 값과 대조한다. */
     private List<Long> wikipediaRevisionIds = new ArrayList<>(Arrays.asList(null, null, null, null, null));
     /** 수정 화면에서 관리자가 명시적으로 Wikipedia 출처 연결을 해제할 언어. */

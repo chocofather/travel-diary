@@ -6,7 +6,9 @@ import com.tripbora.dto.wikidata.WikidataDestinationPreview;
 import com.tripbora.dto.wikidata.WikipediaDescriptionPreview;
 import com.tripbora.model.DestinationSeason;
 import com.tripbora.model.DestinationType;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
 import com.tripbora.service.destination.DestinationSaveOrchestrationService;
+import com.tripbora.service.destination.DuplicateDestinationException;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.destination.DuplicateWikidataDestinationException;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -51,10 +52,19 @@ public class WikidataBulkRegistrationService {
     private final DestinationSaveOrchestrationService orchestrationService;
     private final WikidataRegionExplorer regionExplorer;
     private final ExternalApiRateLimiter rateLimiter;
+    private final WikidataDuplicateMarker duplicateMarker;
     private final Semaphore registrations = new Semaphore(MAX_CONCURRENT_REGISTRATIONS, true);
 
+    /**
+     * @param registered 확정 중복(같은 QID 등)일 때만 true
+     * @param duplicate  공통 중복 판별 결과. 이름·위치가 같은 관리자 직접 등록 여행지는 POSSIBLE_DUPLICATE 로 온다
+     */
     public record Candidate(String qid, String name, String shortDescription, String country, String region,
-                            String imageUrl, boolean registered) {
+                            String imageUrl, boolean registered, DestinationDuplicateCheck duplicate) {
+        public Candidate(String qid, String name, String shortDescription, String country, String region,
+                         String imageUrl, boolean registered) {
+            this(qid, name, shortDescription, country, region, imageUrl, registered, null);
+        }
     }
 
     /**
@@ -78,9 +88,17 @@ public class WikidataBulkRegistrationService {
                          String contactNumber, List<String> notes) {
     }
 
-    /** 여행지 한 곳의 등록 요청. regionId 가 없으면 자동 매핑된 지역을 쓴다. */
+    /**
+     * 여행지 한 곳의 등록 요청. regionId 가 없으면 자동 매핑된 지역을 쓴다.
+     *
+     * @param allowPossibleDuplicate '중복 확인' 후보를 관리자가 확인하고 고른 경우 true. 확정 중복은 이 값과 상관없이 막는다
+     */
     public record RegisterRequest(String qid, String type, String season, Long regionId, String koreanName,
-                                  String photoFileName) {
+                                  String photoFileName, Boolean allowPossibleDuplicate) {
+        public RegisterRequest(String qid, String type, String season, Long regionId, String koreanName,
+                               String photoFileName) {
+            this(qid, type, season, regionId, koreanName, photoFileName, null);
+        }
     }
 
     /**
@@ -101,6 +119,14 @@ public class WikidataBulkRegistrationService {
             return new ItemResult(qid, "DUPLICATE", destinationId, "이미 등록된 여행지입니다.");
         }
 
+        /** 저장 직전 이름·위치가 같은 기존 여행지를 찾았는데 관리자가 확인하지 않은 경우. 아무것도 저장하지 않았다. */
+        static ItemResult possibleDuplicate(String qid, DestinationDuplicateCheck check) {
+            return new ItemResult(qid, "POSSIBLE_DUPLICATE", check.destinationId(),
+                    "기존 여행지 #" + check.destinationId()
+                            + (check.destinationName() == null ? "" : " " + check.destinationName())
+                            + "와 중복일 수 있습니다 (" + check.message() + ").");
+        }
+
         static ItemResult failed(String qid, String message) {
             return new ItemResult(qid, "FAILED", null, message);
         }
@@ -119,7 +145,7 @@ public class WikidataBulkRegistrationService {
         if (qids.isEmpty()) return new SearchResult(List.of(), 0, page.nextOffset());
         Map<String, WikidataDestinationCandidate> quick = new LinkedHashMap<>();
         page.candidates().forEach(candidate -> quick.put(candidate.qid(), candidate));
-        List<Candidate> candidates = candidates(qids, quick);
+        List<Candidate> candidates = candidates(qids, quick, null);
         return new SearchResult(candidates, qids.size() - candidates.size(), page.nextOffset());
     }
 
@@ -145,7 +171,8 @@ public class WikidataBulkRegistrationService {
         List<String> all = found.qids();
         if (offset < 0 || offset > all.size()) throw new IllegalArgumentException("여행지 목록 위치가 올바르지 않습니다.");
         List<String> page = all.subList(offset, Math.min(offset + REGION_PAGE_SIZE, all.size()));
-        List<Candidate> candidates = page.isEmpty() ? List.of() : candidates(page, Map.of());
+        // 고른 지역 안의 장소들이므로 그 지역을 중복 판별의 지역으로 쓴다.
+        List<Candidate> candidates = page.isEmpty() ? List.of() : candidates(page, Map.of(), regionId);
         Integer next = offset + REGION_PAGE_SIZE < all.size() ? offset + REGION_PAGE_SIZE : null;
         return new RegionSearchResult(regionExplorer.resolve(regionId), found.areaQid(), candidates,
                 page.size() - candidates.size(), next, all.size(), found.limited());
@@ -155,20 +182,24 @@ public class WikidataBulkRegistrationService {
      * 표시용 후보. 이름·설명은 기존 다국어 대체 규칙(한국어 → 영어 …)으로, 장소 여부와 국가·소재지·이미지는
      * 기존 검색 상세 조회로 채운다. 한 번에 조회할 수 있는 수만큼 나눠 부른다.
      */
-    private List<Candidate> candidates(List<String> qids, Map<String, WikidataDestinationCandidate> quick) {
+    private List<Candidate> candidates(List<String> qids, Map<String, WikidataDestinationCandidate> quick,
+                                       Long regionId) {
         List<WikidataDestinationCandidate> places = new ArrayList<>();
         for (int start = 0; start < qids.size(); start += DETAILS_CHUNK) {
             places.addAll(wikidataDestinationService.searchDetails(
                     qids.subList(start, Math.min(start + DETAILS_CHUNK, qids.size()))));
         }
-        Set<String> registered = destinationService.findRegisteredWikidataQids(qids);
+        // QID 일치뿐 아니라 이름·좌표·지역으로 관리자 직접 등록 여행지까지 함께 찾는다(등록폼 단건 검색과 같은 판별).
+        List<DestinationDuplicateCheck> checks = duplicateMarker.check(places, quick, regionId);
         List<Candidate> candidates = new ArrayList<>();
-        for (WikidataDestinationCandidate place : places) {
+        for (int index = 0; index < places.size(); index++) {
+            WikidataDestinationCandidate place = places.get(index);
             WikidataDestinationCandidate fallback = quick.get(place.qid());
+            DestinationDuplicateCheck duplicate = checks.get(index);
             candidates.add(new Candidate(place.qid(),
                     firstText(place.name(), fallback == null ? null : fallback.name()),
                     firstText(place.shortDescription(), fallback == null ? null : fallback.shortDescription()),
-                    place.country(), place.region(), place.imageUrl(), registered.contains(place.qid())));
+                    place.country(), place.region(), place.imageUrl(), duplicate.confirmed(), duplicate));
         }
         return List.copyOf(candidates);
     }
@@ -236,8 +267,16 @@ public class WikidataBulkRegistrationService {
             DestinationForm form = formBuilder.form(preview, wikipedia, new WikidataDestinationFormBuilder.Choices(
                     type, season.name(), request.regionId(), request.koreanName(), request.photoFileName()));
             if (form.getRegionId() == null) return ItemResult.failed(qid, "지역을 선택해 주세요.");
+            // 저장 직전 공통 중복 판별은 등록폼 단건 저장과 같은 등록 경로가 한다.
+            // 목록에서 '중복 확인' 후보를 확인하고 고른 경우에만 이름·위치 중복을 넘긴다.
+            form.setAllowPossibleDuplicate(Boolean.TRUE.equals(request.allowPossibleDuplicate()));
             orchestrationService.registerDestination(form, userId, List.of());
             return ItemResult.success(qid, destinationService.findWikidataDestinationId(qid));
+        } catch (DuplicateDestinationException exception) {
+            DestinationDuplicateCheck duplicate = exception.getCheck();
+            return duplicate.confirmed()
+                    ? ItemResult.duplicate(qid, duplicate.destinationId())
+                    : ItemResult.possibleDuplicate(qid, duplicate);
         } catch (DuplicateWikidataDestinationException exception) {
             return ItemResult.duplicate(qid, destinationService.findWikidataDestinationId(qid));
         } catch (DuplicateKeyException exception) {

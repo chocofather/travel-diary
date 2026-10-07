@@ -216,44 +216,18 @@ public class DestinationService {
                 KTO_TOUR_API_SOURCE_TYPE, externalContentId.strip()) > 0;
     }
 
+    public Long findTourApiDestinationId(String externalContentId) {
+        if (externalContentId == null || externalContentId.isBlank()) {
+            return null;
+        }
+        return destinationMapper.findIdByExternalContentId(KTO_TOUR_API_SOURCE_TYPE, externalContentId.strip());
+    }
+
     public Long findWikidataDestinationId(String qid) {
         return destinationMapper.findIdByExternalContentId(WIKIDATA_SOURCE_TYPE, qid);
     }
 
-    /** IN 절이 지나치게 길어지지 않도록 나눠 조회하는 단위. */
-    private static final int EXTERNAL_CONTENT_ID_CHUNK_SIZE = 500;
-
-    /** 넘긴 contentId 중 이미 등록된 것만 돌려준다. 후보 목록의 등록 여부 표시에 쓴다. */
-    public Set<String> findRegisteredTourApiContentIds(Collection<String> externalContentIds) {
-        return findRegisteredExternalContentIds(KTO_TOUR_API_SOURCE_TYPE, externalContentIds);
-    }
-
-    /** 넘긴 QID 중 이미 Wikidata 여행지로 등록된 것만 돌려준다. 해외 일괄 등록 후보의 등록 여부 표시에 쓴다. */
-    public Set<String> findRegisteredWikidataQids(Collection<String> qids) {
-        return findRegisteredExternalContentIds(WIKIDATA_SOURCE_TYPE, qids);
-    }
-
-    private Set<String> findRegisteredExternalContentIds(String sourceType, Collection<String> externalContentIds) {
-        if (externalContentIds == null || externalContentIds.isEmpty()) {
-            return Set.of();
-        }
-        List<String> normalized = externalContentIds.stream()
-                .filter(contentId -> contentId != null && !contentId.isBlank())
-                .map(String::strip)
-                .distinct()
-                .toList();
-        if (normalized.isEmpty()) {
-            return Set.of();
-        }
-
-        Set<String> registered = new HashSet<>();
-        for (int start = 0; start < normalized.size(); start += EXTERNAL_CONTENT_ID_CHUNK_SIZE) {
-            int end = Math.min(start + EXTERNAL_CONTENT_ID_CHUNK_SIZE, normalized.size());
-            registered.addAll(destinationMapper.findExternalContentIds(
-                    sourceType, normalized.subList(start, end)));
-        }
-        return Set.copyOf(registered);
-    }
+    // 후보 목록의 등록 여부 표시는 DestinationDuplicateService(외부 ID·Place ID·이름·위치 공통 판별)가 맡는다.
 
     public List<Destination> getDomesticDestinations() {
         return destinationMapper.findDomestic();

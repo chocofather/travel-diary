@@ -4,20 +4,21 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css?v=20261003-1">
-  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
+  <link rel="stylesheet" href="/css/destination-create.css?v=20261008-2">
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20261008-1">
   <script src="/js/admin-destination-category-select.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260920-1" defer></script>
   <script src="/js/admin-destination-image-bulk-source.js?v=20260927-1" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
   <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
-  <script src="/js/admin-kto-tour-autofill.js?v=20260907-2" defer></script>
+  <script src="/js/admin-destination-duplicate-ack.js?v=20261008-1" defer></script>
+  <script src="/js/admin-kto-tour-autofill.js?v=20261008-2" defer></script>
   <script src="/js/admin-kto-photo-search.js?v=20261003-1" defer></script>
   <script src="/js/admin-wikidata-form-apply.js?v=20260926-3" defer></script>
   <script src="/js/admin-wikipedia-description-apply.js?v=20260926-1" defer></script>
   <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
-  <script src="/js/admin-wikidata-preview.js?v=20260926-10" defer></script>
+  <script src="/js/admin-wikidata-preview.js?v=20261008-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -40,6 +41,8 @@
   <span>입력한 내용과 선택한 사진은 그대로 남아 있으니 고친 뒤 다시 등록해 주세요.</span>
   <a th:if="${existingWikidataDestinationId}" class="admin-btn is-small"
      th:href="@{/admin/destinations/edit/{id}(id=${existingWikidataDestinationId})}">기존 여행지 수정</a>
+  <a th:if="${existingDestinationId}" class="admin-btn is-small"
+     th:href="@{/admin/destinations/edit/{id}(id=${existingDestinationId})}">기존 여행지 수정</a>
 </div>
 
 <section class="admin-destination-section admin-wikidata" data-wikidata-preview>
@@ -82,6 +85,21 @@
   <input type="hidden" th:field="*{wikipediaRevisionIds[4]}" data-wikipedia-revision="zh-TW">
   <!-- Commons 사진 선택은 파일명·대표 여부만 한 칸으로 보낸다. 출처와 이미지는 서버가 다시 조회해 받는다. -->
   <input type="hidden" th:field="*{commonsSelectedPhotosJson}" data-commons-selection>
+  <!-- '중복 확인' 후보를 고르면(또는 저장 직전 판별에 걸리면) 다른 여행지임을 확인해야 저장된다. -->
+  <div class="admin-duplicate-ack" data-possible-duplicate-ack
+       th:hidden="${possibleDuplicate == null and !destinationForm.allowPossibleDuplicate}">
+    <label>
+      <input type="checkbox" th:field="*{allowPossibleDuplicate}" data-allow-possible-duplicate>
+      <span data-possible-duplicate-text
+            th:text="${possibleDuplicate != null}
+                     ? |기존 여행지 #${possibleDuplicate.destinationId()} ${possibleDuplicate.destinationName() ?: ''}와 다른 여행지임을 확인했습니다.|
+                     : '기존 여행지와 다른 여행지임을 확인했습니다.'">기존 여행지와 다른 여행지임을 확인했습니다.</span>
+    </label>
+    <a class="admin-kto-tour-existing" target="_blank" rel="noopener" data-possible-duplicate-link
+       th:hidden="${possibleDuplicate == null}"
+       th:href="${possibleDuplicate != null} ? @{/admin/destinations/edit/{id}(id=${possibleDuplicate.destinationId()})} : '#'"
+       th:text="${possibleDuplicate != null} ? |기존 여행지 #${possibleDuplicate.destinationId()} 열기| : '기존 여행지 열기'">기존 여행지 열기</a>
+  </div>
 
   <section class="admin-destination-section">
     <div class="admin-destination-section-header">
@@ -105,6 +123,13 @@
       <div class="admin-kto-tour-autofill" aria-live="polite">
         <p class="admin-kto-tour-status" data-kto-tour-status>여행지명을 입력한 뒤 TourAPI에서 후보를 검색할 수 있습니다.</p>
         <div class="admin-kto-tour-results" data-kto-tour-results></div>
+        <!-- 고른 TourAPI 후보의 contentId. 저장 시 같은 곳의 중복 등록을 막고 이후 목록에서 등록됨으로 보이게 한다. -->
+        <input type="hidden" th:field="*{ktoContentId}" data-kto-tour-content-id>
+        <p class="admin-kto-tour-link" data-kto-tour-link th:hidden="${#strings.isEmpty(destinationForm.ktoContentId)}">
+          <span>TourAPI 연결: contentId
+            <strong data-kto-tour-link-id th:text="${destinationForm.ktoContentId}"></strong></span>
+          <button type="button" class="admin-btn is-small" data-kto-tour-unlink>연결 해제</button>
+        </p>
       </div>
       <label>간단 설명
         <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>

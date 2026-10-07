@@ -63,17 +63,18 @@ class AdminDestinationKtoImportPageRenderingTest {
         var document = Jsoup.parse(render());
 
         var filters = document.select("[data-kto-import-filter]");
+        // 이름·위치가 같은 기존 여행지가 있는 후보는 '중복 확인' 탭으로 따로 모은다.
         assertThat(filters.eachAttr("data-kto-import-filter"))
-                .containsExactly("ALL", "NEW", "REGISTERED");
+                .containsExactly("ALL", "NEW", "POSSIBLE_DUPLICATE", "REGISTERED");
         // 기본값은 미등록만. 등록완료 항목은 숨기지 않고 다른 필터에서 볼 수 있다.
         assertThat(filters.stream().filter(filter -> filter.hasClass("active")).toList())
                 .singleElement()
                 .satisfies(filter ->
                         assertThat(filter.attr("data-kto-import-filter")).isEqualTo("NEW"));
 
-        // 전체/미등록/등록완료 건수를 각 탭에 표시한다 (TourAPI 원본 총건수가 아니다).
+        // 전체/미등록/중복 확인/등록완료 건수를 각 탭에 표시한다 (TourAPI 원본 총건수가 아니다).
         assertThat(document.select("[data-kto-import-count]").eachAttr("data-kto-import-count"))
-                .containsExactly("ALL", "NEW", "REGISTERED");
+                .containsExactly("ALL", "NEW", "POSSIBLE_DUPLICATE", "REGISTERED");
 
         // 현재 페이지 선택과 전체 선택해제를 따로 둔다 (해외 일괄 등록과 같은 문구)
         assertThat(document.selectFirst("[data-kto-import-select-all]").text()).isEqualTo("현재 페이지 전체선택");

@@ -2,6 +2,7 @@ package com.tripbora.controller.admin;
 
 import com.tripbora.service.kto.KtoTourApiException;
 import com.tripbora.service.kto.KtoTourDetailLookupService;
+import com.tripbora.service.kto.KtoTourDuplicateMarker;
 import com.tripbora.service.kto.KtoTourService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ public class AdminKtoTourController {
 
     private final KtoTourService ktoTourService;
     private final KtoTourDetailLookupService ktoTourDetailLookupService;
+    private final KtoTourDuplicateMarker ktoTourDuplicateMarker;
 
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String keyword,
@@ -41,8 +43,9 @@ public class AdminKtoTourController {
         }
         try {
             // DestinationType -> TourAPI contentTypeId 매핑 기준은 서버(KtoTourService)가 갖는다.
-            return ResponseEntity.ok(
-                    ktoTourService.search(normalizedKeyword, pageNo, numOfRows, destinationType));
+            // 후보마다 이미 등록된 여행지인지 일괄등록과 같은 공통 판별 결과를 붙인다.
+            return ResponseEntity.ok(ktoTourDuplicateMarker.markSearch(
+                    ktoTourService.search(normalizedKeyword, pageNo, numOfRows, destinationType)));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
         }

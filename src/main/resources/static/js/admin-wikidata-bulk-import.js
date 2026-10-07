@@ -24,7 +24,7 @@
 
   function summarize(rows) {
     const count = {total: rows.length, ready: 0, needs: 0, loading: 0, fresh: 0,
-      queued: 0, running: 0, waiting: 0, success: 0, duplicate: 0, failed: 0};
+      queued: 0, running: 0, waiting: 0, success: 0, duplicate: 0, failed: 0, review: 0};
     for (const row of rows) {
       const {state} = rowState(row);
       if (state !== 'done') count[state]++;
@@ -36,17 +36,27 @@
       if (status === 'SUCCESS') count.success++;
       if (status === 'DUPLICATE') count.duplicate++;
       if (status === 'FAILED') count.failed++;
+      if (status === 'POSSIBLE_DUPLICATE') count.review++;
     }
     return count;
   }
 
-  /** 등록 요청 본문. 자동 매핑된 지역을 바꾸지 않았으면 regionId 를 보내지 않는다. */
+  /**
+   * 등록 요청 본문. 자동 매핑된 지역을 바꾸지 않았으면 regionId 를 보내지 않는다.
+   * '중복 확인' 후보를 관리자가 확인하고 포함한 경우에만 allowPossibleDuplicate 를 싣는다.
+   */
   function registerPayload(row) {
     return {
       qid: row.qid, type: row.type, season: row.season, regionId: row.regionId || null,
       koreanName: String(row.koreanName || '').trim() || null,
-      photoFileName: row.photo?.fileName || null
+      photoFileName: row.photo?.fileName || null,
+      ...(row.allowPossibleDuplicate ? {allowPossibleDuplicate: true} : {})
     };
+  }
+
+  /** 서버 공통 중복 판별 결과. REGISTERED · POSSIBLE_DUPLICATE · NOT_REGISTERED */
+  function duplicateStatus(candidate) {
+    return candidate.duplicate?.status || (candidate.registered ? 'REGISTERED' : 'NOT_REGISTERED');
   }
 
   /** 요청 제한으로 자동 재시도하는 한도(여행지마다). 넘으면 사유와 함께 실패로 두고 관리자가 다시 누른다. */
@@ -126,10 +136,10 @@
     }
   }
 
-  root.TripBoraWikidataBulkPlanner = {rowState, summarize, registerPayload, runRegistrationQueue};
+  root.TripBoraWikidataBulkPlanner = {rowState, summarize, registerPayload, runRegistrationQueue, duplicateStatus};
   root.TravelDiaryWikidataBulkPlanner = root.TripBoraWikidataBulkPlanner; // legacy alias (P10a 제거)
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {rowState, summarize, registerPayload, runRegistrationQueue, AUTO_RETRY_LIMIT};
+    module.exports = {rowState, summarize, registerPayload, runRegistrationQueue, duplicateStatus, AUTO_RETRY_LIMIT};
   }
   if (typeof document === 'undefined') return;
 
@@ -446,7 +456,8 @@
       for (const candidate of results) {
         const done = DONE.includes(rows.get(candidate.qid)?.result?.status);
         const registered = candidate.registered || done;
-        const tr = element('tr', registered ? 'is-registered' : '');
+        const possible = !registered && duplicateStatus(candidate) === 'POSSIBLE_DUPLICATE';
+        const tr = element('tr', registered ? 'is-registered' : possible ? 'is-review' : '');
         const check = element('td', 'is-check');
         const box = element('input');
         box.type = 'checkbox';
@@ -454,7 +465,16 @@
         box.disabled = registered || isLocked(candidate.qid);
         box.setAttribute('aria-label', `${candidate.name || candidate.qid} (${candidate.qid}) 선택`);
         box.addEventListener('change', () => {
-          if (box.checked) addRow(candidate); else removeRow(candidate.qid);
+          if (!box.checked) {
+            removeRow(candidate.qid);
+            return;
+          }
+          // 중복 확인 후보는 관리자가 근거를 보고 다른 곳이라고 확인한 경우에만 고른다.
+          if (possible && !confirmPossibleDuplicate(candidate)) {
+            box.checked = false;
+            return;
+          }
+          addRow(candidate, true, possible);
         });
         check.append(box);
         const thumb = element('td', 'is-thumb');
@@ -465,17 +485,40 @@
         const place = element('td', '', [candidate.country, candidate.region].filter(Boolean).join(' · ') || '확인 필요');
         const description = element('td', 'admin-wikidata-bulk-description', candidate.shortDescription || '');
         const state = element('td');
-        state.append(element('span', `admin-kto-import-badge ${registered ? 'is-registered' : 'is-new'}`,
-          registered ? '등록 완료' : '미등록'));
+        state.append(element('span', `admin-kto-import-badge ${registered ? 'is-registered' : possible ? 'is-review' : 'is-new'}`,
+          registered ? '등록 완료' : possible ? '중복 확인' : '미등록'));
+        const existingId = candidate.duplicate?.destinationId || rows.get(candidate.qid)?.result?.destinationId;
+        if (existingId) {
+          const link = element('a', 'admin-kto-import-existing',
+            `#${existingId}${candidate.duplicate?.destinationName ? ` ${candidate.duplicate.destinationName}` : ''}`);
+          link.href = `/admin/destinations/edit/${encodeURIComponent(existingId)}`;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          state.append(link);
+          if (candidate.duplicate?.message) {
+            state.append(element('span', 'admin-kto-import-reason', candidate.duplicate.message));
+          }
+        }
         tr.append(check, thumb, name, place, description, state);
         resultRows.append(tr);
       }
       renderSelection();
     }
 
-    /** 현재 페이지 = 화면에 보이는 후보(더 보기로 붙은 후보 포함). 등록 완료·등록 중 잠긴 후보는 대상이 아니다. */
+    function confirmPossibleDuplicate(candidate) {
+      const duplicate = candidate.duplicate || {};
+      return window.confirm(`'${candidate.name || candidate.qid}'은(는) 기존 여행지 #${duplicate.destinationId}`
+        + ` ${duplicate.destinationName || ''}와 같은 곳일 수 있습니다 (${duplicate.message || '중복 확인'}).\n`
+        + '다른 여행지가 맞다면 확인을 눌러 등록 대상에 넣어 주세요.');
+    }
+
+    /**
+     * 현재 페이지 = 화면에 보이는 후보(더 보기로 붙은 후보 포함).
+     * 등록 완료·등록 중 잠긴 후보와, 하나씩 확인해야 하는 '중복 확인' 후보는 일괄 선택 대상이 아니다.
+     */
     function currentPageSelection() {
-      return pageSelection(results, candidate => !candidate.registered && !isLocked(candidate.qid),
+      return pageSelection(results,
+        candidate => duplicateStatus(candidate) === 'NOT_REGISTERED' && !isLocked(candidate.qid),
         candidate => rows.has(candidate.qid));
     }
 
@@ -516,12 +559,16 @@
       }
     }
 
-    /** refresh=false 는 여러 곳을 한 번에 바꾼 뒤 한 번만 다시 그릴 때 쓴다. */
-    function addRow(candidate, refresh = true) {
+    /**
+     * refresh=false 는 여러 곳을 한 번에 바꾼 뒤 한 번만 다시 그릴 때 쓴다.
+     * allowPossibleDuplicate 는 '중복 확인' 후보를 관리자가 확인하고 고른 경우에만 true 다.
+     */
+    function addRow(candidate, refresh = true, allowPossibleDuplicate = false) {
       if (rows.has(candidate.qid) || candidate.registered) return;
       const row = {qid: candidate.qid, candidate, review: null, reviewState: 'idle', photosState: 'idle',
         photoIndex: new Map(), photo: null, koreanName: '', type: commonType.value, season: commonSeason.value,
-        regionId: null, regionEditing: false, result: null, element: null, photoRow: null};
+        regionId: null, regionEditing: false, result: null, element: null, photoRow: null,
+        allowPossibleDuplicate};
       rows.set(candidate.qid, row);
       if (!review.hidden) mountRow(row);
       if (refresh) refreshAll();
@@ -838,6 +885,7 @@
       const result = row.result;
       if (result?.status === 'SUCCESS') return ['등록 성공', 'is-success'];
       if (result?.status === 'DUPLICATE') return ['이미 등록됨', 'is-registered'];
+      if (result?.status === 'POSSIBLE_DUPLICATE') return [`중복 확인 필요 · ${result.message || ''}`, 'is-needs'];
       if (result?.status === 'RUNNING') return ['등록 중…', 'is-running'];
       if (result?.status === 'RETRYING') return [`자동 재시도 중 (${result.attempt}/${AUTO_RETRY_LIMIT})`, 'is-running'];
       if (result?.status === 'WAITING') {
@@ -860,9 +908,21 @@
       const cell = row.cells.state;
       cell.replaceChildren(element('span', `admin-wikidata-bulk-status ${className}`, text));
       if (row.result?.destinationId) {
-        const link = element('a', '', '수정');
+        const link = element('a', '', row.result.status === 'POSSIBLE_DUPLICATE' ? '기존 여행지' : '수정');
         link.href = `/admin/destinations/edit/${encodeURIComponent(row.result.destinationId)}`;
         cell.append(link);
+      }
+      if (row.result?.status === 'POSSIBLE_DUPLICATE') {
+        // 저장 직전에 새로 찾은 중복 가능성. 다른 곳이 맞다고 확인해야 다시 등록 대상이 된다.
+        const include = element('button', 'admin-btn is-small', '다른 여행지 · 등록 대상에 포함');
+        include.type = 'button';
+        include.disabled = running;
+        include.addEventListener('click', () => {
+          row.allowPossibleDuplicate = true;
+          row.result = null;
+          refreshAll();
+        });
+        cell.append(include);
       }
       if (row.reviewState === 'error') {
         const retry = element('button', 'admin-btn is-small', '다시 불러오기');
@@ -890,6 +950,7 @@
         + (count.loading ? ` · 확인 중 ${count.loading}곳` : '')
         + (progress ? ` | 진행 ${count.success + count.duplicate + count.failed}/${progress} · 성공 ${count.success}`
           + ` · 이미 등록됨 ${count.duplicate} · 실패 ${count.failed}`
+          + (count.review ? ` · 중복 확인 필요 ${count.review}` : '')
           + (count.waiting ? ` · 요청 제한 대기 ${count.waiting}곳` : '') : '');
       registerButton.textContent = running ? '등록 중…' : `등록 가능 ${count.fresh}곳 등록`;
       registerButton.disabled = running || !count.fresh || count.needs > 0 || count.loading > 0;
@@ -945,6 +1006,7 @@
       renderResults();
       const count = summarize([...rows.values()]);
       registerStatus.textContent = `등록을 마쳤습니다. 성공 ${count.success} · 이미 등록됨 ${count.duplicate} · 실패 ${count.failed}`
+        + (count.review ? ` · 중복 확인 필요 ${count.review}` : '')
         + (count.failed ? ' · 실패 사유를 확인해 고친 뒤 재시도할 수 있습니다.' : '');
     }
 

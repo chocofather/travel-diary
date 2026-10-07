@@ -6,12 +6,18 @@ import com.tripbora.dto.kto.KtoTourAutofillResponse;
 import com.tripbora.dto.kto.KtoTourBulkImportRequest;
 import com.tripbora.dto.kto.KtoTourBulkImportResponse;
 import com.tripbora.dto.kto.KtoTourRegionMatchResponse;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DestinationDuplicateQuery;
+import com.tripbora.service.destination.DestinationDuplicateReason;
+import com.tripbora.service.destination.DestinationDuplicateService;
+import com.tripbora.service.destination.DestinationDuplicateStatus;
 import com.tripbora.service.destination.DestinationSavePersistenceService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.destination.DuplicateTourApiDestinationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,6 +28,7 @@ import java.util.Set;
 
 import static com.tripbora.service.kto.KtoTourCandidateRegistrationFilter.ALL;
 import static com.tripbora.service.kto.KtoTourCandidateRegistrationFilter.NEW;
+import static com.tripbora.service.kto.KtoTourCandidateRegistrationFilter.POSSIBLE_DUPLICATE;
 import static com.tripbora.service.kto.KtoTourCandidateRegistrationFilter.REGISTERED;
 import static com.tripbora.service.kto.KtoTourImportContentType.CULTURAL_FACILITY;
 import static com.tripbora.service.kto.KtoTourImportContentType.LEPORTS;
@@ -32,6 +39,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -46,6 +54,8 @@ class KtoTourBulkImportServiceTest {
     @Mock private KtoPhotoImportService ktoPhotoImportService;
     @Mock private DestinationService destinationService;
     @Mock private DestinationSavePersistenceService destinationSavePersistenceService;
+    @Mock private DestinationDuplicateService duplicateService;
+    @Mock private KtoTourRegionMatchService regionMatchService;
 
     private KtoTourBulkImportService service;
 
@@ -59,19 +69,22 @@ class KtoTourBulkImportServiceTest {
                 ktoTourImageImportService,
                 ktoPhotoImportService,
                 destinationService,
-                destinationSavePersistenceService);
+                destinationSavePersistenceService,
+                new KtoTourDuplicateMarker(duplicateService, regionMatchService),
+                duplicateService);
+        // 저장 직전 최종 확인은 따로 정하지 않으면 미등록이다.
+        lenient().when(duplicateService.check(any())).thenReturn(DestinationDuplicateCheck.NOT_REGISTERED);
     }
 
     @Test
     void candidatesAreMarkedRegisteredByContentIdNotByName() {
         stubType(TOURIST_SPOT, candidate("126508", "창덕궁"), candidate("264337", "창덕궁"));
         stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
-        when(destinationService.findRegisteredTourApiContentIds(anyList()))
-                .thenReturn(Set.of("126508"));
+        stubRegistered("126508");
 
         var response = service.findCandidates("11", null, null, ALL, 1, 20);
 
-        // 이름이 같아도 판정 기준은 contentId 뿐이다.
+        // 확정 중복(registered)은 contentId 로만 정한다. 이름이 같은 다른 contentId 는 확정이 아니다.
         assertThat(response.items()).extracting(
                         KtoTourAreaCandidateResponse::contentId,
                         KtoTourAreaCandidateResponse::registered)
@@ -89,7 +102,7 @@ class KtoTourBulkImportServiceTest {
                 candidate("126508", "경복궁"));
         stubType(LEPORTS, candidate("300001", "북악산 등산로"));
         stubType(SHOPPING, candidate("400001", "광장시장"));
-        when(destinationService.findRegisteredTourApiContentIds(anyList())).thenReturn(Set.of());
+        stubRegistered();
 
         var response = service.findCandidates("11", "110", null, ALL, 1, 20);
 
@@ -104,7 +117,7 @@ class KtoTourBulkImportServiceTest {
     @Test
     void aSelectedContentTypeQueriesOnlyThatType() {
         stubType(SHOPPING, candidate("400001", "광장시장"));
-        when(destinationService.findRegisteredTourApiContentIds(anyList())).thenReturn(Set.of());
+        stubRegistered();
 
         var response = service.findCandidates("11", "110", "38", ALL, 1, 20);
 
@@ -127,8 +140,7 @@ class KtoTourBulkImportServiceTest {
         many.add(candidate("126508", "하 경복궁"));
         stubType(TOURIST_SPOT, many.toArray(KtoTourAreaCandidateResponse[]::new));
         stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
-        when(destinationService.findRegisteredTourApiContentIds(anyList()))
-                .thenReturn(Set.of("126508"));
+        stubRegistered("126508");
 
         var registered = service.findCandidates("11", "110", null, REGISTERED, 1, 20);
 
@@ -143,8 +155,7 @@ class KtoTourBulkImportServiceTest {
                 candidate("1", "가"), candidate("2", "나"), candidate("3", "다"),
                 candidate("4", "라"), candidate("5", "마"));
         stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
-        when(destinationService.findRegisteredTourApiContentIds(anyList()))
-                .thenReturn(Set.of("2", "4"));
+        stubRegistered("2", "4");
 
         var all = service.findCandidates("11", "110", null, ALL, 1, 2);
         assertThat(all.allCount()).isEqualTo(5);
@@ -170,7 +181,7 @@ class KtoTourBulkImportServiceTest {
     void theSameConditionDoesNotHitTourApiAgainForPagingOrFilterChanges() {
         stubType(TOURIST_SPOT, candidate("1", "가"), candidate("2", "나"));
         stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
-        when(destinationService.findRegisteredTourApiContentIds(anyList())).thenReturn(Set.of("2"));
+        stubRegistered("2");
 
         service.findCandidates("11", "110", null, NEW, 1, 20);
         service.findCandidates("11", "110", null, REGISTERED, 1, 20);
@@ -272,6 +283,133 @@ class KtoTourBulkImportServiceTest {
         service.importSelected(List.of(item("126508")), 7L);
 
         verify(ktoPhotoImportService).cleanupPreparedPhotos(prepared);
+    }
+
+    /** 관리자 직접 등록 여행지와 이름·위치가 같은 후보는 '중복 확인'으로 따로 세고 미등록 탭에서 뺀다. */
+    @Test
+    void possibleDuplicatesAreCountedSeparatelyAndKeptOutOfTheNewTab() {
+        stubType(TOURIST_SPOT, candidate("126508", "경복궁"), candidate("126509", "창덕궁"),
+                candidate("126510", "새로운 여행지"));
+        stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
+        when(duplicateService.checkAll(anyList())).thenAnswer(invocation -> invocation
+                .<List<DestinationDuplicateQuery>>getArgument(0).stream()
+                .map(query -> switch (query.externalContentId()) {
+                    case "126508" -> registeredCheck(11L);
+                    case "126509" -> possibleCheck(12L);
+                    default -> DestinationDuplicateCheck.NOT_REGISTERED;
+                })
+                .toList());
+
+        var all = service.findCandidates("11", null, null, ALL, 1, 20);
+        var fresh = service.findCandidates("11", null, null, NEW, 1, 20);
+        var review = service.findCandidates("11", null, null, POSSIBLE_DUPLICATE, 1, 20);
+
+        assertThat(all.registeredCount()).isEqualTo(1);
+        assertThat(all.possibleDuplicateCount()).isEqualTo(1);
+        assertThat(all.newCount()).isEqualTo(1);
+        assertThat(all.items()).extracting(KtoTourAreaCandidateResponse::title,
+                        KtoTourAreaCandidateResponse::registered,
+                        candidate -> candidate.duplicate().status(),
+                        candidate -> candidate.duplicate().destinationId())
+                .containsExactly(
+                        tuple("경복궁", true, DestinationDuplicateStatus.REGISTERED, 11L),
+                        tuple("새로운 여행지", false, DestinationDuplicateStatus.NOT_REGISTERED, null),
+                        tuple("창덕궁", false, DestinationDuplicateStatus.POSSIBLE_DUPLICATE, 12L));
+        assertThat(fresh.items()).extracting(KtoTourAreaCandidateResponse::title).containsExactly("새로운 여행지");
+        assertThat(review.items()).extracting(KtoTourAreaCandidateResponse::title).containsExactly("창덕궁");
+    }
+
+    /** 목록 판별에는 TourAPI 좌표(mapx=경도, mapy=위도)와 주소로 찾은 지역을 함께 넘긴다. */
+    @Test
+    void candidateCoordinatesAndAddressRegionAreSentToTheCommonCheck() {
+        stubType(TOURIST_SPOT, new KtoTourAreaCandidateResponse("126508", "12", "관광지", "경복궁",
+                "서울특별시 종로구 사직로 161", null, "126.9770", "37.5796", false, null));
+        stubEmpty(CULTURAL_FACILITY, LEPORTS, SHOPPING);
+        when(regionMatchService.match("서울특별시 종로구 사직로 161")).thenReturn(
+                KtoTourRegionMatchResponse.matched(List.of(
+                        new KtoTourRegionMatchResponse.RegionPathItem(7L, "대한민국"),
+                        new KtoTourRegionMatchResponse.RegionPathItem(38L, "서울"),
+                        new KtoTourRegionMatchResponse.RegionPathItem(235L, "종로구"))));
+        stubRegistered();
+
+        service.findCandidates("11", null, null, ALL, 1, 20);
+
+        ArgumentCaptor<List<DestinationDuplicateQuery>> queries = ArgumentCaptor.forClass(List.class);
+        verify(duplicateService).checkAll(queries.capture());
+        DestinationDuplicateQuery query = queries.getValue().get(0);
+        assertThat(query.sourceType()).isEqualTo(DestinationService.KTO_TOUR_API_SOURCE_TYPE);
+        assertThat(query.externalContentId()).isEqualTo("126508");
+        assertThat(query.names()).containsExactly("경복궁");
+        assertThat(query.regionId()).isEqualTo(235L);
+        assertThat(query.latitude()).isEqualByComparingTo("37.5796");
+        assertThat(query.longitude()).isEqualByComparingTo("126.9770");
+    }
+
+    /** 목록 조회 뒤 다른 관리자가 같은 곳을 등록했으면 저장 직전 확인에서 막고 사진도 받지 않는다. */
+    @Test
+    void theFinalCheckBeforeSavingSkipsConfirmedAndUnconfirmedPossibleDuplicates() {
+        prepareDetail("126508", "경복궁");
+        prepareDetail("126509", "창덕궁");
+        when(destinationService.existsTourApiDestination(any())).thenReturn(false);
+        when(duplicateService.check(any())).thenAnswer(invocation ->
+                "126508".equals(invocation.<DestinationDuplicateQuery>getArgument(0).externalContentId())
+                        ? registeredCheck(11L) : possibleCheck(12L));
+
+        KtoTourBulkImportResponse response = service.importSelected(
+                List.of(item("126508"), item("126509")), 7L);
+
+        assertThat(response.results()).extracting(
+                        KtoTourBulkImportResponse.ItemResult::contentId,
+                        KtoTourBulkImportResponse.ItemResult::status,
+                        KtoTourBulkImportResponse.ItemResult::destinationId)
+                .containsExactly(
+                        tuple("126508", KtoTourBulkImportResponse.Status.DUPLICATE, 11L),
+                        tuple("126509", KtoTourBulkImportResponse.Status.POSSIBLE_DUPLICATE, 12L));
+        assertThat(response.possibleDuplicateCount()).isEqualTo(1);
+        verify(ktoTourImageImportService, never()).preparePhotos(any(), any());
+        verify(destinationSavePersistenceService, never())
+                .registerDestination(any(), any(), any(), anyList());
+    }
+
+    /** 저장 직전 확인은 등록폼과 같은 이름·좌표·지역으로 하고, 관리자가 확인한 중복 확인 후보는 저장한다. */
+    @Test
+    void anAcknowledgedPossibleDuplicateIsSavedWithTheTourApiContentId() {
+        prepareDetail("126509", "창덕궁");
+        when(destinationService.existsTourApiDestination("126509")).thenReturn(false);
+        when(duplicateService.check(any())).thenReturn(possibleCheck(12L));
+        when(ktoTourImageImportService.preparePhotos(any(), any())).thenReturn(List.of());
+        when(destinationSavePersistenceService.registerDestination(
+                any(DestinationForm.class), eq(7L), eq("126509"), anyList())).thenReturn(43L);
+
+        KtoTourBulkImportResponse response = service.importSelected(
+                List.of(new KtoTourBulkImportRequest.Item("126509", "12", true)), 7L);
+
+        assertThat(response.successCount()).isEqualTo(1);
+        ArgumentCaptor<DestinationDuplicateQuery> query = ArgumentCaptor.forClass(DestinationDuplicateQuery.class);
+        verify(duplicateService).check(query.capture());
+        assertThat(query.getValue().externalContentId()).isEqualTo("126509");
+        assertThat(query.getValue().names()).contains("창덕궁");
+        assertThat(query.getValue().regionId()).isEqualTo(235L);
+        assertThat(query.getValue().latitude()).isEqualByComparingTo("37.579");
+    }
+
+    private void stubRegistered(String... contentIds) {
+        Set<String> registered = Set.of(contentIds);
+        when(duplicateService.checkAll(anyList())).thenAnswer(invocation -> invocation
+                .<List<DestinationDuplicateQuery>>getArgument(0).stream()
+                .map(query -> registered.contains(query.externalContentId())
+                        ? registeredCheck(1L) : DestinationDuplicateCheck.NOT_REGISTERED)
+                .toList());
+    }
+
+    private DestinationDuplicateCheck registeredCheck(Long destinationId) {
+        return new DestinationDuplicateCheck(DestinationDuplicateStatus.REGISTERED,
+                DestinationDuplicateReason.EXTERNAL_CONTENT_ID, destinationId, "기존", null, "같은 외부 콘텐츠 ID");
+    }
+
+    private DestinationDuplicateCheck possibleCheck(Long destinationId) {
+        return new DestinationDuplicateCheck(DestinationDuplicateStatus.POSSIBLE_DUPLICATE,
+                DestinationDuplicateReason.NAME_AND_NEARBY, destinationId, "기존", 120, "같은 이름 · 가까운 위치 (약 120m)");
     }
 
     private void prepareDetail(String contentId, String title) {

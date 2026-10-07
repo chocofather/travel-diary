@@ -16,6 +16,11 @@ document.addEventListener("DOMContentLoaded", () => {
         "closedDays", "openingHours", "admissionFee", "mainMenu", "roomType", "mainProducts"
     ];
     const foreignStatus = document.querySelector("[data-kto-tour-foreign-status]");
+    // 고른 후보의 contentId 를 저장까지 넘겨, 같은 곳의 TourAPI 중복 등록을 막는다.
+    const contentIdInput = document.querySelector("[data-kto-tour-content-id]");
+    const linkInfo = document.querySelector("[data-kto-tour-link]");
+    const linkId = document.querySelector("[data-kto-tour-link-id]");
+    const unlinkButton = document.querySelector("[data-kto-tour-unlink]");
     let lastSelectedContentId = null;
     let foreignRequestGeneration = 0;
     let koreanDetailRequestGeneration = 0;
@@ -23,6 +28,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!nameInput || !searchButton || !status || !results) return;
 
     searchButton.addEventListener("click", searchTours);
+    unlinkButton?.addEventListener("click", () => {
+        setLinkedContentId("");
+        announcePossibleDuplicate(null);
+    });
+
+    /** 등록폼의 '다른 여행지 확인' 칸에 알린다 (admin-destination-duplicate-ack.js). */
+    function announcePossibleDuplicate(duplicate) {
+        document.dispatchEvent(new CustomEvent("tripbora:possible-duplicate", {detail: duplicate}));
+    }
+
+    /** 저장할 TourAPI contentId. 비우면 관리자 직접 등록으로 저장된다. */
+    function setLinkedContentId(contentId) {
+        if (!contentIdInput) return;
+        contentIdInput.value = contentId || "";
+        if (linkId) linkId.textContent = contentId || "";
+        if (linkInfo) linkInfo.hidden = !contentId;
+    }
 
     async function searchTours() {
         const keyword = nameInput.value.trim();
@@ -62,18 +84,54 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         setStatus(`${items.length}개의 여행지 후보가 검색되었습니다.`);
         items.forEach(item => {
+            const duplicate = item.duplicate || {};
+            const registered = duplicate.status === "REGISTERED";
+            const review = duplicate.status === "POSSIBLE_DUPLICATE";
             const button = document.createElement("button");
             button.type = "button";
             button.className = "admin-kto-tour-candidate";
+            button.classList.toggle("is-registered", registered);
+            button.classList.toggle("is-review", review);
+            // 이미 등록된 후보는 다시 고르지 못하게 한다. 기존 여행지는 아래 링크로 연다.
+            button.disabled = registered;
 
             const title = document.createElement("strong");
             title.textContent = item.title || "이름 없음";
+            if (registered || review) {
+                const badge = document.createElement("em");
+                badge.className = `admin-kto-tour-badge ${registered ? "is-registered" : "is-review"}`;
+                badge.textContent = registered ? "등록됨" : "중복 확인";
+                title.append(" ", badge);
+            }
             const meta = document.createElement("span");
             meta.textContent = [item.address, item.contentTypeName || item.contentTypeId]
                 .filter(Boolean).join(" · ");
             button.append(title, meta);
-            button.addEventListener("click", () => loadDetail(item));
+            if (registered || review) {
+                const note = document.createElement("span");
+                note.textContent = `기존 #${duplicate.destinationId} ${duplicate.destinationName || ""}`
+                    + ` · ${duplicate.message || ""}`;
+                button.append(note);
+            }
+            button.addEventListener("click", () => {
+                if (review && !window.confirm(`기존 여행지 #${duplicate.destinationId} `
+                    + `${duplicate.destinationName || ""}와 같은 곳일 수 있습니다. 그래도 이 후보로 입력할까요?`)) {
+                    return;
+                }
+                // 확인한 중복 확인 후보만 저장 시 '다른 여행지 확인'으로 넘긴다. 다른 후보면 확인을 지운다.
+                announcePossibleDuplicate(review ? duplicate : null);
+                void loadDetail(item);
+            });
             results.append(button);
+            if (registered || review) {
+                const link = document.createElement("a");
+                link.className = "admin-kto-tour-existing";
+                link.href = `/admin/destinations/edit/${encodeURIComponent(duplicate.destinationId)}`;
+                link.target = "_blank";
+                link.rel = "noopener";
+                link.textContent = `기존 여행지 #${duplicate.destinationId} 열기`;
+                results.append(link);
+            }
         });
     }
 
@@ -101,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.message || "관광정보를 불러오지 못했습니다.");
             if (requestGeneration !== foreignRequestGeneration) return;
+            setLinkedContentId(item.contentId);
             // 입력창의 검색어는 후보를 찾기 위한 값이므로 고른 후보의 이름으로 바꾼다.
             applySelectedTitle(payload.title || item.title);
             applyAutofill(payload);

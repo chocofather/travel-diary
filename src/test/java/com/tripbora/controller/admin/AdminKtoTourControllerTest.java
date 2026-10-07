@@ -9,7 +9,11 @@ import com.tripbora.dto.kto.KtoTourSearchItemResponse;
 import com.tripbora.dto.kto.KtoTourSearchResponse;
 import com.tripbora.repository.user.UserMapper;
 import com.tripbora.service.kto.KtoTourApiException;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DestinationDuplicateReason;
+import com.tripbora.service.destination.DestinationDuplicateStatus;
 import com.tripbora.service.kto.KtoTourDetailLookupService;
+import com.tripbora.service.kto.KtoTourDuplicateMarker;
 import com.tripbora.service.kto.KtoTourRegionMatchService;
 import com.tripbora.service.kto.KtoTourService;
 import org.junit.jupiter.api.Test;
@@ -43,6 +47,8 @@ class AdminKtoTourControllerTest {
     @MockitoBean
     private KtoTourRegionMatchService ktoTourRegionMatchService;
     @MockitoBean
+    private KtoTourDuplicateMarker ktoTourDuplicateMarker;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -51,9 +57,15 @@ class AdminKtoTourControllerTest {
 
     @Test
     void adminCanSearchAndLoadADetail() throws Exception {
-        when(ktoTourService.search("창덕궁", 1, 10, null)).thenReturn(new KtoTourSearchResponse(
+        KtoTourSearchResponse searched = new KtoTourSearchResponse(
                 1, 10, 1, List.of(new KtoTourSearchItemResponse(
-                "126508", "12", "관광지", "창덕궁", "서울 종로구", "126.991", "37.579"))));
+                "126508", "12", "관광지", "창덕궁", "서울 종로구", "126.991", "37.579")));
+        when(ktoTourService.search("창덕궁", 1, 10, null)).thenReturn(searched);
+        // 검색 후보에는 일괄등록과 같은 공통 중복 판별 결과가 붙는다.
+        when(ktoTourDuplicateMarker.markSearch(searched)).thenReturn(new KtoTourSearchResponse(1, 10, 1,
+                List.of(searched.items().get(0).withDuplicate(new DestinationDuplicateCheck(
+                        DestinationDuplicateStatus.REGISTERED, DestinationDuplicateReason.EXTERNAL_CONTENT_ID,
+                        42L, "창덕궁", null, "같은 외부 콘텐츠 ID")))));
         when(ktoTourService.getDetail("126508", "12")).thenReturn(new KtoTourAutofillResponse(
                 "126508", "12", "창덕궁", "서울 종로구", "126.991", "37.579",
                 "궁궐 설명", "https://example.test", "02-0000-0000", "월요일",
@@ -70,7 +82,10 @@ class AdminKtoTourControllerTest {
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].contentId").value("126508"))
-                .andExpect(jsonPath("$.items[0].contentTypeName").value("관광지"));
+                .andExpect(jsonPath("$.items[0].contentTypeName").value("관광지"))
+                .andExpect(jsonPath("$.items[0].duplicate.status").value("REGISTERED"))
+                .andExpect(jsonPath("$.items[0].duplicate.destinationId").value(42))
+                .andExpect(jsonPath("$.items[0].duplicate.message").value("같은 외부 콘텐츠 ID"));
         mockMvc.perform(get("/admin/api/kto/tour/detail")
                         .param("contentId", "126508")
                         .param("contentTypeId", "12")

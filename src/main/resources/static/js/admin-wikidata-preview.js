@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentWikipediaData = null;
   let searchController = null;
   const managerChoices = new Set();
+  // '중복 확인' 후보 중 관리자가 다른 여행지라고 확인한 것. QID → 판별 결과
+  const acknowledgedDuplicates = new Map();
   const baseUrl = '/admin/api/wikidata/destinations';
   const languages = [
     ['ko', '한국어'], ['en', '영어'], ['ja', '일본어'],
@@ -516,24 +518,63 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderCandidates(candidates, detailsPending = false) {
     results.replaceChildren();
     for (const candidate of candidates) {
+      // 공통 중복 판별 결과는 검색 상세(search-details)에서 온다. TourAPI 단건 검색과 같은 표시를 쓴다.
+      const duplicate = candidate.duplicate || {};
+      const registered = duplicate.status === 'REGISTERED';
+      const possible = duplicate.status === 'POSSIBLE_DUPLICATE';
       const card = element('article', 'admin-wikidata-candidate');
+      card.classList.toggle('is-registered', registered);
+      card.classList.toggle('is-review', possible);
       addImage(card, candidate.imageUrl, candidate.name);
       const text = element('div', 'admin-wikidata-candidate-text');
-      text.append(element('strong', '', candidate.name || '명칭 없음'));
+      const title = element('strong', '', candidate.name || '명칭 없음');
+      if (registered || possible) {
+        title.append(' ', element('em', `admin-kto-tour-badge ${registered ? 'is-registered' : 'is-review'}`,
+          registered ? '등록됨' : '중복 확인'));
+      }
+      text.append(title);
       text.append(element('span', 'admin-wikidata-qid', candidate.qid));
       text.append(element('p', '', candidate.shortDescription || '간단 설명 없음'));
       const location = element('small', '', detailsPending ? '국가·지역 확인 중'
         : [candidate.country, candidate.region].filter(Boolean).join(' · ') || '국가·지역 정보 없음');
       location.dataset.candidateLocation = '';
       text.append(location);
+      if (registered || possible) {
+        text.append(element('small', 'admin-wikidata-duplicate-note',
+          `기존 #${duplicate.destinationId} ${duplicate.destinationName || ''} · ${duplicate.message || ''}`));
+        const link = element('a', 'admin-kto-tour-existing', `기존 여행지 #${duplicate.destinationId} 열기`);
+        link.href = `/admin/destinations/edit/${encodeURIComponent(duplicate.destinationId)}`;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        text.append(link);
+      }
       card.append(text);
       const button = element('button', 'admin-btn', '선택하고 자동입력');
       button.type = 'button';
+      // 이미 등록된 후보는 다시 고르지 못하게 한다. 기존 여행지는 위 링크로 연다.
+      button.disabled = registered;
       button.setAttribute('aria-label', `${candidate.name || candidate.qid} (${candidate.qid}) 선택하고 자동입력`);
-      button.addEventListener('click', () => chooseCandidate(candidate.qid));
+      button.addEventListener('click', () => {
+        if (possible) {
+          if (!window.confirm(`기존 여행지 #${duplicate.destinationId} ${duplicate.destinationName || ''}와`
+            + ` 같은 곳일 수 있습니다 (${duplicate.message || '중복 확인'}).\n다른 여행지가 맞다면 확인을 눌러 자동입력해 주세요.`)) {
+            return;
+          }
+          acknowledgedDuplicates.set(candidate.qid, duplicate);
+        } else {
+          acknowledgedDuplicates.delete(candidate.qid);
+        }
+        chooseCandidate(candidate.qid);
+      });
       card.append(button);
       results.append(card);
     }
+  }
+
+  /** 등록폼의 '다른 여행지 확인' 칸에 알린다 (admin-destination-duplicate-ack.js). */
+  function announcePossibleDuplicate(duplicate) {
+    if (typeof CustomEvent !== 'function' || typeof document.dispatchEvent !== 'function') return;
+    document.dispatchEvent(new CustomEvent('tripbora:possible-duplicate', {detail: duplicate}));
   }
 
   async function search() {
@@ -688,6 +729,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 후보 전환은 응답을 기다리지 않고 여기서 끝낸다. 이전 후보의 자동입력·Wikipedia 출처·사진 선택을 정리하고,
     // QID 칸은 새 후보의 기본정보가 확인된 뒤에만 채운다.
     if (selectedQid && selectedQid !== qid) clearPreviousCandidate();
+    // 후보가 바뀌면 그 후보를 '중복 확인'으로 확인하고 골랐는지만 저장폼에 남긴다.
+    if (selectedQid !== qid) announcePossibleDuplicate(acknowledgedDuplicates.get(qid) || null);
     selectedQid = qid;
     basicState = 'pending';
     currentBasicData = null;

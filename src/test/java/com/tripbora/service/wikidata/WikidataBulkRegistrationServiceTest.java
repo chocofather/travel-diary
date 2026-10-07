@@ -7,7 +7,13 @@ import com.tripbora.dto.wikidata.WikidataDestinationPreview.RegionMatch;
 import com.tripbora.dto.wikidata.WikidataDestinationPreview.RegionMatch.RegionPathItem;
 import com.tripbora.dto.wikidata.WikipediaDescriptionPreview;
 import com.tripbora.model.DestinationType;
+import com.tripbora.service.destination.DestinationDuplicateCheck;
+import com.tripbora.service.destination.DestinationDuplicateQuery;
+import com.tripbora.service.destination.DestinationDuplicateReason;
+import com.tripbora.service.destination.DestinationDuplicateService;
+import com.tripbora.service.destination.DestinationDuplicateStatus;
 import com.tripbora.service.destination.DestinationSaveOrchestrationService;
+import com.tripbora.service.destination.DuplicateDestinationException;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.destination.DuplicateWikidataDestinationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -40,12 +47,16 @@ class WikidataBulkRegistrationServiceTest {
     private final MutableClock clock = new MutableClock();
     private final ExternalApiRateLimiter limiter = new ExternalApiRateLimiter(clock, duration -> { }, () -> 0.5,
             ExternalApiRateLimiter.MAX_ATTEMPTS);
+    private final DestinationDuplicateService duplicates = mock(DestinationDuplicateService.class);
     private final WikidataBulkRegistrationService service = new WikidataBulkRegistrationService(wikidata, wikipedia,
-            new WikidataDestinationFormBuilder(new ObjectMapper()), destinations, orchestration, explorer, limiter);
+            new WikidataDestinationFormBuilder(new ObjectMapper()), destinations, orchestration, explorer, limiter,
+            new WikidataDuplicateMarker(wikidata, duplicates));
 
     {
         // 등록되지 않은 QID는 null 이다(Mockito 기본값 0L 로 두지 않는다).
         when(destinations.findWikidataDestinationId(anyString())).thenReturn(null);
+        // 따로 정하지 않으면 목록의 공통 중복 판별은 미등록이다.
+        stubRegisteredQids();
     }
 
     @Test
@@ -55,7 +66,7 @@ class WikidataBulkRegistrationServiceTest {
         when(wikidata.searchDetails(List.of("Q243", "Q1", "Q2"))).thenReturn(List.of(
                 new WikidataDestinationCandidate("Q243", "에펠탑", "ko", "파리의 탑", "ko", "프랑스", "파리", null, null),
                 new WikidataDestinationCandidate("Q2", null, null, null, null, "일본", null, null, null)));
-        when(destinations.findRegisteredWikidataQids(List.of("Q243", "Q1", "Q2"))).thenReturn(Set.of("Q243"));
+        stubRegisteredQids("Q243");
 
         var result = service.search("에펠탑", 10);
 
@@ -78,7 +89,7 @@ class WikidataBulkRegistrationServiceTest {
                 .filter(qid -> !qid.equals("Q1003"))
                 .map(qid -> new WikidataDestinationCandidate(qid, "장소 " + qid, "ko", null, null, "일본", null, null, null))
                 .toList());
-        when(destinations.findRegisteredWikidataQids(any())).thenReturn(Set.of("Q1002"));
+        stubRegisteredQids("Q1002");
 
         var first = service.regionSearch(55L, null, 0);
         var last = service.regionSearch(55L, null, 40);
@@ -240,6 +251,93 @@ class WikidataBulkRegistrationServiceTest {
         assertThat(withPhoto.status()).isEqualTo("RATE_LIMITED");
         assertThat(withoutPhoto.status()).isEqualTo("SUCCESS");
         verify(orchestration, times(3)).registerDestination(any(), any(), any());
+    }
+
+    /** 관리자 직접 등록(ADMIN) 여행지와 이름·좌표가 같은 Wikidata 후보는 목록에서 '중복 확인'으로 보인다. */
+    @Test
+    void candidatesCarryTheCommonDuplicateResultWithNamesCoordinatesAndTheChosenRegion() {
+        List<String> qids = List.of("Q1001", "Q1002");
+        when(explorer.places(55L, null)).thenReturn(new WikidataRegionExplorer.Places("Q123258", qids, false));
+        when(explorer.resolve(55L)).thenReturn(
+                new WikidataRegionExplorer.Resolution(55L, "후쿠오카", "Q123258", "후쿠오카현", "ISO", null, List.of()));
+        when(wikidata.searchDetails(qids)).thenReturn(List.of(
+                new WikidataDestinationCandidate("Q1001", "후쿠오카 타워", "ko", null, null, "일본", null, null, null),
+                new WikidataDestinationCandidate("Q1002", "새 장소", "ko", null, null, "일본", null, null, null)));
+        when(wikidata.placeHints(qids)).thenReturn(Map.of(
+                "Q1001", new WikidataDestinationService.PlaceHints(List.of("후쿠오카 타워", "Fukuoka Tower"),
+                        33.5933, 130.3515)));
+        doAnswer(invocation -> invocation
+                .<List<DestinationDuplicateQuery>>getArgument(0).stream()
+                .map(query -> "Q1001".equals(query.externalContentId()) ? possibleCheck(21L)
+                        : DestinationDuplicateCheck.NOT_REGISTERED)
+                .toList()).when(duplicates).checkAll(any());
+
+        var result = service.regionSearch(55L, null, 0);
+
+        assertThat(result.candidates()).extracting("qid", "registered").containsExactly(
+                org.assertj.core.groups.Tuple.tuple("Q1001", false), org.assertj.core.groups.Tuple.tuple("Q1002", false));
+        assertThat(result.candidates().get(0).duplicate().status()).isEqualTo(DestinationDuplicateStatus.POSSIBLE_DUPLICATE);
+        assertThat(result.candidates().get(0).duplicate().destinationId()).isEqualTo(21L);
+        ArgumentCaptor<List<DestinationDuplicateQuery>> queries = ArgumentCaptor.forClass(List.class);
+        verify(duplicates).checkAll(queries.capture());
+        DestinationDuplicateQuery tower = queries.getValue().get(0);
+        assertThat(tower.sourceType()).isEqualTo(DestinationService.WIKIDATA_SOURCE_TYPE);
+        assertThat(tower.names()).contains("후쿠오카 타워", "Fukuoka Tower");
+        // 지역별 탐색은 고른 지역을 판별 지역으로 쓴다.
+        assertThat(tower.regionId()).isEqualTo(55L);
+        assertThat(tower.latitude()).isEqualByComparingTo("33.5933");
+        // 좌표 단서가 없는 후보도 이름·지역만으로 판별한다.
+        assertThat(queries.getValue().get(1).latitude()).isNull();
+        assertThat(queries.getValue().get(1).regionId()).isEqualTo(55L);
+    }
+
+    /** 저장 직전 확인: 확정 중복은 항상, 중복 확인은 관리자가 확인하지 않았으면 저장하지 않는다. */
+    @Test
+    void theFinalCheckBeforeSavingStopsDuplicatesUnlessThePossibleOneWasAcknowledged() {
+        stubPreview("Q243", new RegionMatch(200L, 300L, true, "",
+                List.of(new RegionPathItem(1L, "유럽"), new RegionPathItem(200L, "프랑스"), new RegionPathItem(300L, "파리"))));
+        // 저장 직전 공통 판별은 등록폼 단건 저장과 같은 등록 경로(orchestration)가 한다.
+        // 관리자가 확인하지 않은 중복 확인 후보는 그 경로가 돌려보낸다.
+        doThrow(new DuplicateDestinationException(possibleCheck(31L))).when(orchestration).registerDestination(
+                argThat(form -> !form.isAllowPossibleDuplicate()), eq(7L), any());
+
+        var stopped = service.register(request("Q243"), 7L);
+        var acknowledged = service.register(new WikidataBulkRegistrationService.RegisterRequest(
+                "Q243", "ATTRACTION", "SPRING", null, null, null, true), 7L);
+
+        assertThat(stopped.status()).isEqualTo("POSSIBLE_DUPLICATE");
+        assertThat(stopped.destinationId()).isEqualTo(31L);
+        assertThat(stopped.message()).contains("#31");
+        assertThat(acknowledged.status()).isEqualTo("SUCCESS");
+        ArgumentCaptor<DestinationForm> forms = ArgumentCaptor.forClass(DestinationForm.class);
+        verify(orchestration, times(2)).registerDestination(forms.capture(), eq(7L), eq(List.of()));
+        assertThat(forms.getAllValues()).extracting(DestinationForm::isAllowPossibleDuplicate)
+                .containsExactly(false, true);
+
+        doThrow(new DuplicateDestinationException(new DestinationDuplicateCheck(DestinationDuplicateStatus.REGISTERED,
+                DestinationDuplicateReason.GOOGLE_PLACE_ID, 41L, "에펠탑", null, "같은 Google Place ID")))
+                .when(orchestration).registerDestination(any(), eq(7L), any());
+        var confirmed = service.register(new WikidataBulkRegistrationService.RegisterRequest(
+                "Q243", "ATTRACTION", "SPRING", null, null, null, true), 7L);
+        assertThat(confirmed.status()).isEqualTo("DUPLICATE");
+        assertThat(confirmed.destinationId()).isEqualTo(41L);
+    }
+
+    private void stubRegisteredQids(String... qids) {
+        Set<String> registered = Set.of(qids);
+        // 이미 걸린 응답을 다시 부르지 않도록 doAnswer 로 바꾼다.
+        doAnswer(invocation -> invocation
+                .<List<DestinationDuplicateQuery>>getArgument(0).stream()
+                .map(query -> registered.contains(query.externalContentId())
+                        ? new DestinationDuplicateCheck(DestinationDuplicateStatus.REGISTERED,
+                        DestinationDuplicateReason.EXTERNAL_CONTENT_ID, 1L, "기존", null, "같은 외부 콘텐츠 ID")
+                        : DestinationDuplicateCheck.NOT_REGISTERED)
+                .toList()).when(duplicates).checkAll(any());
+    }
+
+    private DestinationDuplicateCheck possibleCheck(Long destinationId) {
+        return new DestinationDuplicateCheck(DestinationDuplicateStatus.POSSIBLE_DUPLICATE,
+                DestinationDuplicateReason.NAME_AND_NEARBY, destinationId, "기존", 80, "같은 이름 · 가까운 위치 (약 80m)");
     }
 
     private WikidataBulkRegistrationService.RegisterRequest request(String qid) {

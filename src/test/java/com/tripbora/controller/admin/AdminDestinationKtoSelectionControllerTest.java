@@ -141,6 +141,27 @@ class AdminDestinationKtoSelectionControllerTest {
                 eq(java.util.List.of()));
     }
 
+    /** 등록폼에서 고른 TourAPI contentId 가 저장까지 전달되고, 이미 등록된 contentId 면 기존 여행지로 안내한다. */
+    @Test
+    void aSelectedTourApiContentIdReachesTheSaveAndADuplicateShowsTheExistingDestination() throws Exception {
+        doThrow(new com.tripbora.service.destination.DuplicateTourApiDestinationException("126508"))
+                .when(destinationSaveOrchestrationService)
+                .registerDestination(argThat(form -> "126508".equals(form.getKtoContentId())), eq(7L), any());
+        when(destinationService.findTourApiDestinationId("126508")).thenReturn(42L);
+
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("regionId", "9")
+                        .param("ktoContentId", "126508")
+                        .param("ktoSelectedPhotosJson", "[]"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(409);
+        assertThat(result.getModelAndView().getViewName()).isEqualTo("admin/destinations/create");
+        assertThat(result.getModelAndView().getModel().get("registrationError"))
+                .isEqualTo("이미 등록된 TourAPI 여행지입니다.");
+        assertThat(result.getModelAndView().getModel().get("existingDestinationId")).isEqualTo(42L);
+    }
+
     @Test
     void rejectedDirectImageUploadAnswersBadRequestInsteadOfServerError() throws Exception {
         org.mockito.Mockito.doThrow(

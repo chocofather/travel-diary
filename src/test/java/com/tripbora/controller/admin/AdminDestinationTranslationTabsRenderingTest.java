@@ -373,4 +373,60 @@ class AdminDestinationTranslationTabsRenderingTest {
         assertThat(document.selectFirst("[name=wikidataQid]").val()).isEqualTo("Q12501");
         assertThat(document.selectFirst("[name='translations[0].name']").val()).isEqualTo("만리장성");
     }
+
+    /** 처음 등록 화면에서는 '다른 여행지 확인' 칸이 숨어 있고, 저장폼 안에 있어 체크 값이 함께 저장된다. */
+    @Test
+    void thePossibleDuplicateAcknowledgementStartsHiddenInsideTheSaveForm() throws Exception {
+        var document = Jsoup.parse(mockMvc.perform(get("/admin/destinations/create")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        Element ack = document.selectFirst("[data-possible-duplicate-ack]");
+        assertThat(ack).isNotNull();
+        assertThat(ack.hasAttr("hidden")).isTrue();
+        assertThat(ack.closest("form")).isNotNull();
+        assertThat(ack.selectFirst("input[type=checkbox][name=allowPossibleDuplicate]")).isNotNull();
+        assertThat(document.select("script[src^='/js/admin-destination-duplicate-ack.js']")).hasSize(1);
+    }
+
+    /** Wikidata 단건 후보 저장이 저장 직전 판별에서 중복 가능성에 걸리면 근거·기존 여행지와 확인 칸을 보여준다. */
+    @Test
+    void aPossibleDuplicateAtSaveTimeShowsTheExistingDestinationAndTheAcknowledgement() throws Exception {
+        org.mockito.Mockito.doThrow(new com.tripbora.service.destination.DuplicateDestinationException(
+                        new com.tripbora.service.destination.DestinationDuplicateCheck(
+                                com.tripbora.service.destination.DestinationDuplicateStatus.POSSIBLE_DUPLICATE,
+                                com.tripbora.service.destination.DestinationDuplicateReason.NAME_AND_NEARBY,
+                                5L, "경복궁", 70, "같은 이름 · 가까운 위치 (약 70m)")))
+                .when(destinationSaveOrchestrationService).registerDestination(
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+        com.tripbora.model.User admin = new com.tripbora.model.User();
+        admin.setId(7L);
+        admin.setUserPassword("password");
+        admin.setUserRole(com.tripbora.model.UserRole.ADMIN);
+
+        var response = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q484637")
+                        .param("regionId", "101")
+                        .param("translations[0].languageCode", "ko")
+                        .param("translations[0].name", "경복궁")
+                        .param("season", "SPRING").param("type", "ATTRACTION")
+                        .param("ktoSelectedPhotosJson", "[]")
+                        .with(user(new com.tripbora.security.CustomUserDetails(admin))).with(csrf()))
+                .andExpect(status().isConflict())
+                .andReturn().getResponse().getContentAsString();
+        var document = Jsoup.parse(response);
+
+        assertThat(document.selectFirst("[data-registration-error]").text())
+                .contains("기존 여행지 #5 경복궁와 같은 곳일 수 있습니다", "약 70m");
+        Element ack = document.selectFirst("[data-possible-duplicate-ack]");
+        assertThat(ack.hasAttr("hidden")).isFalse();
+        assertThat(ack.selectFirst("input[name=allowPossibleDuplicate]").hasAttr("checked")).isFalse();
+        assertThat(ack.selectFirst("[data-possible-duplicate-link]").attr("href"))
+                .isEqualTo("/admin/destinations/edit/5");
+        assertThat(ack.text()).contains("#5 경복궁");
+        // 고른 Wikidata 후보는 그대로 남아 확인만 체크하고 다시 등록할 수 있다.
+        assertThat(document.selectFirst("[name=wikidataQid]").val()).isEqualTo("Q484637");
+    }
 }

@@ -1,7 +1,7 @@
 // 해외 일괄 등록 검토 행의 상태 판정과 등록 요청 본문.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {rowState, summarize, registerPayload, runRegistrationQueue, AUTO_RETRY_LIMIT} =
+const {rowState, summarize, registerPayload, runRegistrationQueue, duplicateStatus, AUTO_RETRY_LIMIT} =
   require('../../main/resources/static/js/admin-wikidata-bulk-import.js');
 
 /** 서버 흉내: 제한 중에는 저장하지 않고 RATE_LIMITED, 이미 저장된 QID는 DUPLICATE. 시각은 테스트가 움직인다. */
@@ -141,4 +141,16 @@ test('registration payload sends only file identifiers and keeps the automatic r
     photoFileName: 'Tour Eiffel.jpg'});
   assert.equal(registerPayload(row({regionId: 301, koreanName: ' 에펠탑 '})).regionId, 301);
   assert.equal(registerPayload(row({koreanName: ' 에펠탑 '})).koreanName, '에펠탑');
+});
+
+test('possible duplicates are sent only after the admin acknowledged them and are counted apart', () => {
+  assert.equal(registerPayload(row()).allowPossibleDuplicate, undefined);
+  assert.equal(registerPayload(row({allowPossibleDuplicate: true})).allowPossibleDuplicate, true);
+  const count = summarize([row({result: {status: 'POSSIBLE_DUPLICATE', destinationId: 31}}), row({qid: 'Q2'})]);
+  assert.equal(count.review, 1);
+  // 저장 직전에 새로 찾은 중복 가능성은 다시 확인하기 전까지 '등록 가능'으로 세지 않는다.
+  assert.equal(count.fresh, 1);
+  assert.equal(duplicateStatus({duplicate: {status: 'POSSIBLE_DUPLICATE'}}), 'POSSIBLE_DUPLICATE');
+  assert.equal(duplicateStatus({registered: true}), 'REGISTERED');
+  assert.equal(duplicateStatus({registered: false}), 'NOT_REGISTERED');
 });
