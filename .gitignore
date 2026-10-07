@@ -49,6 +49,7 @@ src/main/resources/application-local.yml
 !README.md
 !docs/licenses/diary-pdf-third-party.md
 !docs/destination-registration.md
+!docs/ops/production-architecture.md
 
 ### Claude Code local config ###
 .claude/

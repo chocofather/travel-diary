@@ -20,7 +20,7 @@ const seasonMeta = {
         desc: homeI18n.summerDescription,
         bgClass: 'summer',
         monthRange: [6, 7, 8],
-        tags: localizedTags(homeI18n.summerTags, [6, 94, 96, 23, 97])
+        tags: localizedTags(homeI18n.summerTags, [6, 94, 96, 23])
     },
     FALL: {
         badge: homeI18n.fallBadge,
@@ -28,7 +28,7 @@ const seasonMeta = {
         desc: homeI18n.fallDescription,
         bgClass: 'fall',
         monthRange: [9, 10, 11],
-        tags: localizedTags(homeI18n.fallTags, [46, 98, 99])
+        tags: localizedTags(homeI18n.fallTags, [46, 98])
     },
     WINTER: {
         badge: homeI18n.winterBadge,
@@ -36,7 +36,7 @@ const seasonMeta = {
         desc: homeI18n.winterDescription,
         bgClass: 'winter',
         monthRange: [12, 1, 2],
-        tags: localizedTags(homeI18n.winterTags, [100, 30, 101, 102, 103])
+        tags: localizedTags(homeI18n.winterTags, [100, 30, 101, 102])
     }
 };
 
