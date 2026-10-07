@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -354,6 +355,24 @@ public class KtoTourService {
                     false));
         }
         return candidates;
+    }
+
+    /**
+     * contentId 의 콘텐츠가 TourAPI 에 있는지와 제목만 확인한다. 공통정보(detailCommon2) 한 번만 부르고
+     * 유형별 소개정보(detailIntro2)는 부르지 않는다.
+     *
+     * @return 제목(없으면 빈 문자열). 그 contentId 의 콘텐츠가 없으면 empty
+     * @throws KtoTourApiException API 키가 없거나 TourAPI 응답을 받지 못한 경우
+     */
+    public Optional<String> findTitle(String contentId) {
+        KtoTourApiResponse response = request("/detailCommon2", builder -> builder
+                .queryParam("contentId", contentId));
+        KtoTourApiResponse.Item common = firstItem(response.response().body().items());
+        if (common == null) {
+            return Optional.empty();
+        }
+        String title = plainText(common.title());
+        return Optional.of(title == null ? "" : title);
     }
 
     public KtoTourAutofillResponse getDetail(String contentId, String contentTypeId) {

@@ -15,8 +15,9 @@ import java.util.regex.Pattern;
  * </ol>
  * 괄호를 지우면 아무것도 남지 않는 이름은 괄호 안 글자를 그대로 쓴다.
  * "서울 경복궁"과 "경복궁"처럼 단어가 더 붙은 이름은 다른 이름으로 본다.
+ * JSON 일괄등록이 TourAPI 제목을 대조할 때도 같은 규칙을 쓴다.
  */
-final class DestinationNameNormalizer {
+public final class DestinationNameNormalizer {
 
     /** 이보다 짧게 정규화된 이름은 비교하지 않는다 (한 글자 이름은 우연히 겹치기 쉽다). */
     static final int MIN_LENGTH = 2;
@@ -28,7 +29,7 @@ final class DestinationNameNormalizer {
     }
 
     /** @return 비교용 이름. 비교할 수 없으면 null */
-    static String normalize(String name) {
+    public static String normalize(String name) {
         if (name == null || name.isBlank()) {
             return null;
         }

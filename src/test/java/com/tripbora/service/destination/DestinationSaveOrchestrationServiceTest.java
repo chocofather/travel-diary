@@ -115,6 +115,55 @@ class DestinationSaveOrchestrationServiceTest {
         verify(persistenceService).registerDestination(form, 7L, List.of());
     }
 
+    /**
+     * JSON 일괄등록은 외부 ID가 없는 관리자 입력형 여행지도 저장 직전에 같은 공통 판별을 거친다.
+     * 확인하지 않은 중복 가능성은 막고, 확인했으면 저장하고 새 여행지 번호를 돌려준다.
+     */
+    @Test
+    void anImportedDestinationWithoutExternalIdIsStillCheckedRightBeforeSaving() {
+        DestinationForm unconfirmed = new DestinationForm();
+        unconfirmed.getTranslations().get(0).setName("경복궁");
+        unconfirmed.setRegionId(11L);
+        DestinationForm acknowledged = new DestinationForm();
+        acknowledged.getTranslations().get(0).setName("경복궁");
+        acknowledged.setRegionId(11L);
+        acknowledged.setAllowPossibleDuplicate(true);
+        when(duplicateService.check(any())).thenReturn(possible(5L));
+        when(persistenceService.registerDestination(acknowledged, 7L, null, List.of())).thenReturn(42L);
+
+        assertThatThrownBy(() -> service.registerImportedDestination(unconfirmed, 7L))
+                .isInstanceOf(DuplicateDestinationException.class);
+        Long saved = service.registerImportedDestination(acknowledged, 7L);
+
+        org.assertj.core.api.Assertions.assertThat(saved).isEqualTo(42L);
+        org.mockito.ArgumentCaptor<DestinationDuplicateQuery> query =
+                org.mockito.ArgumentCaptor.forClass(DestinationDuplicateQuery.class);
+        verify(duplicateService, org.mockito.Mockito.times(2)).check(query.capture());
+        // 외부 ID 없이 이름·지역으로 판별한다.
+        org.assertj.core.api.Assertions.assertThat(query.getValue().sourceType()).isNull();
+        org.assertj.core.api.Assertions.assertThat(query.getValue().externalContentId()).isNull();
+        org.assertj.core.api.Assertions.assertThat(query.getValue().names()).contains("경복궁");
+        org.assertj.core.api.Assertions.assertThat(query.getValue().regionId()).isEqualTo(11L);
+        verify(persistenceService, never()).registerDestination(unconfirmed, 7L, null, List.of());
+        // 기존 관리자 직접 등록 경로(3인자)는 쓰지 않는다.
+        verify(persistenceService, never()).registerDestination(any(), any(), org.mockito.ArgumentMatchers.<List<PreparedKtoPhoto>>any());
+    }
+
+    /** JSON 일괄등록이라도 확정 중복(같은 contentId)은 확인 여부와 상관없이 저장하지 않는다. */
+    @Test
+    void anImportedConfirmedDuplicateIsNeverSaved() {
+        DestinationForm form = new DestinationForm();
+        form.setKtoContentId("126508");
+        form.setAllowPossibleDuplicate(true);
+        when(duplicateService.check(any())).thenReturn(new DestinationDuplicateCheck(
+                DestinationDuplicateStatus.REGISTERED, DestinationDuplicateReason.EXTERNAL_CONTENT_ID,
+                6L, "경복궁", null, "같은 외부 콘텐츠 ID"));
+
+        assertThatThrownBy(() -> service.registerImportedDestination(form, 7L))
+                .isInstanceOf(DuplicateDestinationException.class);
+        verify(persistenceService, never()).registerDestination(any(), any(), any(), any());
+    }
+
     private DestinationDuplicateCheck possible(Long destinationId) {
         return new DestinationDuplicateCheck(DestinationDuplicateStatus.POSSIBLE_DUPLICATE,
                 DestinationDuplicateReason.NAME_AND_NEARBY, destinationId, "경복궁", 70, "같은 이름 · 가까운 위치 (약 70m)");

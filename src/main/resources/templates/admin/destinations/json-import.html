@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-kto-tour-import.css?v=20261008-1">
+  <link rel="stylesheet" href="/css/admin-destination-json-import.css?v=20261008-1">
+  <script src="/js/admin-destination-json-import.js?v=20261008-1" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section" data-json-import>
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">JSON 일괄 등록</h1>
+        <p class="admin-page-description">
+          여행지 JSON을 검증해 미리보기로 확인한 뒤, 고른 여행지만 한 건씩 등록합니다. 이미지는 등록 후 이미지 관리에서 추가합니다.
+        </p>
+      </div>
+      <div class="admin-page-actions">
+        <!-- AI 가 JSON 을 만들 때 참고할 지역·카테고리·편의시설 기준. 읽기 전용이다. -->
+        <a th:href="@{/admin/api/destinations/import-json/master}" class="admin-btn"
+           download="destination-import-master.json">마스터 데이터 내보내기</a>
+        <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
+      </div>
+    </header>
+
+    <!-- 1. 입력: 붙여넣기 또는 파일 선택. 파일 내용은 아래 입력란에 채워 같은 방식으로 보낸다. -->
+    <div class="admin-card admin-json-import-input">
+      <div class="admin-json-import-input-head">
+        <label class="admin-btn is-small admin-json-import-file">
+          JSON 파일 선택
+          <input type="file" accept=".json,application/json" class="admin-visually-hidden" data-json-import-file>
+        </label>
+        <span class="admin-json-import-file-name" data-json-import-file-name>선택한 파일 없음</span>
+        <span class="admin-json-import-limit">최대 30건 · 1MB</span>
+      </div>
+      <textarea class="admin-input admin-json-import-text" rows="12" spellcheck="false" autocomplete="off"
+                aria-label="여행지 JSON" placeholder='{"version": 1, "destinations": [ ... ]}'
+                data-json-import-text></textarea>
+      <div class="admin-json-import-input-actions">
+        <p class="admin-kto-import-status" aria-live="polite" data-json-import-status>
+          JSON을 붙여넣거나 파일을 선택한 뒤 미리보기를 누르세요. 미리보기는 저장하지 않습니다.
+        </p>
+        <button type="button" class="admin-btn is-primary" data-json-import-preview>미리보기</button>
+      </div>
+      <ul class="admin-json-import-issues is-error admin-json-import-file-errors" data-json-import-file-errors hidden></ul>
+    </div>
+
+    <!-- 2. 미리보기와 등록. 여행지마다 따로 등록하므로 한 건의 실패가 나머지를 되돌리지 않는다. -->
+    <section class="admin-card is-table-card admin-json-import-result" data-json-import-result hidden>
+      <dl class="admin-json-import-summary" data-json-import-summary>
+        <div><dt>총</dt><dd data-json-import-summary-count="ALL">0</dd></div>
+        <div class="is-new"><dt>등록 가능</dt><dd data-json-import-summary-count="NOT_REGISTERED">0</dd></div>
+        <div class="is-review"><dt>중복 확인</dt><dd data-json-import-summary-count="POSSIBLE_DUPLICATE">0</dd></div>
+        <div class="is-registered"><dt>등록됨</dt><dd data-json-import-summary-count="REGISTERED">0</dd></div>
+        <div class="is-invalid"><dt>오류</dt><dd data-json-import-summary-count="INVALID">0</dd></div>
+      </dl>
+      <div class="admin-kto-import-toolbar">
+        <div class="admin-kto-import-tabs admin-json-import-tabs" role="group" aria-label="상태 필터">
+          <button type="button" class="admin-filter-tab active" aria-pressed="true" data-json-import-filter="ALL">
+            전체 <span data-json-import-count="ALL">0</span>
+          </button>
+          <button type="button" class="admin-filter-tab" aria-pressed="false" data-json-import-filter="NOT_REGISTERED">
+            등록 가능 <span data-json-import-count="NOT_REGISTERED">0</span>
+          </button>
+          <button type="button" class="admin-filter-tab" aria-pressed="false" data-json-import-filter="POSSIBLE_DUPLICATE">
+            중복 확인 <span data-json-import-count="POSSIBLE_DUPLICATE">0</span>
+          </button>
+          <button type="button" class="admin-filter-tab" aria-pressed="false" data-json-import-filter="REGISTERED">
+            등록됨 <span data-json-import-count="REGISTERED">0</span>
+          </button>
+          <button type="button" class="admin-filter-tab" aria-pressed="false" data-json-import-filter="INVALID">
+            오류 <span data-json-import-count="INVALID">0</span>
+          </button>
+        </div>
+        <div class="admin-kto-import-actions">
+          <span class="admin-kto-import-count" aria-live="polite" data-json-import-selected-count>선택 0건</span>
+          <button type="button" class="admin-btn is-small" data-json-import-select-all>등록 가능 전체선택</button>
+          <button type="button" class="admin-btn is-small" data-json-import-clear>선택해제</button>
+          <button type="button" class="admin-btn is-primary is-small" data-json-import-register disabled>
+            선택한 여행지 등록
+          </button>
+        </div>
+      </div>
+      <p class="admin-kto-import-status" role="status" aria-live="polite" data-json-import-progress>
+        등록 가능한 여행지를 고르세요. '중복 확인' 여행지는 행마다 다른 여행지임을 확인해야 고를 수 있습니다.
+      </p>
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-kto-import-table admin-json-import-table">
+          <thead>
+          <tr>
+            <th scope="col" class="is-check"><span class="admin-visually-hidden">선택</span></th>
+            <th scope="col">여행지</th>
+            <th scope="col">국가·지역</th>
+            <th scope="col">유형</th>
+            <th scope="col">카테고리</th>
+            <th scope="col">상태</th>
+            <th scope="col">검수</th>
+          </tr>
+          </thead>
+          <tbody data-json-import-rows></tbody>
+        </table>
+      </div>
+      <p class="admin-kto-import-status" data-json-import-empty hidden>이 상태의 여행지가 없습니다.</p>
+    </section>
+  </section>
+</th:block>
+</html>

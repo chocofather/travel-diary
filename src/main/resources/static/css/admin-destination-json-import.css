@@ -1,0 +1,196 @@
+/* 여행지 JSON 일괄 등록. 표·배지·상태 문구는 국내·해외 일괄 등록(admin-kto-tour-import.css)을 그대로 쓰고 여기에는 이 화면만의 부분만 둔다. */
+
+.admin-json-import-input {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+}
+
+.admin-json-import-input-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-json-import-file {
+    position: relative;
+    cursor: pointer;
+}
+
+.admin-json-import-file-name {
+    color: #35415a;
+    font-size: 0.78rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.admin-json-import-limit {
+    margin-left: auto;
+    color: #8a93a6;
+    font-size: 0.74rem;
+}
+
+.admin-json-import-text {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.admin-json-import-input-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.admin-json-import-input-actions .admin-kto-import-status {
+    padding: 0;
+}
+
+.admin-json-import-result {
+    margin-top: 14px;
+}
+
+/* 상단 요약: 총 · 등록 가능 · 중복 확인 · 등록됨 · 오류 */
+.admin-json-import-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 14px;
+    border-bottom: 1px solid #e6ebf4;
+}
+
+.admin-json-import-summary div {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #f5f7fb;
+}
+
+.admin-json-import-summary dt {
+    color: #5b6780;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.admin-json-import-summary dd {
+    margin: 2px 0 0;
+    color: #1f2a3d;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.admin-json-import-summary .is-new { background: #eef3ff; }
+.admin-json-import-summary .is-review { background: #fff6e0; }
+.admin-json-import-summary .is-registered { background: #f0f2f6; }
+.admin-json-import-summary .is-invalid { background: #fdeeee; }
+
+.admin-json-import-tabs {
+    flex-wrap: wrap;
+}
+
+.admin-kto-import-badge.is-invalid {
+    color: #b04444;
+    background: #fdecec;
+}
+
+.admin-json-import-table td {
+    vertical-align: top;
+}
+
+.admin-json-import-table tr.is-invalid td {
+    background: #fffafa;
+}
+
+.admin-json-import-name strong {
+    display: block;
+    color: #1f2a3d;
+}
+
+.admin-json-import-state {
+    min-width: 150px;
+}
+
+.admin-json-import-approve {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    color: #9a5b00;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-json-import-outcome {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #e1e6ef;
+    font-size: 0.74rem;
+}
+
+.admin-json-import-outcome.is-success strong { color: #1f6b3a; }
+.admin-json-import-outcome.is-registered strong { color: #6b7487; }
+.admin-json-import-outcome.is-review strong { color: #9a5b00; }
+.admin-json-import-outcome.is-failed strong { color: #b04444; }
+.admin-json-import-outcome.is-running strong { color: #2f5bd0; }
+
+.admin-json-import-review {
+    min-width: 240px;
+    max-width: 420px;
+}
+
+.admin-json-import-issues {
+    display: grid;
+    gap: 3px;
+    margin: 0 0 6px;
+    padding: 0 0 0 14px;
+    font-size: 0.73rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.admin-json-import-issues.is-error { color: #b04444; }
+.admin-json-import-issues.is-warning { color: #805b1c; }
+
+.admin-json-import-file-errors {
+    padding: 10px 14px 10px 28px;
+    border-radius: 8px;
+    background: #fdf2f2;
+}
+
+.admin-json-import-evidence {
+    font-size: 0.73rem;
+    color: #5b6780;
+}
+
+.admin-json-import-evidence summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.admin-json-import-evidence p,
+.admin-json-import-evidence ul {
+    margin: 4px 0 0;
+    padding-left: 14px;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+    .admin-json-import-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-json-import-input-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-json-import-limit {
+        margin-left: 0;
+    }
+}

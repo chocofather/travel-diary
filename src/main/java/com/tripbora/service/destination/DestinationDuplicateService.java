@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -65,6 +66,53 @@ public class DestinationDuplicateService {
             results.add(query == null ? DestinationDuplicateCheck.NOT_REGISTERED : check(query, index, regions));
         }
         return List.copyOf(results);
+    }
+
+    /**
+     * 같은 묶음(JSON 일괄등록 파일 등) 안의 후보끼리 기존 여행지와 똑같은 규칙으로 판별한다.
+     * 각 후보는 자기보다 앞선 후보와만 비교하므로, 같은 곳이 두 번 나오면 뒤쪽만 중복으로 표시된다.
+     *
+     * <p>결과의 {@code destinationId} 는 여행지 번호가 아니라 같은 곳으로 본 앞 후보의 순번(0부터)이고,
+     * {@code destinationName} 은 그 후보의 첫 이름이다. 후보가 null 이면 미등록으로 본다.</p>
+     */
+    public List<DestinationDuplicateCheck> checkWithinBatch(List<DestinationDuplicateQuery> queries) {
+        if (queries == null || queries.isEmpty()) {
+            return List.of();
+        }
+        RegionPaths regions = new RegionPaths();
+        List<DestinationDuplicateIndexRow> earlier = new ArrayList<>();
+        List<DestinationDuplicateCheck> results = new ArrayList<>(queries.size());
+        for (int position = 0; position < queries.size(); position++) {
+            DestinationDuplicateQuery query = queries.get(position);
+            if (query == null) {
+                results.add(DestinationDuplicateCheck.NOT_REGISTERED);
+                continue;
+            }
+            results.add(earlier.isEmpty() ? DestinationDuplicateCheck.NOT_REGISTERED
+                    : check(query, new Index(earlier), regions));
+            earlier.addAll(batchRows((long) position, query));
+        }
+        return List.copyOf(results);
+    }
+
+    /** 묶음 안의 후보 하나를 색인 줄로 바꾼다. 이름마다 한 줄이며, 첫 이름이 표시 이름이 된다. */
+    private static List<DestinationDuplicateIndexRow> batchRows(Long position, DestinationDuplicateQuery query) {
+        List<DestinationDuplicateIndexRow> rows = new ArrayList<>();
+        List<String> names = query.names().isEmpty() ? Collections.singletonList(null) : query.names();
+        for (String name : names) {
+            DestinationDuplicateIndexRow row = new DestinationDuplicateIndexRow();
+            row.setDestinationId(position);
+            row.setRegionId(query.regionId());
+            row.setLatitude(query.latitude());
+            row.setLongitude(query.longitude());
+            row.setSourceType(query.sourceType());
+            row.setExternalContentId(query.externalContentId());
+            row.setGooglePlaceId(query.googlePlaceId());
+            row.setLanguageCode(KOREAN);
+            row.setName(name);
+            rows.add(row);
+        }
+        return rows;
     }
 
     private DestinationDuplicateCheck check(DestinationDuplicateQuery query, Index index, RegionPaths regions) {

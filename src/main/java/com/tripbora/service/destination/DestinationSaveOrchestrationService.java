@@ -33,6 +33,29 @@ public class DestinationSaveOrchestrationService {
     public void registerDestination(DestinationForm form,
                                     Long userId,
                                     List<KtoSelectedPhotoRequest> selectedPhotos) {
+        register(form, userId, selectedPhotos, false);
+    }
+
+    /**
+     * JSON 일괄등록 전용 등록. 등록폼·KTO·Wikidata 와 같은 경로로 저장하되, 외부 ID(QID·contentId)가 없는
+     * 관리자 입력형 여행지도 저장 직전에 공통 중복 판별을 거친다. 사진은 받지 않는다.
+     * 기존 등록 경로({@link #registerDestination})의 동작은 바꾸지 않는다.
+     *
+     * @return 저장된 여행지 번호
+     * @throws DuplicateDestinationException 확정 중복이거나, 확인하지 않은 중복 가능성이 있는 경우
+     */
+    public Long registerImportedDestination(DestinationForm form, Long userId) {
+        return register(form, userId, List.of(), true);
+    }
+
+    /**
+     * @param imported JSON 일괄등록이면 true. 외부 ID가 없어도 중복 판별을 하고, 저장된 여행지 번호를 돌려준다.
+     * @return 저장된 여행지 번호. 기존 관리자 직접 등록(imported=false, 외부 ID 없음)은 null
+     */
+    private Long register(DestinationForm form,
+                          Long userId,
+                          List<KtoSelectedPhotoRequest> selectedPhotos,
+                          boolean imported) {
         List<KtoSelectedPhotoRequest> selections = safeSelections(selectedPhotos);
         validateCreateMainSelection(form, selections);
 
@@ -54,6 +77,9 @@ public class DestinationSaveOrchestrationService {
             rejectDuplicate(form, wikidataRequested
                     ? DestinationService.WIKIDATA_SOURCE_TYPE : DestinationService.KTO_TOUR_API_SOURCE_TYPE,
                     wikidataRequested ? form.getWikidataQid().strip().toUpperCase(Locale.ROOT) : ktoContentId);
+        } else if (imported) {
+            // JSON 일괄등록은 외부 ID가 없어도 이름·위치·Place ID 로 같은 판별을 한다.
+            rejectDuplicate(form, null, null);
         }
         String commonsSelectionJson = form.getCommonsSelectedPhotosJson();
         List<CommonsPhotoImportService.Selection> commonsSelections =
@@ -75,19 +101,20 @@ public class DestinationSaveOrchestrationService {
         try {
             if (wikidataRequested) {
                 long persistStart = System.nanoTime();
-                persistenceService.registerWikidataDestination(form, userId, prepared.sources(), commonsPhotos);
+                Long destinationId = persistenceService.registerWikidataDestination(
+                        form, userId, prepared.sources(), commonsPhotos);
                 log.info("Wikidata 여행지 등록: qid={}, 재검증·사진 준비 {}ms, DB 저장 {}ms, Wikipedia 출처 {}건, Commons 사진 {}장",
                         form.getWikidataQid(), preparationMillis, (System.nanoTime() - persistStart) / 1_000_000,
                         prepared.sources().size(), commonsPhotos.size());
-            } else {
-                // TourAPI 후보를 고른 등록은 contentId 를 남겨, 이후 TourAPI 목록에서 같은 곳을 등록됨으로 본다.
-                // contentId 가 없으면 지금처럼 관리자 직접 등록(ADMIN)이다.
-                if (ktoContentId == null) {
-                    persistenceService.registerDestination(form, userId, preparedPhotos);
-                } else {
-                    persistenceService.registerDestination(form, userId, ktoContentId, preparedPhotos);
-                }
+                return destinationId;
             }
+            // TourAPI 후보를 고른 등록은 contentId 를 남겨, 이후 TourAPI 목록에서 같은 곳을 등록됨으로 본다.
+            // contentId 가 없으면 지금처럼 관리자 직접 등록(ADMIN)이다.
+            if (ktoContentId == null && !imported) {
+                persistenceService.registerDestination(form, userId, preparedPhotos);
+                return null;
+            }
+            return persistenceService.registerDestination(form, userId, ktoContentId, preparedPhotos);
         } catch (RuntimeException exception) {
             ktoPhotoImportService.cleanupPreparedPhotos(preparedPhotos);
             if (!commonsPhotos.isEmpty()) commonsPhotoImportService.cleanup(commonsPhotos);

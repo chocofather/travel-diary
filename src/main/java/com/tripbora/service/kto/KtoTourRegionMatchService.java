@@ -38,6 +38,14 @@ public class KtoTourRegionMatchService {
 
     private final CountryCategoryService countryCategoryService;
 
+    /**
+     * 시·도 정식 명칭("서울특별시")을 지역 데이터의 이름("서울")으로 바꾼다. 별칭이 아니면 그대로 돌려준다.
+     * 주소 매칭과 JSON 일괄등록의 국내 지역 매핑이 같은 별칭 표를 쓴다.
+     */
+    public static String provinceName(String name) {
+        return name == null ? null : PROVINCE_ALIASES.getOrDefault(name, name);
+    }
+
     public KtoTourRegionMatchResponse match(String address) {
         List<String> tokens = addressTokens(address);
         if (tokens.isEmpty()) {

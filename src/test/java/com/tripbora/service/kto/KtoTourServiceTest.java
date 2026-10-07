@@ -143,6 +143,31 @@ class KtoTourServiceTest {
         server.verify();
     }
 
+    /** JSON 일괄등록의 contentId 확인은 공통정보 한 번만 부르고, 없는 contentId 는 empty 로 돌려준다. */
+    @Test
+    void findTitleCallsOnlyDetailCommonAndTellsMissingContent() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+        String found = """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{"item":[{
+                  "contentid":"126508","contenttypeid":"12","title":"창덕궁<br>"
+                }]}}}}
+                """;
+        String missing = """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":""}}}
+                """;
+        server.expect(request -> assertDetailRequest(request.getURI(), "/detailCommon2", false))
+                .andRespond(withSuccess(found, MediaType.APPLICATION_JSON));
+        server.expect(request -> assertDetailRequest(request.getURI(), "/detailCommon2", false))
+                .andRespond(withSuccess(missing, MediaType.APPLICATION_JSON));
+
+        assertThat(service.findTitle("126508")).contains("창덕궁");
+        assertThat(service.findTitle("126508")).isEmpty();
+        // detailIntro2 는 부르지 않는다.
+        server.verify();
+    }
+
     @Test
     void mergesCommonAndAttractionIntroAndSanitizesHtml() {
         RestClient.Builder builder = RestClient.builder();

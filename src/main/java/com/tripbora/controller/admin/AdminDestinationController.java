@@ -107,6 +107,12 @@ public class AdminDestinationController {
         return "admin/destinations/wikidata-import";
     }
 
+    /** JSON 일괄 등록 화면. 미리보기·등록·마스터 데이터 내보내기는 /admin/api/destinations/import-json 이 맡는다. */
+    @GetMapping("/json-import")
+    public String showJsonImportPage() {
+        return "admin/destinations/json-import";
+    }
+
     /** 등록폼의 유형·시즌 선택지와 같은 순서·이름. */
     private static final Map<String, String> DESTINATION_TYPE_LABELS = orderedLabels(
             "ATTRACTION", "관광지", "ACCOMMODATION", "숙소", "RESTAURANTS", "음식점",

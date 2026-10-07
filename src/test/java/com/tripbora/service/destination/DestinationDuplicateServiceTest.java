@@ -200,6 +200,33 @@ class DestinationDuplicateServiceTest {
         verify(mapper, times(1)).findDuplicateIndex();
     }
 
+    /**
+     * JSON 일괄등록 파일 안의 후보끼리도 같은 규칙으로 본다. 앞 후보와만 비교하고, 결과의 번호는 앞 후보의 순번이다.
+     * 기존 DB 색인은 읽지 않는다.
+     */
+    @Test
+    void candidatesInOneBatchAreComparedWithEarlierOnesByTheSameRules() {
+        List<DestinationDuplicateCheck> checks = service.checkWithinBatch(List.of(
+                tourApi("126508", "경복궁", 11L, "37.5796", "126.9770"),
+                tourApi("126508", "다른 이름", 21L, null, null),
+                new DestinationDuplicateQuery(null, null, null, List.of("경복궁 (景福宮)"), 11L,
+                        new BigDecimal("37.5790"), new BigDecimal("126.9768")),
+                new DestinationDuplicateQuery(null, null, null, List.of("경복궁"), 21L,
+                        new BigDecimal("35.1631"), new BigDecimal("129.1635"))));
+
+        assertThat(checks).extracting(DestinationDuplicateCheck::status)
+                .containsExactly(NOT_REGISTERED, REGISTERED, POSSIBLE_DUPLICATE, NOT_REGISTERED);
+        // 같은 contentId: 0번 후보와 같은 곳
+        assertThat(checks.get(1).destinationId()).isEqualTo(0L);
+        assertThat(checks.get(1).reason()).isEqualTo(DestinationDuplicateReason.EXTERNAL_CONTENT_ID);
+        // 같은 이름 · 가까운 위치: 0번 후보, 표시 이름은 그 후보의 첫 이름
+        assertThat(checks.get(2).destinationId()).isEqualTo(0L);
+        assertThat(checks.get(2).destinationName()).isEqualTo("경복궁");
+        assertThat(checks.get(2).reason()).isEqualTo(DestinationDuplicateReason.NAME_AND_NEARBY);
+        // 이름이 같아도 멀리 떨어진 곳은 다른 곳이다.
+        verify(mapper, org.mockito.Mockito.never()).findDuplicateIndex();
+    }
+
     @Test
     void namesAreNormalizedOnlyForSpacingCaseBracketsAndSymbols() {
         assertThat(DestinationNameNormalizer.normalize(" 경복궁 (景福宮) ")).isEqualTo("경복궁");
