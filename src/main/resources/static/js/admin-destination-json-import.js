@@ -166,7 +166,7 @@
         const resultLine = element('div', `admin-json-import-outcome ${info.className}`);
         resultLine.append(element('strong', null, info.label));
         if (row.result.status === 'SUCCESS' && row.result.destinationId != null) {
-          resultLine.append(existingLink(row.result.destinationId, `새 여행지 #${row.result.destinationId} 열기`));
+          resultLine.append(existingLink(row.result.destinationId, '등록한 여행지 수정'));
         } else if (row.result.status === 'REGISTERED' && row.result.destinationId != null) {
           resultLine.append(existingLink(row.result.destinationId));
         } else if (row.result.status === 'POSSIBLE_DUPLICATE' && row.result.duplicate) {

@@ -296,6 +296,24 @@ body {
     opacity: 1;
 }
 
+/* 주소는 있지만 받지 못한 사진: 깨진 아이콘·대체 문구 없이 빈 자리로 두거나 영역째 숨긴다. */
+.carousel-wrapper[hidden],
+.carousel.no-image[hidden] {
+    display: none;
+}
+
+.carousel .slide.is-image-error {
+    background: #f3f4f6;
+}
+
+.carousel .slide.is-image-error img {
+    visibility: hidden;
+}
+
+.carousel .slide.is-image-error::after {
+    content: none;
+}
+
 /* 확대 모달 */
 .image-modal {
     padding: 0;
@@ -338,6 +356,59 @@ body {
     height: auto;      /* 원본 비율 유지 · 잘림 없음 */
     border-radius: 8px;
     background: #111;
+}
+
+/* 사진과 출처 캡션을 함께 가운데 둔다. */
+.image-modal .image-modal-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 92vw;
+    margin: 0;
+}
+
+/* 캡션이 보일 때만 그 높이만큼 사진을 줄여 화면 밖으로 밀려나지 않게 한다. */
+.image-modal .image-modal-figure:has(.image-modal-caption:not([hidden])) .image-modal-img {
+    max-height: calc(92vh - 48px);
+}
+
+/* 사진 감상을 방해하지 않는 작은 출처 캡션 */
+.image-modal .image-modal-caption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px 6px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 4px 10px;
+    color: rgba(255, 255, 255, 0.82);
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.image-modal .image-modal-caption[hidden] {
+    display: none;
+}
+
+.image-modal .image-modal-caption a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.image-modal .image-modal-caption a:hover,
+.image-modal .image-modal-caption a:focus-visible {
+    color: #fff;
+}
+
+/* 받지 못한 사진은 깨진 아이콘·대체 문구 대신 비워 둔다. */
+.image-modal .image-modal-img.is-error {
+    visibility: hidden;
 }
 
 /* 좌/우 이동 버튼 */
@@ -407,9 +478,18 @@ body {
 }
 
 @media (max-width: 600px) {
-    .image-modal .image-modal-img {
+    .image-modal .image-modal-img,
+    .image-modal .image-modal-figure:has(.image-modal-caption:not([hidden])) .image-modal-img {
         max-width: 94vw;
         max-height: 78vh;
+    }
+
+    .image-modal .image-modal-figure {
+        max-width: 94vw;
+    }
+
+    .image-modal .image-modal-caption {
+        font-size: 11px;
     }
 
     .image-modal .image-modal-close {

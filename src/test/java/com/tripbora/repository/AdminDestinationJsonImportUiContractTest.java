@@ -44,6 +44,9 @@ class AdminDestinationJsonImportUiContractTest {
                 .contains("if (row.preview.status === 'POSSIBLE_DUPLICATE') return row.approved;")
                 .contains("['SUCCESS', 'REGISTERED', 'RUNNING'].includes(row.result.status)")
                 .contains("/admin/destinations/edit/")
+                // 성공 행 링크는 관리자 수정폼으로 가므로 그 목적이 드러나는 문구를 쓴다.
+                .contains("existingLink(row.result.destinationId, '등록한 여행지 수정')")
+                .doesNotContain("새 여행지")
                 .contains("MAX_BYTES = 1048576");
     }
 

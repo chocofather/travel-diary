@@ -4,7 +4,7 @@
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
-    <link rel="stylesheet" href="/css/detail.css?v=20260927-2">
+    <link rel="stylesheet" href="/css/detail.css?v=20261008-1">
     <link rel="stylesheet" href="/css/comment.css">
     <link rel="stylesheet" href="/css/content-comment.css">
     <link rel="stylesheet" href="/css/destination-detail-mobile.css?v=20261003-1">
@@ -176,7 +176,9 @@
         </p>
     </div>
 
-    <div class="carousel no-image" th:if="${images == null or images.isEmpty()}">
+    <!-- 대표 이미지 주소가 없으면 이미지 영역을 아예 만들지 않아 제목·소개가 바로 이어진다. -->
+    <div class="carousel no-image"
+         th:if="${(images == null or images.isEmpty()) and !#strings.isEmpty(destination.thumbnailPath)}">
         <img th:src="@{${destination.thumbnailPath}}"
              th:alt="#{destination.detail.gallery.coverAlt(${destination.name})}"/>
     </div>
@@ -188,7 +190,15 @@
                 th:aria-label="#{destination.detail.gallery.close}">&times;</button>
         <button type="button" class="image-modal-nav prev"
                 th:aria-label="#{destination.detail.gallery.previous}">&#10094;</button>
-        <img class="image-modal-img" src="" alt="" />
+        <figure class="image-modal-figure">
+            <img class="image-modal-img" src="" alt="" />
+            <!-- 지금 보이는 사진의 출처. 캐러셀 슬라이드의 data-* 값(저장된 출처 정보)만 쓴다. -->
+            <figcaption id="destination-image-modal-caption" class="image-modal-caption" hidden
+                        th:data-source-label="#{destination.detail.gallery.source}"
+                        th:data-photographer-label="#{destination.detail.gallery.photographer}"
+                        th:data-credit-label="#{destination.detail.gallery.credit}"
+                        th:data-source-link-label="#{destination.detail.gallery.sourceLink}"></figcaption>
+        </figure>
         <button type="button" class="image-modal-nav next"
                 th:aria-label="#{destination.detail.gallery.next}">&#10095;</button>
     </dialog>
@@ -1362,7 +1372,7 @@
 
     <!-- 자체 JS -->
     <script src="/js/detail-carousel.js" defer></script>
-    <script src="/js/destination-image-modal.js?v=20261001-2" defer></script>
+    <script src="/js/destination-image-modal.js?v=20261008-1" defer></script>
     <script src="/js/destination-description-mobile.js?v=20261001-1" defer></script>
     <script src="/js/map-init.js" defer></script>
     <script src="/js/bookmark.js" defer></script>

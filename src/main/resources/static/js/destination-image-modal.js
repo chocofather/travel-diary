@@ -5,9 +5,12 @@
  * - 리스너는 로드 즉시 document 에 캡처 단계로 걸고, 모달 요소는 클릭 시점에 찾는다.
  * - 열 때는 항상 showModal() 로 top layer 에 올린다.
  * - 상세 페이지의 이미지 목록을 그대로 써서 이전/다음 이동을 지원한다.
+ * - 모달 아래에 지금 보이는 사진의 출처를 캐러셀 슬라이드의 data-* 값으로 보여준다.
+ * - 주소는 있지만 받지 못한 사진은 깨진 아이콘·대체 문구 대신 빈 자리로 두거나 영역을 숨긴다.
  */
 (function () {
     const MODAL_ID = 'destination-image-modal';
+    const CAPTION_ID = 'destination-image-modal-caption';
     const IMAGE_SELECTOR = '.carousel .slide img, .carousel.no-image img';
 
     // 현재 모달이 보여주는 이미지 목록과 위치
@@ -36,7 +39,9 @@
         const source = images[currentIndex];
         if (!modalImage || !source) return;
 
+        modalImage.classList.remove('is-error');
         modalImage.src = source.currentSrc || source.src;
+        renderCaption(source);
         const messages = document.getElementById('destination-detail-i18n')?.dataset;
         modalImage.alt = source.alt || messages?.galleryFallbackAlt || '';
         if (mobile.matches) modalImage.setAttribute('draggable', 'false');
@@ -46,6 +51,63 @@
         document.dispatchEvent(new CustomEvent('destination-gallery-change', {
             detail: {index: currentIndex}
         }));
+    }
+
+    function captionNode(tag, text) {
+        const node = document.createElement(tag);
+        node.textContent = text;
+        return node;
+    }
+
+    function captionLink(text, href, rel) {
+        const link = captionNode('a', text);
+        link.href = href;
+        link.target = '_blank';
+        link.rel = rel;
+        return link;
+    }
+
+    /**
+     * 지금 보이는 사진의 출처. 캐러셀 아래 출처와 같은 값(제공처 · 라이선스 · 촬영 · 크레딧 · 출처 링크)을
+     * 있는 것만 이어 붙인다. 출처 정보가 없는 사진은 캡션을 숨긴다.
+     */
+    function renderCaption(source) {
+        const caption = document.getElementById(CAPTION_ID);
+        if (!caption) return;
+        const data = source.closest('.slide')?.dataset || {};
+        const labels = caption.dataset;
+
+        if (!data.sourceName && !data.licenseLabel && !data.photographer && !data.sourceUrl) {
+            caption.replaceChildren();
+            caption.hidden = true;
+            return;
+        }
+        const parts = [];
+        if (data.sourceName) parts.push(captionNode('span', data.sourceName));
+        if (data.licenseLabel) {
+            parts.push(data.licenseUrl
+                ? captionLink(data.licenseLabel, data.licenseUrl, 'noopener noreferrer license')
+                : captionNode('span', data.licenseLabel));
+        }
+        if (data.photographer) parts.push(captionNode('span', `${labels.photographerLabel} ${data.photographer}`));
+        if (data.credit) parts.push(captionNode('span', `${labels.creditLabel} ${data.credit}`));
+
+        const nodes = [captionNode('span', labels.sourceLabel)];
+        parts.forEach((part, index) => {
+            if (index > 0) {
+                const separator = captionNode('span', '·');
+                separator.setAttribute('aria-hidden', 'true');
+                nodes.push(separator);
+            }
+            nodes.push(part);
+        });
+        if (data.sourceUrl) {
+            const link = captionLink('↗', data.sourceUrl, 'noopener noreferrer');
+            link.setAttribute('aria-label', labels.sourceLinkLabel || '');
+            nodes.push(link);
+        }
+        caption.replaceChildren(...nodes);
+        caption.hidden = false;
     }
 
     /** 순환 이동. 첫 장에서 이전 -> 마지막, 마지막에서 다음 -> 첫 장. */
@@ -233,4 +295,39 @@
             if (!event.target.open) finishClose(event.target);
         }
     }, true);
+
+    /**
+     * 주소는 있지만 받지 못한 사진. 대표 이미지 한 장이면 영역을 숨기고, 슬라이드는 빈 자리로 두되
+     * 모든 슬라이드가 실패하면 캐러셀째 숨긴다(인덱스가 어긋나지 않게 슬라이드는 지우지 않는다).
+     */
+    function hideBrokenImage(image) {
+        const cover = image.closest('.carousel.no-image');
+        if (cover) {
+            cover.hidden = true;
+            return;
+        }
+        const slide = image.closest('.slide');
+        if (!slide) return;
+        slide.classList.add('is-image-error');
+        const wrapper = slide.closest('.carousel-wrapper');
+        if (wrapper && !wrapper.querySelector('.slide:not(.is-image-error)')) wrapper.hidden = true;
+    }
+
+    // error 는 버블링되지 않으므로 캡처 단계에서 받는다.
+    document.addEventListener('error', (event) => {
+        const target = event.target;
+        if (!target || typeof target.matches !== 'function') return;
+        if (target.matches('.image-modal-img')) {
+            if (target.getAttribute('src')) target.classList.add('is-error');
+            return;
+        }
+        if (target.matches(IMAGE_SELECTOR)) hideBrokenImage(target);
+    }, true);
+
+    // 스크립트보다 먼저 실패한 사진. 지연 로딩 사진은 아직 받기 전일 수 있어 위 리스너에 맡긴다.
+    collectImages().forEach((image) => {
+        if (image.complete && image.naturalWidth === 0 && image.getAttribute('loading') !== 'lazy') {
+            hideBrokenImage(image);
+        }
+    });
 })();
