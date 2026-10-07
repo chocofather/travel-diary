@@ -48,6 +48,7 @@ src/main/resources/application-local.yml
 *.md
 !README.md
 !docs/licenses/diary-pdf-third-party.md
+!docs/destination-registration.md
 
 ### Claude Code local config ###
 .claude/
@@ -69,3 +70,5 @@ CLAUDE.md
 *.sql
 !docs/db/wikimedia_destination_source_proposal.sql
 docs/course-comment-images-analysis.txt
+
+destination-import-master*.json

@@ -119,6 +119,8 @@ public class DestinationImportService {
         }
         DestinationImportMasterResolver.MasterData master = resolver.load();
         List<Evaluation> evaluations = file.items().stream().map(item -> evaluate(item, master)).toList();
+        validator.duplicateKeys(file.items())
+                .forEach((position, issue) -> evaluations.get(position).errors.add(issue));
 
         markFileDuplicates(evaluations);
 

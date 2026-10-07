@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -90,6 +91,27 @@ public class DestinationImportValidator {
         validateInfo(item, path + ".info", errors, factFields);
         validateEvidence(item, path, errors, warnings, factFields);
         return new Result(List.copyOf(errors), List.copyOf(warnings), List.copyOf(factFields));
+    }
+
+    /**
+     * 파일 안 key 중복. 같은 key 가 다시 나오면 뒤 행마다 오류를 돌려준다. key 가 없는 행은 비교하지 않는다.
+     *
+     * @return 행 위치 → 오류. 중복이 아닌 행은 들어 있지 않다
+     */
+    public Map<Integer, DestinationImportIssue> duplicateKeys(List<DestinationImportParser.ParsedItem> items) {
+        Map<String, String> firstPaths = new HashMap<>();
+        Map<Integer, DestinationImportIssue> duplicates = new HashMap<>();
+        for (int position = 0; position < items.size(); position++) {
+            DestinationImportParser.ParsedItem parsed = items.get(position);
+            String key = parsed.item() == null ? null : parsed.item().key();
+            if (key == null) continue;
+            String firstPath = firstPaths.putIfAbsent(key, parsed.path());
+            if (firstPath != null) {
+                duplicates.put(position, issue(parsed.path() + ".key", "같은 key '" + key + "'가 " + firstPath
+                        + "에도 있습니다. key 는 파일 안에서 한 번만 쓸 수 있습니다."));
+            }
+        }
+        return duplicates;
     }
 
     private void validateTranslations(DestinationImportItem item, String path, List<DestinationImportIssue> errors) {

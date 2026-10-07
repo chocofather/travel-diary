@@ -335,6 +335,17 @@ class DestinationImportServiceTest {
     }
 
     @Test
+    void aRepeatedKeyMakesTheLaterRowInvalid() throws Exception {
+        DestinationImportPreview preview = service.preview(file(List.of(
+                palace("same", "경복궁"), tower("same", "후쿠오카 타워"))));
+
+        assertThat(preview.rows()).extracting(DestinationImportPreview.Row::status).containsExactly(
+                DestinationImportRowStatus.NOT_REGISTERED, DestinationImportRowStatus.INVALID);
+        assertThat(errors(preview, 1)).contains("destinations[1].key: 같은 key 'same'가 destinations[0]에도 있습니다. "
+                + "key 는 파일 안에서 한 번만 쓸 수 있습니다.");
+    }
+
+    @Test
     void tourApiContentIdMustExistAndANameMismatchIsWarned() throws Exception {
         ObjectNode found = contentRow("a", "경복궁", "1001");
         ObjectNode renamed = contentRow("b", "창덕궁", "1002");
