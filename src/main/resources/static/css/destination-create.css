@@ -903,6 +903,16 @@
     gap: 14px;
 }
 
+.admin-kto-photo-new-batch {
+    grid-column: 1 / -1;
+    margin: 4px 0 -4px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e6f0;
+    color: #4e66bd;
+    font-size: 0.8rem;
+    font-weight: 650;
+}
+
 .admin-kto-photo-card {
     min-width: 0;
     overflow: hidden;

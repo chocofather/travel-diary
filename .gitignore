@@ -73,3 +73,4 @@ CLAUDE.md
 docs/course-comment-images-analysis.txt
 
 destination-import-master*.json
+/local-data/destination-imports/

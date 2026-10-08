@@ -34,6 +34,18 @@ function ktoPhotoSelectionKey(item) {
     return JSON.stringify([externalContentId, imageUrl]);
 }
 
+// 이미 불러온 사진은 자리를 그대로 두고, 새 결과 중 겹치는 사진만 뺀다. 새 결과의 순서는 유지한다
+function excludeLoadedKtoPhotos(items, loadedItems) {
+    const seenKeys = new Set(loadedItems.map(ktoPhotoSelectionKey).filter(key => key !== null));
+    return items.filter(item => {
+        const key = ktoPhotoSelectionKey(item);
+        if (key === null) return true;
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
+        return true;
+    });
+}
+
 function createKtoPhotoSelectionState() {
     const selectedItems = new Map();
     let mainSelectionKey = null;
@@ -131,8 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
         let currentPage = 0;
         let totalCount = 0;
         let displayedCount = 0;
+        let fetchedCount = 0;
         let loading = false;
         let loadedItems = [];
+        let latestBatchStartIndex = -1;
         const selectionState = createKtoPhotoSelectionState();
 
         function destinationName() {
@@ -351,11 +365,29 @@ document.addEventListener("DOMContentLoaded", () => {
             return selectedPhoto;
         }
 
+        function createNewBatchMarker() {
+            const marker = textElement("p", "admin-kto-photo-new-batch", "새로 불러온 이미지");
+            marker.setAttribute("data-kto-photo-new-batch", "");
+            return marker;
+        }
+
+        // loadedItems 순서가 곧 화면 순서다. 선택 상태가 바뀌어 다시 그려도 위치는 바뀌지 않는다
         function renderLoadedPhotos() {
             const fragment = document.createDocumentFragment();
-            stablySortKtoPhotos(loadedItems, currentKeyword)
-                .forEach(item => fragment.append(createCard(item)));
+            loadedItems.forEach((item, index) => {
+                if (index === latestBatchStartIndex) fragment.append(createNewBatchMarker());
+                fragment.append(createCard(item));
+            });
             results.replaceChildren(fragment);
+        }
+
+        // 더보기 결과는 기존 카드를 다시 그리지 않고 목록 맨 뒤에만 붙인다
+        function appendLoadedPhotos(items) {
+            results.querySelector("[data-kto-photo-new-batch]")?.remove();
+            const fragment = document.createDocumentFragment();
+            fragment.append(createNewBatchMarker());
+            items.forEach(item => fragment.append(createCard(item)));
+            results.append(fragment);
         }
 
         function renderSelectedPhotos() {
@@ -375,7 +407,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         function updateMoreButton(receivedCount) {
-            moreButton.hidden = receivedCount === 0 || displayedCount >= totalCount;
+            // 중복 제외로 화면 장수가 줄어도 서버에서 받은 장수 기준으로 다음 페이지 여부를 판단한다
+            moreButton.hidden = receivedCount === 0 || fetchedCount >= totalCount;
         }
 
         async function loadPhotos(append) {
@@ -398,7 +431,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentPage = 0;
                 totalCount = 0;
                 displayedCount = 0;
+                fetchedCount = 0;
                 loadedItems = [];
+                latestBatchStartIndex = -1;
                 results.replaceChildren();
                 moreButton.hidden = true;
             }
@@ -430,9 +465,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 currentPage = requestPage;
                 totalCount = Number.isFinite(Number(payload.totalCount)) ? Number(payload.totalCount) : 0;
-                loadedItems.push(...payload.items);
+                fetchedCount += payload.items.length;
+                const newItems = excludeLoadedKtoPhotos(payload.items, loadedItems);
+                if (!append) {
+                    // 최초 조회 결과만 검색어 관련도로 정렬하고, 이후에는 이 순서를 고정한다
+                    loadedItems = stablySortKtoPhotos(newItems, currentKeyword);
+                    renderLoadedPhotos();
+                } else if (newItems.length > 0) {
+                    latestBatchStartIndex = loadedItems.length;
+                    loadedItems.push(...newItems);
+                    appendLoadedPhotos(newItems);
+                }
                 displayedCount = loadedItems.length;
-                renderLoadedPhotos();
 
                 if (displayedCount === 0) {
                     setStatus("검색 결과가 없습니다.", "empty");

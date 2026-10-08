@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
-    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261003-1";
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261008-1";
 
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
@@ -76,7 +76,7 @@ class AdminKtoPhotoSearchUiContractTest {
     }
 
     @Test
-    void sharedScriptStablyRanksAllLoadedPhotosByTheCurrentKeyword() throws IOException {
+    void sharedScriptRanksOnlyTheFirstPageAndAppendsMorePagesWithoutReordering() throws IOException {
         String script = resource("/static/js/admin-kto-photo-search.js");
 
         assertThat(script)
@@ -85,11 +85,18 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("title.includes(normalizedKeyword)")
                 .contains("searchKeyword.includes(normalizedKeyword)")
                 .contains("function stablySortKtoPhotos")
-                .contains("originalIndex")
                 .contains("left.rank - right.rank || left.originalIndex - right.originalIndex")
-                .contains("loadedItems.push(...payload.items)")
-                .contains("stablySortKtoPhotos(loadedItems, currentKeyword)")
-                .doesNotContain("results.append(createCard(item))");
+                // 최초 조회 결과만 정렬하고, 더보기 결과는 받은 순서 그대로 맨 뒤에 붙인다
+                .contains("loadedItems = stablySortKtoPhotos(newItems, currentKeyword)")
+                .contains("loadedItems.push(...newItems)")
+                .contains("appendLoadedPhotos(newItems)")
+                .contains("results.append(fragment)")
+                // 중복은 새 결과에서만 빼고 기존 항목 자리는 건드리지 않는다
+                .contains("function excludeLoadedKtoPhotos")
+                .contains("excludeLoadedKtoPhotos(payload.items, loadedItems)")
+                .doesNotContain(
+                        "stablySortKtoPhotos(loadedItems, currentKeyword)",
+                        "loadedItems.push(...payload.items)");
     }
 
     @Test
