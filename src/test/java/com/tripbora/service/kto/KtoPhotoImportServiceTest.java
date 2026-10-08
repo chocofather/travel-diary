@@ -84,6 +84,27 @@ class KtoPhotoImportServiceTest {
         verify(downloadService).download(type3Url);
     }
 
+    /** 관광사진 API 사진과 /cms/resource_photo/ TourAPI 사진을 함께 골라도 모두 준비된다. */
+    @Test
+    void mixedSelectionWithTourApiResourcePhotoIsPrepared() {
+        String resourcePhotoUrl = "https://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg";
+        when(ktoTourService.getImportableImages("3414579")).thenReturn(List.of(
+                new KtoTourImageCandidate("3414579", "축제", resourcePhotoUrl, "Type1", false)));
+        when(downloadService.download(REQUEST_URL_A)).thenReturn(downloaded(
+                "/uploads/destinations/11111111-1111-4111-8111-111111111111.jpg", REQUEST_URL_A));
+        when(downloadService.download(resourcePhotoUrl)).thenReturn(downloaded(
+                "/uploads/destinations/22222222-2222-4222-8222-222222222222.jpg", resourcePhotoUrl));
+
+        List<PreparedKtoPhoto> prepared = importService.preparePhotos(List.of(
+                request("123", REQUEST_URL_A, "경복궁", null, true),
+                request("3414579", resourcePhotoUrl, "축제", null, false)));
+
+        assertThat(prepared).extracting(PreparedKtoPhoto::sourceImageUrl, PreparedKtoPhoto::licenseType)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(REQUEST_URL_A, "KOGL_TYPE_1"),
+                        org.assertj.core.groups.Tuple.tuple(resourcePhotoUrl, "KOGL_TYPE_1"));
+    }
+
     @Test
     void tourApiSelectionWithoutAllowedLicenseOrUnknownImageIsNotSaved() {
         String type2Url = "https://tong.visitkorea.or.kr/cms/resource/20/type2_image2_1.jpg";
@@ -172,9 +193,52 @@ class KtoPhotoImportServiceTest {
         when(downloadService.download(REQUEST_URL_B)).thenThrow(failure);
 
         assertThatThrownBy(() -> importService.preparePhotos(List.of(first, second)))
-                .isSameAs(failure);
+                .isInstanceOf(KtoPhotoItemFailureException.class)
+                .hasCause(failure);
 
         verify(downloadService).deleteDownloadedPhoto(firstDownload.localImageUrl());
+    }
+
+    /** 여러 장 중 실패한 사진의 순번·식별값·단계·사유를 알 수 있어야 한다. */
+    @Test
+    void failureIdentifiesTheFailedPhotoStageAndReason() {
+        KtoSelectedPhotoRequest first = request("content-a", REQUEST_URL_A, "경복궁", null, false);
+        KtoSelectedPhotoRequest second = request("content-b", REQUEST_URL_B, "경복궁 야경", null, true);
+        when(downloadService.download(REQUEST_URL_A)).thenReturn(downloaded(
+                "/uploads/destinations/11111111-1111-4111-8111-111111111111.jpg", REQUEST_URL_A));
+        when(downloadService.download(REQUEST_URL_B))
+                .thenThrow(new KtoPhotoDownloadException("지원하지 않는 Content-Type(image/gif)"));
+
+        assertThatThrownBy(() -> importService.preparePhotos(List.of(first, second)))
+                .isInstanceOfSatisfying(KtoPhotoItemFailureException.class, failure -> {
+                    assertThat(failure.position()).isEqualTo(2);
+                    assertThat(failure.externalContentId()).isEqualTo("content-b");
+                    assertThat(failure.imageUrl()).isEqualTo(REQUEST_URL_B);
+                    assertThat(failure.title()).isEqualTo("경복궁 야경");
+                    assertThat(failure.stage()).isEqualTo(KtoPhotoItemFailureException.Stage.DOWNLOAD);
+                    assertThat(failure.reason()).isEqualTo("지원하지 않는 Content-Type(image/gif)");
+                    assertThat(failure.causeType()).isEqualTo("KtoPhotoDownloadException");
+                });
+    }
+
+    @Test
+    void urlValidationAndLicenseFailuresAreReportedWithTheirOwnStage() {
+        when(downloadService.download(REQUEST_URL_A)).thenThrow(new InvalidKtoPhotoUrlException());
+
+        assertThatThrownBy(() -> importService.preparePhotos(List.of(
+                request("content-a", REQUEST_URL_A, "경복궁", null, false))))
+                .isInstanceOfSatisfying(KtoPhotoItemFailureException.class, failure ->
+                        assertThat(failure.stage()).isEqualTo(KtoPhotoItemFailureException.Stage.VALIDATION));
+
+        String tourUrl = "https://tong.visitkorea.or.kr/cms/resource/99/other.jpg";
+        when(ktoTourService.getImportableImages("200")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> importService.preparePhotos(List.of(
+                request("200", tourUrl, "축제", null, false))))
+                .isInstanceOfSatisfying(KtoPhotoItemFailureException.class, failure -> {
+                    assertThat(failure.stage()).isEqualTo(KtoPhotoItemFailureException.Stage.LICENSE);
+                    assertThat(failure.reason()).isEqualTo("TourAPI 재조회 결과에서 같은 이미지를 찾지 못함");
+                });
     }
 
     @Test
@@ -191,7 +255,8 @@ class KtoPhotoImportServiceTest {
                 .when(downloadService).deleteDownloadedPhoto(firstDownload.localImageUrl());
 
         assertThatThrownBy(() -> importService.preparePhotos(List.of(first, second)))
-                .isSameAs(originalFailure);
+                .isInstanceOf(KtoPhotoItemFailureException.class)
+                .hasCause(originalFailure);
     }
 
     @Test

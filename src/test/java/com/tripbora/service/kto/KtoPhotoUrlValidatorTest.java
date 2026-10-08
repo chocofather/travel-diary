@@ -34,6 +34,56 @@ class KtoPhotoUrlValidatorTest {
         assertThat(validator.validate(FESTIVAL_RESOURCE_URL)).isEqualTo(URI.create(FESTIVAL_RESOURCE_URL));
     }
 
+    /** TourAPI 검색 결과로 실제 내려온 원본 사진 주소. 다중 등록에서 이 주소만 막혀 전체가 실패했다. */
+    @Test
+    void acceptsHttpsTourApiResourcePhotoImages() throws Exception {
+        KtoPhotoUrlValidator validator = publicAddressValidator();
+        String resourcePhotoUrl = "https://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg";
+
+        assertThat(validator.validate(resourcePhotoUrl)).isEqualTo(URI.create(resourcePhotoUrl));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            // 새 경로는 HTTPS만 허용한다
+            "http://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource_photos/79/3414579_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource_photo%2f79/3414579_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource_photo/../../etc/passwd",
+            "https://tong.visitkorea.or.kr/cms/resource_photo/%2e%2e/cms2/website/75/1002175.jpg",
+            "https://example.com/cms/resource_photo/79/3414579_image2_1.jpg",
+            "https://tong.visitkorea.or.kr.attacker.com/cms/resource_photo/79/3414579_image2_1.jpg",
+            "https://localhost/cms/resource_photo/79/3414579_image2_1.jpg",
+            "https://tong.visitkorea.or.kr:8443/cms/resource_photo/79/3414579_image2_1.jpg"
+    })
+    void rejectsLookalikeOrInsecureResourcePhotoUrls(String imageUrl) throws Exception {
+        KtoPhotoUrlValidator validator = publicAddressValidator();
+
+        assertThatThrownBy(() -> validator.validate(imageUrl))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+    }
+
+    @Test
+    void resourcePhotoImagesStillRejectUnsafeResolvedAddresses() throws Exception {
+        KtoPhotoUrlValidator validator = new KtoPhotoUrlValidator(
+                host -> new InetAddress[]{InetAddress.getByName("127.0.0.1")});
+
+        assertThatThrownBy(() -> validator.validate(
+                "https://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+    }
+
+    @Test
+    void commonsValidatorDoesNotAcceptKtoResourcePhotoPath() throws Exception {
+        InetAddress publicAddress = InetAddress.getByAddress(new byte[]{(byte) 203, 0, 113, 10});
+        KtoPhotoUrlValidator validator = KtoPhotoUrlValidator.wikimediaCommons(
+                host -> new InetAddress[]{publicAddress});
+
+        assertThatThrownBy(() -> validator.validate(
+                "https://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "https://example.com/cms2/website/75/1002175.jpg",

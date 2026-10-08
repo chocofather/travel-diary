@@ -11,6 +11,7 @@ import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.file.DestinationCardThumbnailService;
 import com.tripbora.service.file.UnsupportedImageFormatException;
 import com.tripbora.service.kto.InvalidKtoSelectedPhotosException;
+import com.tripbora.service.kto.KtoPhotoItemFailureException;
 import com.tripbora.service.kto.KtoSelectedPhotoRequestParser;
 import com.tripbora.service.wikidata.CommonsApiException;
 import com.tripbora.service.wikidata.CommonsPhotoDownloadException;
@@ -152,7 +153,8 @@ public class AdminDestinationImageController {
     @PostMapping("/{id}/images/kto")
     public String addKtoPhotos(@PathVariable Long id,
                                @RequestParam(value = "ktoSelectedPhotosJson", required = false)
-                               String selectedPhotosJson) {
+                               String selectedPhotosJson,
+                               RedirectAttributes redirectAttributes) {
         try {
             List<KtoSelectedPhotoRequest> selectedPhotos =
                     ktoSelectedPhotoRequestParser.parse(selectedPhotosJson);
@@ -161,8 +163,22 @@ public class AdminDestinationImageController {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "선택한 관광사진 정보가 올바르지 않습니다.");
+        } catch (KtoPhotoItemFailureException exception) {
+            // 여러 장은 전부 저장하거나 전부 저장하지 않는다. 어느 사진이 왜 실패했는지 관리 화면에 알린다
+            redirectAttributes.addFlashAttribute("ktoAddError",
+                    "이미지 등록 중 일부 항목 처리에 실패했습니다. 선택한 사진은 한 장도 저장되지 않았습니다.");
+            redirectAttributes.addFlashAttribute("ktoAddErrorDetail", ktoFailureDetail(exception));
+            redirectAttributes.addFlashAttribute("ktoAddErrorImageUrl", exception.imageUrl());
+            return managementRedirect(id) + "#kto-add";
         }
         return managementRedirect(id);
+    }
+
+    private String ktoFailureDetail(KtoPhotoItemFailureException exception) {
+        String title = exception.title() == null || exception.title().isBlank() ? "제목 없음" : exception.title();
+        return exception.position() + "번째 선택 사진 「" + title + "」(콘텐츠 ID " + exception.externalContentId()
+                + ") · " + exception.stage().label() + " 단계 · " + exception.reason()
+                + " (" + exception.causeType() + ")";
     }
 
     /** 기존 Wikidata 여행지에 Commons 사진을 더한다. 결과는 관리 화면으로 돌아가 안내한다. */

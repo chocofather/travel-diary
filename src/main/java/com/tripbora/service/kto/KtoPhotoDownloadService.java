@@ -116,7 +116,7 @@ public class KtoPhotoDownloadService {
 
             long fileSize = copyBounded(response.body(), temporary);
             if (fileSize == 0) {
-                throw new KtoPhotoDownloadException();
+                throw new KtoPhotoDownloadException("빈 이미지 파일");
             }
 
             ImageFormat imageFormat = detectAndValidateImage(temporary, declaredContentType);
@@ -134,7 +134,7 @@ public class KtoPhotoDownloadService {
         } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
             throw exception;
         } catch (IOException | RuntimeException exception) {
-            throw new KtoPhotoDownloadException();
+            throw new KtoPhotoDownloadException("다운로드 중 오류(" + exception.getClass().getSimpleName() + ")");
         } finally {
             deleteQuietly(temporary);
             if (!completed) {
@@ -178,16 +178,23 @@ public class KtoPhotoDownloadService {
         if (response != null && (response.statusCode() == 429 || response.statusCode() == 503)) {
             throw new PhotoDownloadRateLimitedException(response.retryAfter());
         }
-        if (response == null
-                || response.statusCode() < 200 || response.statusCode() >= 300
-                || response.body() == null
-                || response.contentLength() > maxFileSize) {
-            throw new KtoPhotoDownloadException();
+        if (response == null) {
+            throw new KtoPhotoDownloadException("응답 없음");
+        }
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new KtoPhotoDownloadException("HTTP 상태 " + response.statusCode());
+        }
+        if (response.body() == null) {
+            throw new KtoPhotoDownloadException("응답 본문 없음");
+        }
+        if (response.contentLength() > maxFileSize) {
+            throw new KtoPhotoDownloadException(
+                    "용량 제한 초과(" + response.contentLength() + " bytes > " + maxFileSize + " bytes)");
         }
 
         String contentType = normalizeContentType(response.contentType());
         if (!("image/jpeg".equals(contentType) || "image/png".equals(contentType))) {
-            throw new KtoPhotoDownloadException();
+            throw new KtoPhotoDownloadException("지원하지 않는 Content-Type(" + contentType + ")");
         }
         return contentType;
     }
@@ -219,7 +226,7 @@ public class KtoPhotoDownloadService {
                 }
                 total += read;
                 if (total > maxFileSize) {
-                    throw new KtoPhotoDownloadException();
+                    throw new KtoPhotoDownloadException("용량 제한 초과(" + maxFileSize + " bytes 초과)");
                 }
                 output.write(buffer, 0, read);
             }
@@ -229,11 +236,11 @@ public class KtoPhotoDownloadService {
     private ImageFormat detectAndValidateImage(Path file, String declaredContentType) {
         try (ImageInputStream imageInput = ImageIO.createImageInputStream(file.toFile())) {
             if (imageInput == null) {
-                throw new KtoPhotoDownloadException();
+                throw new KtoPhotoDownloadException("이미지 파일을 읽을 수 없음");
             }
             Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
             if (!readers.hasNext()) {
-                throw new KtoPhotoDownloadException();
+                throw new KtoPhotoDownloadException("이미지 형식을 판별할 수 없음");
             }
 
             ImageReader reader = readers.next();
@@ -241,17 +248,19 @@ public class KtoPhotoDownloadService {
                 reader.setInput(imageInput, true, true);
                 ImageFormat detected = ImageFormat.from(reader.getFormatName());
                 if (detected == null || !detected.contentType.equals(declaredContentType)) {
-                    throw new KtoPhotoDownloadException();
+                    throw new KtoPhotoDownloadException("실제 이미지 형식(" + reader.getFormatName()
+                            + ")과 Content-Type(" + declaredContentType + ") 불일치");
                 }
 
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
                 if (width <= 0 || height <= 0 || (long) width * height > MAX_IMAGE_PIXELS) {
-                    throw new KtoPhotoDownloadException();
+                    throw new KtoPhotoDownloadException("이미지 크기 제한 초과(" + width + "x" + height
+                            + ", 최대 " + MAX_IMAGE_PIXELS + "픽셀)");
                 }
                 BufferedImage decoded = reader.read(0);
                 if (decoded == null) {
-                    throw new KtoPhotoDownloadException();
+                    throw new KtoPhotoDownloadException("이미지 디코딩 실패");
                 }
                 return detected;
             } finally {
@@ -261,7 +270,8 @@ public class KtoPhotoDownloadService {
             if (exception instanceof KtoPhotoDownloadException downloadException) {
                 throw downloadException;
             }
-            throw new KtoPhotoDownloadException();
+            throw new KtoPhotoDownloadException(
+                    "이미지 디코딩 중 오류(" + exception.getClass().getSimpleName() + ")");
         }
     }
 

@@ -90,7 +90,12 @@
           </div>
         </form>
 
-        <div class="admin-image-add-kto">
+        <div id="kto-add" class="admin-image-add-kto">
+          <div th:if="${ktoAddError}" class="admin-alert" role="alert">
+            <p th:text="${ktoAddError}">이미지 등록 중 일부 항목 처리에 실패했습니다.</p>
+            <p th:if="${ktoAddErrorDetail}" th:text="${ktoAddErrorDetail}"></p>
+            <p th:if="${ktoAddErrorImageUrl}" th:text="${'이미지 주소: ' + ktoAddErrorImageUrl}"></p>
+          </div>
           <form th:action="@{/admin/destinations/{id}/images/kto(id=${destinationId})}"
                 method="post" class="admin-destination-form admin-kto-photo-management-form">
             <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search(true)}"></th:block>

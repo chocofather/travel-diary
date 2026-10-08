@@ -3,11 +3,14 @@ package com.tripbora.service.kto;
 import com.tripbora.model.DestinationImage;
 import com.tripbora.service.destination.DestinationImageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class KtoPhotoImportPersistenceService {
@@ -28,10 +31,33 @@ public class KtoPhotoImportPersistenceService {
             return;
         }
 
-        List<DestinationImage> images = preparedPhotos.stream()
-                .map(preparedPhoto -> destinationImage(destinationId, preparedPhoto))
-                .toList();
-        destinationImageService.saveImages(destinationId, images);
+        // 한 장씩 넘겨도 같은 트랜잭션이라 순서·대표 처리는 같고, 실패하면 전체가 롤백된다. 실패한 사진만 식별한다
+        for (int index = 0; index < preparedPhotos.size(); index++) {
+            PreparedKtoPhoto preparedPhoto = preparedPhotos.get(index);
+            try {
+                destinationImageService.saveImages(destinationId,
+                        List.of(destinationImage(destinationId, preparedPhoto)));
+            } catch (RuntimeException exception) {
+                throw persistFailure(destinationId, index + 1, preparedPhoto, exception);
+            }
+        }
+    }
+
+    private KtoPhotoItemFailureException persistFailure(Long destinationId, int position,
+                                                        PreparedKtoPhoto preparedPhoto,
+                                                        RuntimeException exception) {
+        Throwable rootCause = NestedExceptionUtils.getMostSpecificCause(exception);
+        KtoPhotoItemFailureException failure = new KtoPhotoItemFailureException(
+                position, preparedPhoto.externalContentId(), preparedPhoto.sourceImageUrl(), preparedPhoto.title(),
+                KtoPhotoItemFailureException.Stage.PERSIST,
+                "DB 저장 실패(" + rootCause.getClass().getSimpleName() + ")", exception);
+        // DB 원인 메시지(예: 컬럼 길이·문자셋 오류)는 로그에만 남긴다
+        log.warn("KTO 관광사진 저장 실패: destinationId={}, {}번째 사진, 단계={}, externalContentId={}, imageUrl={}, "
+                        + "title={}, photographerLength={}, 예외={}, 원인={}: {}",
+                destinationId, position, failure.stage().code(), failure.externalContentId(), failure.imageUrl(),
+                failure.title(), preparedPhoto.photographer() == null ? 0 : preparedPhoto.photographer().length(),
+                exception.getClass().getSimpleName(), rootCause.getClass().getSimpleName(), rootCause.getMessage());
+        return failure;
     }
 
     private DestinationImage destinationImage(Long destinationId, PreparedKtoPhoto preparedPhoto) {

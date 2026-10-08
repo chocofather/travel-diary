@@ -56,6 +56,18 @@ class KtoPhotoDownloadServiceTest {
     }
 
     @Test
+    void downloadsTourApiResourcePhotoImage() throws Exception {
+        String resourcePhotoUrl = "https://tong.visitkorea.or.kr/cms/resource_photo/79/3414579_image2_1.jpg";
+        KtoPhotoDownloadService service = service(
+                responding(200, "image/jpeg", jpeg.length, jpeg), 10 * 1024);
+
+        KtoDownloadedPhoto result = service.download(resourcePhotoUrl);
+
+        assertThat(result.sourceImageUrl()).isEqualTo(resourcePhotoUrl);
+        assertThat(storedPath(result)).hasBinaryContent(jpeg);
+    }
+
+    @Test
     void acceptsKtoImageJpgAliasAsCanonicalJpeg() throws Exception {
         KtoPhotoDownloadService service = service(
                 responding(200, "image/jpg", jpeg.length, jpeg), 10 * 1024);

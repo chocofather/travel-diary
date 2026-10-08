@@ -8,12 +8,15 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class KtoPhotoUrlValidator {
 
     private static final String ALLOWED_HOST = "tong.visitkorea.or.kr";
     private static final String WEBSITE_PATH_PREFIX = "/cms2/website/";
     private static final String FESTIVAL_RESOURCE_PATH_PREFIX = "/cms/resource/";
+    /** TourAPI 이미지가 내려오는 KTO 원본 사진 경로. 새로 허용한 경로라 HTTPS만 받는다. */
+    private static final String TOUR_PHOTO_RESOURCE_PATH_PREFIX = "/cms/resource_photo/";
     /** Commons 원본은 upload, API가 주는 렌디션(thumburl)은 thumb 호스트에서 내려온다. */
     private static final Set<String> COMMONS_HOSTS = Set.of("upload.wikimedia.org", "thumb.wikimedia.org");
     private static final String COMMONS_PATH_PREFIX = "/wikipedia/commons/";
@@ -21,6 +24,8 @@ public class KtoPhotoUrlValidator {
     private final HostResolver hostResolver;
     private final Set<String> allowedHosts;
     private final List<String> allowedPathPrefixes;
+    /** HTTPS 주소에서만 허용하는 경로. */
+    private final List<String> httpsOnlyPathPrefixes;
     private final boolean httpAllowed;
 
     public KtoPhotoUrlValidator() {
@@ -28,13 +33,16 @@ public class KtoPhotoUrlValidator {
     }
 
     KtoPhotoUrlValidator(HostResolver hostResolver) {
-        this(Set.of(ALLOWED_HOST), List.of(WEBSITE_PATH_PREFIX, FESTIVAL_RESOURCE_PATH_PREFIX), true, hostResolver);
+        this(Set.of(ALLOWED_HOST), List.of(WEBSITE_PATH_PREFIX, FESTIVAL_RESOURCE_PATH_PREFIX),
+                List.of(TOUR_PHOTO_RESOURCE_PATH_PREFIX), true, hostResolver);
     }
 
     private KtoPhotoUrlValidator(Set<String> allowedHosts, List<String> allowedPathPrefixes,
-                                 boolean httpAllowed, HostResolver hostResolver) {
+                                 List<String> httpsOnlyPathPrefixes, boolean httpAllowed,
+                                 HostResolver hostResolver) {
         this.allowedHosts = Set.copyOf(allowedHosts);
         this.allowedPathPrefixes = List.copyOf(allowedPathPrefixes);
+        this.httpsOnlyPathPrefixes = List.copyOf(httpsOnlyPathPrefixes);
         this.httpAllowed = httpAllowed;
         this.hostResolver = hostResolver;
     }
@@ -45,7 +53,7 @@ public class KtoPhotoUrlValidator {
     }
 
     static KtoPhotoUrlValidator wikimediaCommons(HostResolver hostResolver) {
-        return new KtoPhotoUrlValidator(COMMONS_HOSTS, List.of(COMMONS_PATH_PREFIX), false, hostResolver);
+        return new KtoPhotoUrlValidator(COMMONS_HOSTS, List.of(COMMONS_PATH_PREFIX), List.of(), false, hostResolver);
     }
 
     public URI validate(String imageUrl) {
@@ -58,7 +66,7 @@ public class KtoPhotoUrlValidator {
                 || uri.getUserInfo() != null
                 || uri.getFragment() != null
                 || hasNonStandardPort(uri, scheme)
-                || !hasAllowedPath(uri)) {
+                || !hasAllowedPath(uri, "https".equals(scheme))) {
             throw new InvalidKtoPhotoUrlException();
         }
 
@@ -88,9 +96,12 @@ public class KtoPhotoUrlValidator {
                 && !("https".equals(scheme) && port == 443);
     }
 
-    private boolean hasAllowedPath(URI uri) {
+    private boolean hasAllowedPath(URI uri, boolean https) {
+        List<String> pathPrefixes = https
+                ? Stream.concat(allowedPathPrefixes.stream(), httpsOnlyPathPrefixes.stream()).toList()
+                : allowedPathPrefixes;
         String path = uri.getPath();
-        if (!hasAllowedPathPrefix(path) || !hasAllowedPathPrefix(uri.getRawPath())) {
+        if (!hasAllowedPathPrefix(path, pathPrefixes) || !hasAllowedPathPrefix(uri.getRawPath(), pathPrefixes)) {
             return false;
         }
         for (String segment : path.split("/")) {
@@ -101,8 +112,8 @@ public class KtoPhotoUrlValidator {
         return uri.normalize().getPath().equals(path);
     }
 
-    private boolean hasAllowedPathPrefix(String path) {
-        return path != null && allowedPathPrefixes.stream().anyMatch(path::startsWith);
+    private boolean hasAllowedPathPrefix(String path, List<String> pathPrefixes) {
+        return path != null && pathPrefixes.stream().anyMatch(path::startsWith);
     }
 
     private void verifyPublicAddresses(String host) {

@@ -9,6 +9,8 @@ import com.tripbora.service.destination.DestinationKtoImageManagementService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.file.UnsupportedImageFormatException;
 import com.tripbora.service.kto.InvalidKtoSelectedPhotosException;
+import com.tripbora.service.kto.KtoPhotoDownloadException;
+import com.tripbora.service.kto.KtoPhotoItemFailureException;
 import com.tripbora.service.kto.KtoSelectedPhotoRequestParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -180,17 +183,42 @@ class AdminDestinationImageControllerTest {
                 true));
         when(requestParser.parse(json)).thenReturn(selected);
 
-        String view = controller.addKtoPhotos(10L, json);
+        String view = controller.addKtoPhotos(10L, json, new RedirectAttributesModelMap());
 
         assertThat(view).isEqualTo("redirect:/admin/destinations/10/images");
         verify(ktoImageManagementService).addPhotos(10L, selected);
+    }
+
+    /** 한 장이 실패하면 500 대신 관리 화면으로 돌아가 실패한 사진과 사유를 알린다. */
+    @Test
+    void ktoPhotoFailureReturnsToManagementWithTheFailedPhoto() throws Exception {
+        String json = "[{\"externalContentId\":\"200\"}]";
+        List<KtoSelectedPhotoRequest> selected = List.of(new KtoSelectedPhotoRequest(
+                "200", "https://tong.visitkorea.or.kr/cms2/website/20/source.jpg", "야경", null, false));
+        when(requestParser.parse(json)).thenReturn(selected);
+        doThrow(new KtoPhotoItemFailureException(2, "200",
+                "https://tong.visitkorea.or.kr/cms2/website/20/source.jpg", "야경",
+                KtoPhotoItemFailureException.Stage.DOWNLOAD, "HTTP 상태 404",
+                new KtoPhotoDownloadException("HTTP 상태 404")))
+                .when(ktoImageManagementService).addPhotos(10L, selected);
+
+        mockMvc.perform(post("/admin/destinations/10/images/kto").param("ktoSelectedPhotosJson", json))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#kto-add"))
+                .andExpect(flash().attribute("ktoAddError",
+                        "이미지 등록 중 일부 항목 처리에 실패했습니다. 선택한 사진은 한 장도 저장되지 않았습니다."))
+                .andExpect(flash().attribute("ktoAddErrorDetail",
+                        "2번째 선택 사진 「야경」(콘텐츠 ID 200) · 다운로드·이미지 검증 단계 · HTTP 상태 404"
+                                + " (KtoPhotoDownloadException)"))
+                .andExpect(flash().attribute("ktoAddErrorImageUrl",
+                        "https://tong.visitkorea.or.kr/cms2/website/20/source.jpg"));
     }
 
     @Test
     void malformedKtoSelectionIsRejectedBeforeDownload() {
         when(requestParser.parse("[{")).thenThrow(new InvalidKtoSelectedPhotosException());
 
-        assertThatThrownBy(() -> controller.addKtoPhotos(10L, "[{"))
+        assertThatThrownBy(() -> controller.addKtoPhotos(10L, "[{", new RedirectAttributesModelMap()))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
