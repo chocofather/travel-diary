@@ -91,6 +91,82 @@ body {
     aspect-ratio: 1200 / 327;
 }
 
+/*
+  세션 첫 진입 때 한 번만 도는 로고 등장 모션. 헤더 인라인 스크립트가 클래스를 붙였다 뗀다.
+  새 그림이나 복제 레이어 없이 기존 로고 <img> 하나만 움직인다.
+  1) 비행기 핀 심볼 부분(가로 0~285px / 1200px = 23.75%)만 보이게 잘라, 오른쪽에서 완만한 곡선으로
+     제자리까지 날아온다.
+  2) 도착 100ms 뒤 같은 이미지의 글자 부분을 왼쪽부터 드러낸다.
+  타임라인(2200ms): 심볼 비행 0~1600ms → 정지 100ms → 글자 reveal 1700~2200ms. 비행이 끝나면 transform·opacity 가
+  더는 걸려 있지 않아 정적 로고와 같은 렌더링으로 글자가 드러나고, 끝나면 클래스가 빠져 원래 로고만 남는다.
+*/
+.logo.is-logo-intro img {
+    opacity: 0;  /* 이미지가 준비될 때까지. 공간은 aspect-ratio 로 그대로 잡혀 있다. */
+}
+
+.logo.is-logo-intro.is-logo-intro-playing img {
+    /*
+      출발 거리. 1200px 이상은 가운데 820px 메뉴의 첫 글자에 닿지 않는 만큼(1200px 에서 120px,
+      1440px 에서 240px, 최대 260px). 메뉴가 ☰ 로 접히는 태블릿은 200px.
+    */
+    --logo-intro-distance: clamp(120px, calc(50vw - 480px), 260px);
+    --logo-intro-lift: -10px;
+    opacity: 1;
+    transform-origin: 11.875% 50%;  /* 심볼 가운데 */
+    animation:
+        tripbora-logo-flight 1600ms linear backwards,
+        tripbora-logo-reveal 2200ms linear both;
+}
+
+/* 태블릿·모바일 출발 거리는 아래 로고 크기 미디어쿼리(1199px·767px) 안에서 함께 정한다. */
+
+/*
+  심볼 비행: 오른쪽에서 나타나(약 200ms 동안 opacity) 살짝 떠오르는 완만한 곡선으로 왼쪽 제자리까지 온다.
+  가로 이동은 적당한 속도로 시작해 도착하며 감속하고(bounce·급정지 없음), 기울기는 -8° 에서 0° 로 돌아온다.
+*/
+@keyframes tripbora-logo-flight {
+    0% {
+        translate: var(--logo-intro-distance) 0;
+        rotate: -8deg;
+        scale: 0.9;
+        transform: translateY(0);
+        opacity: 0;
+        animation-timing-function: cubic-bezier(0.32, 0.6, 0.38, 1);
+    }
+    12.5% {
+        opacity: 1;
+    }
+    45% {
+        transform: translateY(var(--logo-intro-lift));
+        animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+    }
+    100% {
+        translate: 0 0;
+        rotate: 0deg;
+        scale: 1;
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 글자: 비행 중에는 심볼만 보이게 자르고, 도착 100ms 뒤 500ms 동안 오른쪽으로 펼쳐지듯 드러낸다. */
+@keyframes tripbora-logo-reveal {
+    0%, 77.27% {
+        clip-path: inset(0 76.25% 0 0);
+        animation-timing-function: cubic-bezier(0.25, 0.8, 0.3, 1);
+    }
+    100% {
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo.is-logo-intro img {
+        opacity: 1;
+        animation: none !important;
+    }
+}
+
 /* 그리드 레이아웃 */
 .nav-grid {
     width: var(--menu-width);
@@ -356,6 +432,11 @@ body {
         height: 100px;
     }
 
+    /* 로고 인트로: 메뉴가 ☰ 로 접혀 로고 오른쪽이 비므로 200px 에서 출발한다. */
+    .logo.is-logo-intro.is-logo-intro-playing img {
+        --logo-intro-distance: 200px;
+    }
+
     .nav-grid,
     .global-submenu {
         display: none !important;
@@ -437,6 +518,12 @@ body {
         left: 20px;
         width: clamp(92px, calc(100vw - 268px), 124px);
         height: 100px;
+    }
+
+    /* 로고 인트로: 로고 상자 오른쪽 끝(약 70~95px)에서 출발해 오른쪽 버튼 묶음과 겹치지 않는다. */
+    .logo.is-logo-intro.is-logo-intro-playing img {
+        --logo-intro-distance: 76.25%;
+        --logo-intro-lift: -6px;
     }
 
     .site-menu {

@@ -11,6 +11,46 @@
     <div class="logo">
       <a href="/"><img src="/images/branding/tripbora-logo6.png?v=20260928-1" th:alt="#{header.brand.logoAlt}" alt="TripBora 트립보라 로고" /></a>
     </div>
+    <!--
+      로고 등장 모션(브라우저 세션당 1회, 동작은 style.css 의 tripbora-logo-*).
+      로고 바로 뒤에서 동기로 판단해 첫 그림 전에 준비 상태를 정한다. 움직임 줄이기 설정이거나
+      sessionStorage 를 쓸 수 없거나 이미 본 세션이면 아무것도 하지 않아 정적 로고가 그대로 보인다.
+    -->
+    <script>
+      (function () {
+        var logo = document.querySelector(".main-nav .logo");
+        var image = logo ? logo.querySelector("img") : null;
+        if (!image || typeof image.decode !== "function") return;
+        try {
+          if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          if (window.sessionStorage.getItem("tripbora.logoIntroPlayed")) return;
+          window.sessionStorage.setItem("tripbora.logoIntroPlayed", "1");
+        } catch (error) {
+          return;
+        }
+
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          logo.classList.remove("is-logo-intro", "is-logo-intro-playing");
+        }
+
+        logo.classList.add("is-logo-intro");
+        // 이미지가 늦게 오면 모션 없이 정적 로고를 보여 준다.
+        var giveUp = setTimeout(finish, 2500);
+        image.decode().then(function () {
+          if (finished) return;
+          clearTimeout(giveUp);
+          logo.classList.add("is-logo-intro-playing");
+          // 심볼 이동(tripbora-logo-flight)이 먼저 끝나므로 글자 reveal 이 끝날 때 정리한다.
+          image.addEventListener("animationend", function (event) {
+            if (event.animationName === "tripbora-logo-reveal") finish();
+          });
+          setTimeout(finish, 2800);  // 전체 2.2초 모션의 종료 신호가 오지 않을 때의 안전장치
+        }, finish);
+      })();
+    </script>
 
     <!-- 검색 + 로그인/프로필 -->
     <div class="search-box">
