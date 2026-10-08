@@ -1,6 +1,8 @@
 package com.tripbora.service.destination;
 
 import com.tripbora.config.i18n.SupportedLanguage;
+import com.tripbora.dto.AdminDestinationDataStatusCounts;
+import com.tripbora.dto.AdminDestinationListItemDto;
 import com.tripbora.dto.DestinationDetailDto;
 import com.tripbora.dto.DestinationDto;
 import com.tripbora.dto.DestinationForm;
@@ -409,24 +411,39 @@ public class DestinationService {
         return destinationMapper.findByCountryCategoryId(cityId);
     }
 
-    /** 관리자 여행지 목록 한 쪽. 지역·분류·검색·정렬은 모두 DB 조회 단계에서 적용한다. */
-    public List<Destination> getAdminDestinationPage(List<Long> regionIds, String destinationType,
-                                                     String keyword, String sort, long offset, int size) {
+    /** 관리자 여행지 목록 한 쪽. 지역·분류·데이터 상태·검색·정렬은 모두 DB 조회 단계에서 적용한다. */
+    public List<AdminDestinationListItemDto> getAdminDestinationPage(List<Long> regionIds, String destinationType,
+                                                                     String dataStatus, String keyword, String sort,
+                                                                     long offset, int size) {
         if (regionIds == null || regionIds.isEmpty()) {
             return List.of();
         }
         DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
-        return destinationMapper.findAdminDestinationPage(regionIds, destinationType,
+        return destinationMapper.findAdminDestinationPage(regionIds, destinationType, dataStatus,
                 search.namePattern(), search.chosungPattern(), sort, offset, size);
     }
 
-    public int countAdminDestinations(List<Long> regionIds, String destinationType, String keyword) {
+    public int countAdminDestinations(List<Long> regionIds, String destinationType, String dataStatus,
+                                      String keyword) {
         if (regionIds == null || regionIds.isEmpty()) {
             return 0;
         }
         DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
-        return destinationMapper.countAdminDestinations(regionIds, destinationType,
+        return destinationMapper.countAdminDestinations(regionIds, destinationType, dataStatus,
                 search.namePattern(), search.chosungPattern());
+    }
+
+    /** 관리자 목록 상단 데이터 상태별 건수. 데이터 상태 필터만 빼고 지금 목록 조건을 그대로 쓴다. */
+    public AdminDestinationDataStatusCounts getAdminDestinationDataStatusCounts(List<Long> regionIds,
+                                                                                String destinationType,
+                                                                                String keyword) {
+        if (regionIds == null || regionIds.isEmpty()) {
+            return new AdminDestinationDataStatusCounts();
+        }
+        DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
+        AdminDestinationDataStatusCounts counts = destinationMapper.countAdminDestinationDataStatus(
+                regionIds, destinationType, search.namePattern(), search.chosungPattern());
+        return counts != null ? counts : new AdminDestinationDataStatusCounts();
     }
 
 

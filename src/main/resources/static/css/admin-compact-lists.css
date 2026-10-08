@@ -151,6 +151,73 @@
     border-color: #dfe4eb;
 }
 
+/* 관리자 여행지 목록: 데이터 상태 바로가기(작은 pill)와 행별 누락 표시 */
+.admin-data-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 12px;
+}
+
+.admin-data-status-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 5px 11px;
+    color: #56627c;
+    background: #fff;
+    border: 1px solid #dce2ed;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.admin-data-status-link strong {
+    color: #35415a;
+    font-weight: 750;
+}
+
+.admin-data-status-link.has-issue strong {
+    color: #a1590f;
+}
+
+.admin-data-status-link:hover {
+    border-color: #c9c0e4;
+}
+
+.admin-data-status-link.is-active {
+    color: var(--admin-blue-dark);
+    background: var(--admin-blue-soft);
+    border-color: var(--admin-blue);
+}
+
+.admin-data-status-link.is-active strong {
+    color: var(--admin-blue-dark);
+}
+
+.admin-data-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.admin-data-issue {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    color: #94550f;
+    background: #fff8ec;
+    border: 1px solid #f3dfbd;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
 .admin-table-empty {
     padding: 34px 18px !important;
     color: #8791a5;

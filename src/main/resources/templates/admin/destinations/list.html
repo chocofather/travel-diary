@@ -2,8 +2,8 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin-compact-lists.css">
-  <script src="/js/admin-destination-filter.js?v=20261009-1" defer></script>
+  <link rel="stylesheet" href="/css/admin-compact-lists.css?v=20261009-1">
+  <script src="/js/admin-destination-filter.js?v=20261009-2" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section">
@@ -55,6 +55,13 @@
                   th:selected="${destinationType} == ${entry.key}">관광지</option>
         </select>
 
+        <!-- 데이터 상태(누락 항목)도 바꾸는 즉시 조회한다. 판정은 DB 조회 단계에서 한다. -->
+        <select id="destination-data-status-filter" name="dataStatus" class="admin-select" aria-label="데이터 상태">
+          <option value="">데이터 상태 전체</option>
+          <option th:each="entry : ${dataStatusLabels}" th:value="${entry.key}" th:text="${entry.value}"
+                  th:selected="${dataStatus} == ${entry.key}">이미지 없음</option>
+        </select>
+
         <select id="destination-continent-filter" name="continentId" class="admin-select"
                 th:if="${type} == 'overseas'">
           <option value="">- 대륙 선택 -</option>
@@ -98,6 +105,18 @@
       </form>
     </div>
 
+    <!-- 데이터 상태 바로가기. 건수는 데이터 상태만 뺀 지금 조건 기준이고, 누르면 그 상태로 1쪽부터 본다. -->
+    <nav class="admin-data-status-bar" aria-label="데이터 상태 바로가기">
+      <a th:each="shortcut : ${statusShortcuts}"
+         th:with="active=${shortcut.status() == null ? dataStatus == null : shortcut.status() == dataStatus}"
+         th:href="${shortcut.url()}" class="admin-data-status-link"
+         th:classappend="${active ? 'is-active' : ''} + ${shortcut.status() != null and shortcut.count() > 0 ? ' has-issue' : ''}"
+         th:attr="aria-current=${active} ? 'true' : null">
+        <span th:text="${shortcut.label()}">이미지 없음</span>
+        <strong th:text="${#numbers.formatInteger(shortcut.count(), 1, 'COMMA')}">0</strong>
+      </a>
+    </nav>
+
     <p class="admin-list-summary" th:text="|총 ${#numbers.formatInteger(totalCount, 1, 'COMMA')}곳|">총 0곳</p>
 
     <div class="admin-card is-table-card">
@@ -118,7 +137,22 @@
           <!-- 번호는 DB ID 가 아니라 지금 조건·정렬에서의 순번이다(쪽을 넘겨도 이어진다). -->
           <tr th:each="dest, stat : ${destinationList}">
             <td class="admin-table-number" th:text="${pageOffset + stat.index + 1}">1</td>
-            <td th:text="${dest.name}">제주도</td>
+            <td>
+              <span th:text="${dest.name}">제주도</span>
+              <!-- 누락 항목이 있을 때만 작게 표시한다(정상 여행지에는 붙이지 않는다). -->
+              <div class="admin-data-issues" th:if="${dest.hasDataIssue()}">
+                <span class="admin-data-issue" th:if="${dest.missingImage}">이미지 없음</span>
+                <span class="admin-data-issue" th:if="${dest.missingMainImage}"
+                      title="이미지는 있지만 대표 이미지가 지정되지 않았습니다.">대표 이미지 없음</span>
+                <span class="admin-data-issue" th:if="${dest.missingCategory}">카테고리 없음</span>
+                <span class="admin-data-issue" th:if="${dest.missingDescription}"
+                      title="한국어 간단 설명과 상세 설명이 모두 비어 있습니다.">기본 설명 없음</span>
+                <span class="admin-data-issue" th:if="${dest.missingTranslation}"
+                      th:with="missingLanguages=${#strings.listJoin(dest.missingTranslationLanguages, ', ')}"
+                      th:title="|번역이 완료되지 않은 언어: ${missingLanguages} (이름 또는 한국어에 있는 설명이 비어 있음)|"
+                      th:text="${#lists.size(dest.missingTranslationLanguages) == 4} ? '번역 없음' : |번역 누락: ${missingLanguages}|">번역 누락: ja</span>
+              </div>
+            </td>
             <td th:text="${dest.regionName}">제주</td>
             <td class="admin-table-actions">
               <div class="admin-action-group">

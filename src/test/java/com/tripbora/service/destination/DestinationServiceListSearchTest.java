@@ -68,18 +68,20 @@ class DestinationServiceListSearchTest {
 
     @Test
     void ordinaryKeywordIsSentAsAPartialNameCondition() {
-        destinationService.getAdminDestinationPage(REGION_IDS, "ATTRACTION", "경복", "latest", 30, 30);
+        destinationService.getAdminDestinationPage(REGION_IDS, "ATTRACTION", "missing_image", "경복", "latest", 30, 30);
 
-        verify(destinationMapper).findAdminDestinationPage(REGION_IDS, "ATTRACTION", "경복", null, "latest", 30, 30);
+        verify(destinationMapper).findAdminDestinationPage(
+                REGION_IDS, "ATTRACTION", "missing_image", "경복", null, "latest", 30, 30);
     }
 
     @Test
     void chosungKeywordIsSentAsAGeneratedPatternInsteadOfTheRawJamo() {
-        destinationService.getAdminDestinationPage(REGION_IDS, null, "ㄱㅂㄱ", "latest", 0, 30);
+        destinationService.getAdminDestinationPage(REGION_IDS, null, null, "ㄱㅂㄱ", "latest", 0, 30);
 
         ArgumentCaptor<String> chosung = ArgumentCaptor.forClass(String.class);
         verify(destinationMapper)
                 .findAdminDestinationPage(org.mockito.ArgumentMatchers.eq(REGION_IDS),
+                        org.mockito.ArgumentMatchers.isNull(),
                         org.mockito.ArgumentMatchers.isNull(),
                         org.mockito.ArgumentMatchers.isNull(),
                         chosung.capture(),
@@ -92,16 +94,25 @@ class DestinationServiceListSearchTest {
 
     @Test
     void blankKeywordCarriesNoSearchCondition() {
-        destinationService.countAdminDestinations(REGION_IDS, null, "   ");
+        destinationService.countAdminDestinations(REGION_IDS, null, null, "   ");
 
-        verify(destinationMapper).countAdminDestinations(REGION_IDS, null, null, null);
+        verify(destinationMapper).countAdminDestinations(REGION_IDS, null, null, null, null);
+    }
+
+    /** 상단 상태별 건수는 데이터 상태 조건 없이 같은 검색 조건으로 한 번만 집계한다. */
+    @Test
+    void dataStatusCountsUseTheSameSearchConditionWithoutAStatusFilter() {
+        destinationService.getAdminDestinationDataStatusCounts(REGION_IDS, "ATTRACTION", "경복");
+
+        verify(destinationMapper).countAdminDestinationDataStatus(REGION_IDS, "ATTRACTION", "경복", null);
     }
 
     /** 지역 범위가 비면 IN () 쿼리를 만들지 않고 빈 결과로 끝낸다. */
     @Test
     void emptyRegionScopeSkipsTheQuery() {
-        assertThat(destinationService.getAdminDestinationPage(List.of(), null, null, "latest", 0, 30)).isEmpty();
-        assertThat(destinationService.countAdminDestinations(List.of(), null, null)).isZero();
+        assertThat(destinationService.getAdminDestinationPage(List.of(), null, null, null, "latest", 0, 30)).isEmpty();
+        assertThat(destinationService.countAdminDestinations(List.of(), null, null, null)).isZero();
+        assertThat(destinationService.getAdminDestinationDataStatusCounts(List.of(), null, null).getTotal()).isZero();
 
         org.mockito.Mockito.verifyNoInteractions(destinationMapper);
     }

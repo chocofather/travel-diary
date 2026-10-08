@@ -1,5 +1,6 @@
 package com.tripbora.controller.admin;
 
+import com.tripbora.dto.AdminDestinationDataStatusCounts;
 import com.tripbora.dto.DestinationForm;
 import com.tripbora.dto.kto.KtoSelectedPhotoRequest;
 import com.tripbora.model.CountryCategory;
@@ -354,15 +355,25 @@ public class AdminDestinationController {
     private static final String DEFAULT_ADMIN_LIST_SORT = "latest";
     private static final Map<String, String> ADMIN_LIST_SORT_LABELS = orderedLabels(
             "latest", "최신 등록순", "oldest", "오래된 등록순", "name", "이름순");
+    /** 데이터 상태 필터. 판정 기준은 DestinationMapper.xml 의 adminMissing* 조건이다. */
+    private static final Map<String, String> ADMIN_DATA_STATUS_LABELS = orderedLabels(
+            "missing_image", "이미지 없음", "missing_main_image", "대표 이미지 없음",
+            "missing_category", "카테고리 없음", "missing_translation", "번역 미완료",
+            "missing_description", "기본 설명 없음");
+
+    /** 목록 위 데이터 상태 바로가기 한 칸. status 가 null 이면 '전체'다. */
+    public record DataStatusShortcut(String status, String label, int count, String url) {
+    }
 
     /**
-     * 여행지 관리 목록. 범위(전체/국내/해외)·분류·지역·검색·정렬은 모두 GET 조건이라
+     * 여행지 관리 목록. 범위(전체/국내/해외)·분류·데이터 상태·지역·검색·정렬은 모두 GET 조건이라
      * 새로고침·뒤로가기·쪽 이동에도 그대로 남고, DB 조회 단계에서 한 쪽(30건)만 가져온다.
      */
     @GetMapping
     public String showDestinationList(
             @RequestParam(value = "scope", required = false) String scope,
             @RequestParam(value = "destinationType", required = false) String destinationType,
+            @RequestParam(value = "dataStatus", required = false) String dataStatus,
             @RequestParam(value = "continentId", required = false) Long continentId,
             @RequestParam(value = "countryId", required = false) Long countryId,
             @RequestParam(value = "cityId", required = false) Long cityId,
@@ -379,6 +390,7 @@ public class AdminDestinationController {
         String type = "domestic".equals(scope) || "overseas".equals(scope) ? scope : null;
         String selectedDestinationType = DESTINATION_TYPE_LABELS.containsKey(destinationType) ? destinationType : null;
         String selectedSort = ADMIN_LIST_SORT_LABELS.containsKey(sort) ? sort : DEFAULT_ADMIN_LIST_SORT;
+        String selectedDataStatus = ADMIN_DATA_STATUS_LABELS.containsKey(dataStatus) ? dataStatus : null;
         // 지역 조건은 지금 범위에 속한 것만 쓴다(국내: 시/도·시/군/구, 해외: 대륙·국가·도시).
         if (!"domestic".equals(type)) {
             regionId = null;
@@ -431,12 +443,15 @@ public class AdminDestinationController {
             }
         }
 
-        int totalCount = destinationService.countAdminDestinations(regionIds, selectedDestinationType, searchKeyword);
+        int totalCount = destinationService.countAdminDestinations(
+                regionIds, selectedDestinationType, selectedDataStatus, searchKeyword);
         int totalPages = totalCount == 0 ? 0 : (totalCount + ADMIN_LIST_PAGE_SIZE - 1) / ADMIN_LIST_PAGE_SIZE;
         int currentPage = totalPages == 0 ? 1 : Math.min(parsePage(page), totalPages);
         long offset = (long) (currentPage - 1) * ADMIN_LIST_PAGE_SIZE;
-        var destinationList = destinationService.getAdminDestinationPage(
-                regionIds, selectedDestinationType, searchKeyword, selectedSort, offset, ADMIN_LIST_PAGE_SIZE);
+        var destinationList = destinationService.getAdminDestinationPage(regionIds, selectedDestinationType,
+                selectedDataStatus, searchKeyword, selectedSort, offset, ADMIN_LIST_PAGE_SIZE);
+        AdminDestinationDataStatusCounts statusCounts = destinationService.getAdminDestinationDataStatusCounts(
+                regionIds, selectedDestinationType, searchKeyword);
         int pageStart = Math.max(1, currentPage - 2);
         int pageEnd = Math.min(totalPages, pageStart + 4);
         pageStart = Math.max(1, pageEnd - 4);
@@ -448,6 +463,8 @@ public class AdminDestinationController {
         model.addAttribute("destinationTypeLabels", DESTINATION_TYPE_LABELS);
         model.addAttribute("sort", selectedSort);
         model.addAttribute("sortLabels", ADMIN_LIST_SORT_LABELS);
+        model.addAttribute("dataStatus", selectedDataStatus);
+        model.addAttribute("dataStatusLabels", ADMIN_DATA_STATUS_LABELS);
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", totalPages);
@@ -455,11 +472,28 @@ public class AdminDestinationController {
         model.addAttribute("pageEnd", pageEnd);
         model.addAttribute("pageOffset", offset);
         // 쪽 이동 링크와 삭제 후 돌아올 주소. 지금 조건을 그대로 담고 page 만 바꿔 붙인다.
-        model.addAttribute("listUrl", adminListUrl(type, selectedDestinationType, continentId, countryId,
-                cityId, regionId, districtId, searchKeyword, selectedSort, null));
-        String currentListUrl = adminListUrl(type, selectedDestinationType, continentId, countryId,
-                cityId, regionId, districtId, searchKeyword, selectedSort, currentPage);
+        model.addAttribute("listUrl", adminListUrl(type, selectedDestinationType, selectedDataStatus, continentId,
+                countryId, cityId, regionId, districtId, searchKeyword, selectedSort, null));
+        String currentListUrl = adminListUrl(type, selectedDestinationType, selectedDataStatus, continentId,
+                countryId, cityId, regionId, districtId, searchKeyword, selectedSort, currentPage);
         model.addAttribute("listQuery", currentListUrl.substring("/admin/destinations".length()));
+        // 데이터 상태 바로가기(select 와 같은 항목). 다른 조건은 그대로 두고 데이터 상태만 바꿔 1쪽부터 본다.
+        List<DataStatusShortcut> statusShortcuts = new ArrayList<>();
+        statusShortcuts.add(new DataStatusShortcut(null, "전체", statusCounts.getTotal(),
+                adminListUrl(type, selectedDestinationType, null, continentId, countryId, cityId,
+                        regionId, districtId, searchKeyword, selectedSort, null)));
+        for (var shortcut : List.of(
+                Map.entry("missing_image", statusCounts.getMissingImage()),
+                Map.entry("missing_main_image", statusCounts.getMissingMainImage()),
+                Map.entry("missing_category", statusCounts.getMissingCategory()),
+                Map.entry("missing_translation", statusCounts.getMissingTranslation()),
+                Map.entry("missing_description", statusCounts.getMissingDescription()))) {
+            statusShortcuts.add(new DataStatusShortcut(shortcut.getKey(),
+                    ADMIN_DATA_STATUS_LABELS.get(shortcut.getKey()), shortcut.getValue(),
+                    adminListUrl(type, selectedDestinationType, shortcut.getKey(), continentId, countryId,
+                            cityId, regionId, districtId, searchKeyword, selectedSort, null)));
+        }
+        model.addAttribute("statusShortcuts", statusShortcuts);
 
         // 대륙 리스트 (depth=1)
         var continents = countryCategoryService.getRegionsByDepth(1);
@@ -523,11 +557,12 @@ public class AdminDestinationController {
     }
 
 
-    /** 삭제 후에는 삭제 전 목록 조건(범위·분류·지역·검색·정렬·쪽)으로 돌아간다. 조건은 폼 주소의 GET 값이다. */
+    /** 삭제 후에는 삭제 전 목록 조건(범위·분류·데이터 상태·지역·검색·정렬·쪽)으로 돌아간다. 조건은 폼 주소의 GET 값이다. */
     @PostMapping("/{id}/delete")
     public String deleteDestination(@PathVariable Long id,
                                     @RequestParam(value = "scope", required = false) String scope,
                                     @RequestParam(value = "destinationType", required = false) String destinationType,
+                                    @RequestParam(value = "dataStatus", required = false) String dataStatus,
                                     @RequestParam(value = "continentId", required = false) Long continentId,
                                     @RequestParam(value = "countryId", required = false) Long countryId,
                                     @RequestParam(value = "cityId", required = false) Long cityId,
@@ -540,10 +575,11 @@ public class AdminDestinationController {
         String type = "domestic".equals(scope) || "overseas".equals(scope) ? scope : null;
         String selectedDestinationType = DESTINATION_TYPE_LABELS.containsKey(destinationType) ? destinationType : null;
         String selectedSort = ADMIN_LIST_SORT_LABELS.containsKey(sort) ? sort : DEFAULT_ADMIN_LIST_SORT;
+        String selectedDataStatus = ADMIN_DATA_STATUS_LABELS.containsKey(dataStatus) ? dataStatus : null;
         String searchKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
         // 마지막 쪽의 마지막 한 건을 지워도 목록이 남은 마지막 쪽으로 맞춰 보여 준다.
-        return "redirect:" + adminListUrl(type, selectedDestinationType, continentId, countryId, cityId,
-                regionId, districtId, searchKeyword, selectedSort, parsePage(page));
+        return "redirect:" + adminListUrl(type, selectedDestinationType, selectedDataStatus, continentId, countryId,
+                cityId, regionId, districtId, searchKeyword, selectedSort, parsePage(page));
     }
 
     private static int parsePage(String page) {
@@ -557,13 +593,14 @@ public class AdminDestinationController {
         }
     }
 
-    /** 관리자 여행지 목록 주소. 기본값(전체·전체 분류·최신 등록순·1쪽)은 주소에 넣지 않는다. */
-    static String adminListUrl(String scope, String destinationType, Long continentId, Long countryId,
-                               Long cityId, Long regionId, Long districtId, String keyword,
+    /** 관리자 여행지 목록 주소. 기본값(전체·전체 분류·데이터 상태 전체·최신 등록순·1쪽)은 주소에 넣지 않는다. */
+    static String adminListUrl(String scope, String destinationType, String dataStatus, Long continentId,
+                               Long countryId, Long cityId, Long regionId, Long districtId, String keyword,
                                String sort, Integer page) {
         return org.springframework.web.util.UriComponentsBuilder.fromPath("/admin/destinations")
                 .queryParamIfPresent("scope", Optional.ofNullable(scope))
                 .queryParamIfPresent("destinationType", Optional.ofNullable(destinationType))
+                .queryParamIfPresent("dataStatus", Optional.ofNullable(dataStatus))
                 .queryParamIfPresent("continentId", Optional.ofNullable(continentId))
                 .queryParamIfPresent("countryId", Optional.ofNullable(countryId))
                 .queryParamIfPresent("cityId", Optional.ofNullable(cityId))

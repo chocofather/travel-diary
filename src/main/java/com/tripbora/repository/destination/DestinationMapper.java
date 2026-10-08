@@ -1,5 +1,7 @@
     package com.tripbora.repository.destination;
 
+    import com.tripbora.dto.AdminDestinationDataStatusCounts;
+    import com.tripbora.dto.AdminDestinationListItemDto;
     import com.tripbora.dto.CategoryDestinationCount;
     import com.tripbora.model.Destination;
     import com.tripbora.model.DestinationCategory;
@@ -107,19 +109,30 @@
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);
 
-        /** 관리자 여행지 목록 한 쪽. sort 는 latest / oldest / name 중 하나다. */
-        List<Destination> findAdminDestinationPage(@Param("regionIds") List<Long> regionIds,
-                                                   @Param("destinationType") String destinationType,
-                                                   @Param("keyword") String keyword,
-                                                   @Param("chosungPattern") String chosungPattern,
-                                                   @Param("sort") String sort,
-                                                   @Param("offset") long offset,
-                                                   @Param("size") int size);
+        /**
+         * 관리자 여행지 목록 한 쪽. sort 는 latest / oldest / name, dataStatus 는 null 또는
+         * missing_image / missing_main_image / missing_category / missing_translation / missing_description 이다.
+         */
+        List<AdminDestinationListItemDto> findAdminDestinationPage(@Param("regionIds") List<Long> regionIds,
+                                                                   @Param("destinationType") String destinationType,
+                                                                   @Param("dataStatus") String dataStatus,
+                                                                   @Param("keyword") String keyword,
+                                                                   @Param("chosungPattern") String chosungPattern,
+                                                                   @Param("sort") String sort,
+                                                                   @Param("offset") long offset,
+                                                                   @Param("size") int size);
 
         int countAdminDestinations(@Param("regionIds") List<Long> regionIds,
                                    @Param("destinationType") String destinationType,
+                                   @Param("dataStatus") String dataStatus,
                                    @Param("keyword") String keyword,
                                    @Param("chosungPattern") String chosungPattern);
+
+        /** 데이터 상태 필터를 뺀 지금 목록 조건 안의 상태별 건수(집계 한 번). */
+        AdminDestinationDataStatusCounts countAdminDestinationDataStatus(@Param("regionIds") List<Long> regionIds,
+                                                                         @Param("destinationType") String destinationType,
+                                                                         @Param("keyword") String keyword,
+                                                                         @Param("chosungPattern") String chosungPattern);
 
         // 조회수 증가
         void incrementViewCount(Long id);
