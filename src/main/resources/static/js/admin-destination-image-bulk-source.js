@@ -182,14 +182,20 @@
         const result = panel.querySelector("[data-bulk-result]");
         let applyingUpload = false;
 
+        /** Commons 사진은 출처를 고칠 수 없어 공통 선택에 있어도 출처 일괄 적용 대상이 아니다. */
+        function isCommons(card) {
+            return choice(card)?.dataset.imageCommons === "true";
+        }
         /** 적용 대상. 나눠 올리기로 이미 등록된 사진은 여기서 더 고칠 수 없으므로 뺀다. */
         function selectedCards() {
             return cardsFor(panel).filter(card => choice(card)?.checked
-                && !card.classList.contains("is-upload-done"));
+                && !card.classList.contains("is-upload-done") && !isCommons(card));
         }
         function updateCount() {
             const selected = selectedCards().length;
-            count.textContent = `선택한 사진 ${selected}장`;
+            const commons = cardsFor(panel).filter(card => choice(card)?.checked && isCommons(card)).length;
+            count.textContent = `선택한 사진 ${selected}장`
+                + (commons ? ` (Commons 사진 ${commons}장은 출처를 바꿀 수 없어 제외)` : "");
             // 미리보기를 거치지 않아도 선택한 사진이 있으면 바로 적용할 수 있다.
             apply.disabled = selected === 0;
         }
@@ -298,10 +304,11 @@
             result.hidden = false;
         }
 
-        panel.querySelector("[data-bulk-select-all]").addEventListener("click", () => {
+        // 등록된 사진(existing)은 머리말의 공통 선택 관리가 전체 선택·해제를 맡아 이 버튼이 없다.
+        panel.querySelector("[data-bulk-select-all]")?.addEventListener("click", () => {
             cardsFor(panel).forEach(card => { if (choice(card)) choice(card).checked = true; }); invalidate();
         });
-        panel.querySelector("[data-bulk-clear-all]").addEventListener("click", () => {
+        panel.querySelector("[data-bulk-clear-all]")?.addEventListener("click", () => {
             cardsFor(panel).forEach(card => { if (choice(card)) choice(card).checked = false; }); invalidate();
         });
         panel.querySelector("[data-bulk-preview-button]").addEventListener("click", showPreview);

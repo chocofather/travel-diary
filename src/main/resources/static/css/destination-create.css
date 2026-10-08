@@ -903,7 +903,8 @@
     gap: 14px;
 }
 
-.admin-kto-photo-new-batch {
+.admin-kto-photo-new-batch,
+.admin-kto-photo-license-divider {
     grid-column: 1 / -1;
     margin: 4px 0 -4px;
     padding-top: 12px;
@@ -911,6 +912,17 @@
     color: #4e66bd;
     font-size: 0.8rem;
     font-weight: 650;
+}
+
+/* 제1유형을 모두 보여준 뒤 이어지는 제3유형 묶음의 시작 표시 */
+.admin-kto-photo-license-divider {
+    color: #8a6a3a;
+}
+
+.admin-kto-photo-new-batch + .admin-kto-photo-license-divider {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
 }
 
 .admin-kto-photo-card {

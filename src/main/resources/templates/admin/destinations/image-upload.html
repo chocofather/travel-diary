@@ -2,14 +2,14 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css?v=20261008-1">
-  <link rel="stylesheet" href="/css/admin-destination-images.css?v=20261008-1">
-  <script src="/js/admin-kto-photo-search.js?v=20261008-2" defer></script>
+  <link rel="stylesheet" href="/css/destination-create.css?v=20261009-1">
+  <link rel="stylesheet" href="/css/admin-destination-images.css?v=20261009-2">
+  <script src="/js/admin-kto-photo-search.js?v=20261009-3" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-image-batch-upload.js?v=20261008-1" defer></script>
-  <script src="/js/admin-destination-image-bulk-source.js?v=20260927-1" defer></script>
+  <script src="/js/admin-destination-image-bulk-source.js?v=20261009-1" defer></script>
   <script src="/js/admin-destination-image-cards.js?v=20260927-1" defer></script>
-  <script src="/js/admin-destination-image-bulk-delete.js?v=20261008-1" defer></script>
+  <script src="/js/admin-destination-image-bulk-delete.js?v=20261009-2" defer></script>
   <script src="/js/admin-destination-image-order.js?v=20260927-3" defer></script>
   <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
   <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
@@ -72,7 +72,7 @@
             <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
             <div class="admin-image-bulk-panel" data-image-bulk="upload">
               <h3>신규 업로드 사진에 공통 출처 적용</h3>
-              <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields}"></th:block>
+              <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields(true)}"></th:block>
             </div>
             <th:block th:replace="~{admin/destinations/fragments/image-metadata :: metadataTemplate}"></th:block>
           </div>
@@ -146,7 +146,8 @@
             th:action="@{/admin/destinations/{id}/images/sources/bulk(id=${destinationId})}"
             method="post" class="admin-image-bulk-panel" data-image-bulk="existing">
         <h3>등록된 사진의 공통 출처 일괄 수정</h3>
-        <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields}"></th:block>
+        <!-- 대상은 아래 사진 카드에서 고른 공통 선택이다. 전체 선택·해제는 '등록된 이미지' 머리말에 있다. -->
+        <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields(false)}"></th:block>
         <div data-bulk-hidden></div>
       </form>
 
@@ -165,7 +166,8 @@
           </p>
         </div>
         <!--
-          선택 삭제. 카드의 '삭제 선택' 체크박스가 form 속성으로 이 폼에 묶여 있어 체크한 사진 ID만 보낸다.
+          공통 선택 관리. 카드의 '선택' 체크박스가 form 속성으로 이 폼에 묶여 있어 선택 삭제는 체크한 사진 ID만 보낸다.
+          '출처 일괄 적용'은 위 공통 출처 일괄 수정 영역으로 이동하며, 그 영역도 같은 선택을 대상으로 쓴다.
           대표 이미지가 포함되면 단건 삭제와 같이 남은 첫 사진이 대표가 된다(서버가 단건 삭제를 차례로 적용).
         -->
         <form th:unless="${#lists.isEmpty(imageList)}" id="image-bulk-delete-form"
@@ -173,6 +175,8 @@
               method="post" class="admin-image-bulk-delete" data-image-bulk-delete>
           <button type="button" class="admin-btn is-small" data-image-bulk-delete-all>전체 선택</button>
           <button type="button" class="admin-btn is-small" data-image-bulk-delete-clear disabled>선택 해제</button>
+          <span class="admin-image-selection-count" aria-live="polite" data-image-selection-count>0장 선택</span>
+          <button type="button" class="admin-btn is-small" data-image-bulk-source-open disabled>출처 일괄 적용</button>
           <button type="submit" class="admin-btn is-small is-danger" data-image-bulk-delete-submit disabled>선택 삭제</button>
         </form>
         <button type="button" class="admin-btn is-primary" data-image-order-open
@@ -259,11 +263,17 @@
                  loading="lazy" decoding="async"
                  th:alt="${img.sourceTitle != null and !#strings.isEmpty(img.sourceTitle) ? img.sourceTitle : '여행지 이미지'}"
                  onerror="this.onerror=null;this.src='/images/default.png';">
-            <!-- 공통 출처 일괄 수정의 적용 대상 선택. 사진 위에 두어 여러 장을 훑으며 고르기 쉽게 한다. -->
-            <label class="admin-image-bulk-photo-choice admin-image-card-select" th:unless="${img.commonsImage}"
-                   title="위 '등록된 사진의 공통 출처 일괄 수정'의 적용 대상으로 선택">
-              <input type="checkbox" data-image-bulk-select th:value="${img.id}">
-              <span>일괄 적용</span>
+            <!--
+              공통 선택. 머리말의 '출처 일괄 적용'과 '선택 삭제'가 이 선택 하나를 같이 쓴다.
+              사진 영역(이 미리보기)을 눌러도 이 체크박스가 토글된다(admin-destination-image-bulk-delete.js).
+              form 속성으로 선택 삭제 폼에 묶여 체크한 사진 ID만 보낸다.
+              Commons 사진은 출처를 고칠 수 없어 출처 일괄 적용에서만 빠진다(data-image-commons).
+            -->
+            <label class="admin-image-bulk-photo-choice admin-image-card-select" title="이 사진 선택">
+              <input type="checkbox" name="imageIds" form="image-bulk-delete-form"
+                     data-image-delete-select data-image-bulk-select th:value="${img.id}"
+                     th:attr="data-image-main=${img.isMain}, data-image-commons=${img.commonsImage}">
+              <span>선택</span>
             </label>
             <span class="admin-image-order-badge" th:text="${stat.count}"
                   th:attr="aria-label=|순서 ${stat.count}번째|">1</span>
@@ -304,13 +314,6 @@
                 <button type="submit" class="admin-btn is-small"
                         th:text="${img.isSlide} ? '슬라이드 해제' : '슬라이드 포함'">슬라이드 포함</button>
               </form>
-
-              <!-- 위 '선택 삭제' 폼으로 보낸다. 사진·출처 영역과 떨어진 버튼 줄에 두어 다른 동작과 겹치지 않게 한다. -->
-              <label class="admin-image-delete-choice" title="선택 삭제 대상으로 선택">
-                <input type="checkbox" name="imageIds" form="image-bulk-delete-form" data-image-delete-select
-                       th:value="${img.id}" th:attr="data-image-main=${img.isMain}">
-                <span>삭제 선택</span>
-              </label>
 
               <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
                 <input type="hidden" name="destinationId" th:value="${destinationId}">

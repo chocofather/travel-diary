@@ -36,6 +36,11 @@ public class KtoPhotoGalleryService {
     /** 관광사진 API(포토코리아)가 주는 웹용 이미지 경로. TourAPI 이미지는 /cms/resource/ 를 쓴다. */
     private static final String GALLERY_IMAGE_HOST = "tong.visitkorea.or.kr";
     private static final String GALLERY_IMAGE_PATH_PREFIX = "/cms2/website/";
+    /**
+     * gallerySearchList1 정렬 구분. 활용매뉴얼(관광사진) v4.2: "A=촬영일, B=제목, C=수정일".
+     * 최근 촬영 사진이 앞 페이지에 오도록 촬영일 정렬을 요청한다. 키워드 매칭 범위는 바뀌지 않는다.
+     */
+    static final String PHOTOGRAPHY_DATE_ARRANGE = "A";
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -64,6 +69,7 @@ public class KtoPhotoGalleryService {
                                 .queryParam("MobileOS", "ETC")
                                 .queryParam("MobileApp", "TripBora")
                                 .queryParam("keyword", keyword)
+                                .queryParam("arrange", PHOTOGRAPHY_DATE_ARRANGE)
                                 .queryParam("pageNo", pageNo)
                                 .queryParam("numOfRows", numOfRows)
                                 .queryParam("_type", "json")

@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
-    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261008-2";
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261009-3";
 
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
@@ -76,7 +76,7 @@ class AdminKtoPhotoSearchUiContractTest {
     }
 
     @Test
-    void sharedScriptRanksOnlyTheFirstPageAndAppendsMorePagesWithoutReordering() throws IOException {
+    void sharedScriptSortsEachFetchedPageAndAppendsMorePagesWithoutReordering() throws IOException {
         String script = resource("/static/js/admin-kto-photo-search.js");
 
         assertThat(script)
@@ -85,18 +85,66 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("title.includes(normalizedKeyword)")
                 .contains("searchKeyword.includes(normalizedKeyword)")
                 .contains("function stablySortKtoPhotos")
-                .contains("left.rank - right.rank || left.originalIndex - right.originalIndex")
-                // 최초 조회 결과만 정렬하고, 더보기 결과는 받은 순서 그대로 맨 뒤에 붙인다
-                .contains("loadedItems = stablySortKtoPhotos(newItems, currentKeyword)")
-                .contains("loadedItems.push(...newItems)")
-                .contains("appendLoadedPhotos(newItems)")
-                .contains("results.append(fragment)")
-                // 중복은 새 결과에서만 빼고 기존 항목 자리는 건드리지 않는다
+                // 1순위 공공누리 유형(제1 → 제3 → 그 밖), 2순위 촬영월 최신순(없으면 유형 뒤),
+                // 관련도와 받은 순서는 같은 유형·같은 촬영월일 때만 쓰는 tie-breaker
+                .contains("left.licenseRank - right.licenseRank\n"
+                        + "            || compareKtoPhotoPhotographyMonth(left.photographyMonth, right.photographyMonth)\n"
+                        + "            || left.rank - right.rank\n"
+                        + "            || left.originalIndex - right.originalIndex")
+                // 유형은 서버가 정한 licenseType 으로만 판별하고 화면 라벨을 파싱하지 않는다
+                .contains("function ktoPhotoLicenseRank")
+                .contains("String(item?.licenseType ?? \"\").trim()")
+                .contains("if (licenseType === \"KOGL_TYPE_1\") return 0")
+                .contains("if (licenseType === \"KOGL_TYPE_3\") return 1")
+                .doesNotContain("licenseLabel.includes(", "item.licenseLabel ?? \"\").trim() ===")
+                .contains("if (left === null) return 1")
+                .contains("if (right === null) return -1")
+                .contains("return right - left")
+                // 촬영월은 관광사진 API 응답 값(YYYYMM)만 쓰고 등록일·수정일로 대신하지 않는다
+                .contains("String(item?.photographyMonth ?? \"\").trim()")
+                // 중복은 화면·보관 중인 사진 기준으로 새 결과에서만 뺀다
                 .contains("function excludeLoadedKtoPhotos")
-                .contains("excludeLoadedKtoPhotos(payload.items, loadedItems)")
+                .contains("excludeLoadedKtoPhotos(payload.items, knownItems())")
                 .doesNotContain(
-                        "stablySortKtoPhotos(loadedItems, currentKeyword)",
-                        "loadedItems.push(...payload.items)");
+                        "stablySortKtoPhotos(displayedItems, currentKeyword)",
+                        "displayedItems.push(...payload.items)",
+                        // 촬영 정보가 없으면 문구를 띄우지 않고 생략한다
+                        "촬영 정보 없음");
+    }
+
+    /** 제1유형 단계 → 제3유형 단계. 더보기는 항상 맨 뒤에만 붙이고 기존 카드 사이에 끼워 넣지 않는다. */
+    @Test
+    void morePhotosLoadInTwoStagesAndAlwaysAppendToTheEnd() throws IOException {
+        String script = resource("/static/js/admin-kto-photo-search.js");
+
+        assertThat(script)
+                // 1단계: 촬영월 있는 제1유형만 바로 보여주고, 나머지는 따로 보관한다
+                .contains("return ktoPhotoLicenseRank(item) === 0 && ktoPhotoPhotographyMonthKey(item) !== null")
+                .contains("stablySortKtoPhotos(newItems.filter(isImmediateKtoPhoto), currentKeyword)")
+                .contains("deferredUndatedPrimaryItems.push(")
+                .contains("deferredTrailingItems.push(...newItems.filter(isTrailingLicenseKtoPhoto))")
+                // 관광사진 페이지 소진 판단과 2단계 전환
+                .contains("galleryExhausted = payload.items.length === 0 || requestPage * pageSize >= totalCount")
+                .contains("if (shownItems.length === 0) shownItems = takeDeferredBatch()")
+                .contains("if (append && galleryExhausted) {")
+                // 2단계 대기열: 촬영월 없는 제1유형 → 제3유형 등, 제1유형이 남아 있으면 제3유형을 섞지 않는다
+                .contains("deferredUndatedPrimaryItems.concat(deferredTrailingItems)")
+                .contains("const groupEnd = trailingStart > 0 ? trailingStart : deferredQueue.length")
+                .contains("moreButton.hidden = galleryExhausted && (deferredQueue?.length ?? 0) === 0")
+                // 화면에 그린 순서는 맨 뒤에만 붙이고, 라벨은 방금 붙인 묶음 앞·첫 제3유형 앞에 둔다
+                .contains("displayedItems.push(...items)")
+                .contains("results.append(fragment)")
+                .contains("if (markAsNewBatch) latestBatchStartItem = items[0]")
+                .contains("if (item === latestBatchStartItem) fragment.append(createNewBatchMarker())")
+                .contains("if (item === firstTrailingItem) fragment.append(createLicenseDivider())")
+                .contains("\"공공누리 제3유형 사진\"")
+                .doesNotContain(
+                        "results.insertBefore(",
+                        "data-kto-photo-trailing",
+                        "appendLoadedPhotos(newPrimaryItems");
+
+        assertThat(resource("/static/css/destination-create.css"))
+                .contains(".admin-kto-photo-license-divider");
     }
 
     @Test

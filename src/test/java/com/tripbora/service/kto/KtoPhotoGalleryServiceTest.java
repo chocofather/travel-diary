@@ -174,6 +174,8 @@ class KtoPhotoGalleryServiceTest {
     private void assertRequestParameters(URI uri, String expectedKeyword) {
         assertPath(uri, "/PhotoGalleryService1/gallerySearchList1");
         assertQueryValue(uri, "keyword", expectedKeyword);
+        // 활용매뉴얼(관광사진) v4.2 arrange: A=촬영일, B=제목, C=수정일
+        assertQueryValue(uri, "arrange", "A");
         assertQueryValue(uri, "MobileOS", "ETC");
         assertQueryValue(uri, "MobileApp", "TripBora");
         assertQueryValue(uri, "pageNo", "1");

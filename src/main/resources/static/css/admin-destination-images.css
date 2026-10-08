@@ -698,7 +698,8 @@
     position: absolute;
     top: 8px;
     left: 8px;
-    padding: 3px 8px 3px 6px;
+    gap: 5px;
+    padding: 4px 9px 4px 7px;
     color: #2f3a4f;
     background: rgba(255, 255, 255, 0.92);
     border-radius: 999px;
@@ -757,10 +758,14 @@
     justify-self: end;
 }
 
+/* 위의 출처 상태·요약과 아래 동작 버튼을 얇은 선으로 나눈다. */
 .admin-destination-image-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    margin-top: 2px;
+    padding-top: 8px;
+    border-top: 1px solid #edf0f5;
 }
 
 /* 좁은 카드에서도 대표·슬라이드·삭제가 한 줄에 들어가도록 작게 둔다. */
@@ -780,43 +785,47 @@
     margin: 0;
 }
 
-/* 선택 삭제 체크박스: 삭제 버튼 바로 앞(오른쪽 끝)에 둔다. */
-.admin-image-delete-choice {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 26px;
-    margin-left: auto;
-    padding: 0 4px;
-    color: #4d576b;
-    font-size: 0.7rem;
-    font-weight: 700;
-    white-space: nowrap;
+/* 공통 선택(선택 삭제·출처 일괄 적용이 같이 쓴다)된 카드 */
+.admin-destination-image-card.is-selected {
+    border-color: #9fb2e6;
+    box-shadow: 0 0 0 2px #dfe7fb;
+}
+
+/* 사진 영역을 눌러도 선택이 토글된다. 터치에서 두 번 탭 확대·글자 선택이 끼어들지 않게 한다. */
+.admin-destination-image-grid .admin-destination-image-preview {
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
-.admin-image-delete-choice input {
-    width: 15px;
-    height: 15px;
-    margin: 0;
-    accent-color: #d95555;
-}
-
-.admin-destination-image-actions .admin-image-delete-choice + form {
-    margin-left: 0;
-}
-
-.admin-destination-image-card.is-delete-selected {
-    border-color: #e3a3a3;
-    box-shadow: 0 0 0 2px #f6d6d6;
+/* 키보드는 체크박스로 선택한다(Space). 포커스 위치가 사진 위에서도 보이게 한다. */
+.admin-image-card-select:focus-within {
+    outline: 2px solid #6d86d8;
+    outline-offset: 1px;
 }
 
 .admin-image-bulk-delete {
     display: flex;
     flex: 0 0 auto;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
     margin: 0;
+}
+
+.admin-image-selection-count {
+    min-width: 4.2em;
+    padding: 0 4px;
+    color: #3e4b68;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* 머리말의 '출처 일괄 적용'으로 옮겨 올 때 관리자 상단바에 제목이 가리지 않게 한다. */
+.admin-image-bulk-panel[data-image-bulk="existing"] {
+    scroll-margin-top: 88px;
 }
 
 .admin-image-bulk-delete-alert {
@@ -863,5 +872,10 @@
     .admin-image-add-upload,
     .admin-image-add-kto .admin-kto-photo-section {
         padding: 14px;
+    }
+
+    /* 좁은 화면에서는 공통 선택 관리 버튼 줄이 머리말 폭 전체를 쓰고 필요하면 줄을 바꾼다. */
+    .admin-image-bulk-delete {
+        flex: 1 1 100%;
     }
 }

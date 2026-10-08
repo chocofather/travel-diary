@@ -4,17 +4,17 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css?v=20261008-3">
+  <link rel="stylesheet" href="/css/destination-create.css?v=20261009-1">
   <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20261008-1">
   <script src="/js/admin-destination-category-select.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260920-1" defer></script>
-  <script src="/js/admin-destination-image-bulk-source.js?v=20260927-1" defer></script>
+  <script src="/js/admin-destination-image-bulk-source.js?v=20261009-1" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
   <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
   <script src="/js/admin-destination-duplicate-ack.js?v=20261008-1" defer></script>
   <script src="/js/admin-kto-tour-autofill.js?v=20261008-2" defer></script>
-  <script src="/js/admin-kto-photo-search.js?v=20261008-2" defer></script>
+  <script src="/js/admin-kto-photo-search.js?v=20261009-3" defer></script>
   <script src="/js/admin-wikidata-form-apply.js?v=20260926-3" defer></script>
   <script src="/js/admin-wikipedia-description-apply.js?v=20260926-1" defer></script>
   <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
@@ -742,7 +742,7 @@
         <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
         <div class="admin-image-bulk-panel" data-image-bulk="upload">
           <h3>선택 사진에 공통 출처 적용</h3>
-          <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields}"></th:block>
+          <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields(true)}"></th:block>
         </div>
         <th:block th:replace="~{admin/destinations/fragments/image-metadata :: metadataTemplate}"></th:block>
       </div>

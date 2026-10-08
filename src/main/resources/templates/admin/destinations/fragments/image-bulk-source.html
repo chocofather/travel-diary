@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<th:block th:fragment="fields">
+<!--
+  selectionControls: 이 영역 안에 전체 선택/해제를 둘지. 등록된 사진은 '등록된 이미지' 머리말의 공통 선택 관리를 쓰므로 false.
+-->
+<th:block th:fragment="fields(selectionControls)">
   <div class="admin-image-bulk-fields">
     <label><span>제공기관</span><input type="text" maxlength="100" data-bulk-field="sourceName" placeholder="예: 한국관광공사"></label>
     <label><span>공통 저작자 (해당하는 경우)</span><input type="text" maxlength="100" data-bulk-field="photographer"></label>
@@ -24,8 +27,10 @@
     <label><input type="checkbox" value="commonSourceUrl" data-bulk-overwrite> 공통 페이지 URL</label>
   </fieldset>
   <p class="admin-image-bulk-selection" data-bulk-count aria-live="polite">선택한 사진 0장</p>
-  <button type="button" class="admin-btn is-small" data-bulk-select-all>전체 선택</button>
-  <button type="button" class="admin-btn is-small" data-bulk-clear-all>전체 해제</button>
+  <th:block th:if="${selectionControls}">
+    <button type="button" class="admin-btn is-small" data-bulk-select-all>전체 선택</button>
+    <button type="button" class="admin-btn is-small" data-bulk-clear-all>전체 해제</button>
+  </th:block>
   <button type="button" class="admin-btn is-small" data-bulk-preview-button>변경 미리보기</button>
   <div class="admin-image-bulk-preview" data-bulk-preview hidden aria-live="polite"></div>
   <button type="button" class="admin-btn is-primary" data-bulk-apply disabled>공통 출처 적용</button>

@@ -17,6 +17,7 @@
     .home-page .trip-card-list .trip-card { flex: 0 0 calc((100% - 32px) / 3); }
     .home-page .trip-card-list .trip-card img { height: auto; aspect-ratio: 16 / 10; }
     .home-page .trip-card-list .trip-info { padding: 8px 0 0; }
+    .home-page .trip-card-list .trip-info h4 { margin-bottom: 4px; font-size: 15px; }
     .home-page .trip-card-list .trip-info p { font-size: 12px; }
 
     .home-page .home-converge { padding: 0 24px 40px; }

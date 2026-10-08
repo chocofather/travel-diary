@@ -132,20 +132,55 @@ class AdminDestinationImageManagementUiContractTest {
                 .contains("submitting = true;");
     }
 
+    /** 카드의 체크박스 하나를 선택 삭제와 출처 일괄 적용이 같이 쓴다. 관리는 '등록된 이미지' 머리말에서 한다. */
     @Test
-    void registeredImagesCanBeSelectedAndDeletedTogether() throws IOException {
+    void registeredImagesShareOneSelectionForBulkDeleteAndBulkSource() throws IOException {
         Document page = Jsoup.parse(resource("/templates/admin/destinations/image-upload.html"));
 
         assertThat(page.select("form#image-bulk-delete-form[data-image-bulk-delete][method=post]"))
                 .singleElement()
                 .satisfies(form -> assertThat(form.attr("th:action")).contains("/images/delete/bulk"));
-        assertThat(page.select(".admin-destination-image-card input[type=checkbox][data-image-delete-select]"))
-                .singleElement()
+        var card = page.selectFirst(".admin-destination-image-grid .admin-destination-image-card");
+        assertThat(card.select("input[type=checkbox]")).singleElement()
+                .satisfies(choice -> assertThat(choice.hasAttr("data-image-delete-select")).isTrue())
+                .satisfies(choice -> assertThat(choice.hasAttr("data-image-bulk-select")).isTrue())
                 .satisfies(choice -> assertThat(choice.attr("name")).isEqualTo("imageIds"))
-                .satisfies(choice -> assertThat(choice.attr("form")).isEqualTo("image-bulk-delete-form"));
+                .satisfies(choice -> assertThat(choice.attr("form")).isEqualTo("image-bulk-delete-form"))
+                .satisfies(choice -> assertThat(choice.attr("th:attr")).contains("data-image-commons=${img.commonsImage}"));
+        assertThat(card.select(".admin-image-card-select").text()).isEqualTo("선택");
+        assertThat(card.text()).doesNotContain("삭제 선택", "일괄 적용");
+        // 단건 삭제는 그대로 둔다
+        assertThat(card.select(".admin-destination-image-actions form[th:action*=/delete] button").text())
+                .isEqualTo("삭제");
+
+        var bar = page.selectFirst("[data-image-order-bar] form[data-image-bulk-delete]");
+        assertThat(bar.select("[data-image-bulk-delete-all], [data-image-bulk-delete-clear], "
+                + "[data-image-selection-count], [data-image-bulk-source-open], [data-image-bulk-delete-submit]"))
+                .hasSize(5);
+        assertThat(bar.selectFirst("[data-image-bulk-source-open]").text()).isEqualTo("출처 일괄 적용");
+        // 등록된 사진 출처 영역은 머리말의 공통 선택을 쓰므로 자체 전체 선택·해제를 두지 않는다
+        assertThat(resource("/templates/admin/destinations/image-upload.html"))
+                .contains("image-bulk-source :: fields(false)", "image-bulk-source :: fields(true)");
+        assertThat(resource("/templates/admin/destinations/fragments/image-bulk-source.html"))
+                .contains("th:fragment=\"fields(selectionControls)\"", "th:if=\"${selectionControls}\"");
+
         assertThat(resource("/static/js/admin-destination-image-bulk-delete.js"))
                 .contains("선택한 이미지 ${targets.length}장을 삭제하시겠습니까?")
-                .contains("if (submitting || targets.length === 0");
+                .contains("if (submitting || targets.length === 0")
+                .contains("countLabel.textContent = `${count}장 선택`")
+                .contains("choice.dataset.imageCommons !== \"true\"")
+                .contains("choice.dispatchEvent(new Event(\"change\", {bubbles: true}))")
+                .contains("classList.toggle(\"is-selected\", choice.checked)")
+                // 사진 영역만 눌러도 토글하고, 체크박스·버튼·링크를 누른 경우는 건드리지 않는다
+                .contains("closest?.(\".admin-destination-image-grid .admin-destination-image-preview\")")
+                .contains("event.target.closest(\"label, a, button, input, select\")")
+                .contains("choice.checked = !choice.checked");
+        // 대표·슬라이드·삭제·출처 영역은 사진 영역 밖에 있어 사진 클릭 토글과 겹치지 않는다
+        assertThat(card.select(".admin-destination-image-preview form, .admin-destination-image-preview details, "
+                + ".admin-destination-image-preview button")).isEmpty();
+        assertThat(resource("/static/js/admin-destination-image-bulk-source.js"))
+                .contains("choice(card)?.dataset.imageCommons === \"true\"")
+                .contains("panel.querySelector(\"[data-bulk-select-all]\")?.addEventListener");
     }
 
     @Test
@@ -288,8 +323,8 @@ class AdminDestinationImageManagementUiContractTest {
                 "/templates/admin/destinations/fragments/image-bulk-source.html"));
         Document page = Jsoup.parse(management);
 
-        assertThat(create).contains("admin-destination-image-bulk-source.js?v=20260927-1");
-        assertThat(management).contains("admin-destination-image-bulk-source.js?v=20260927-1");
+        assertThat(create).contains("admin-destination-image-bulk-source.js?v=20261009-1");
+        assertThat(management).contains("admin-destination-image-bulk-source.js?v=20261009-1");
         assertThat(metadata.select("[data-image-metadata-field=commonSourceUrl][data-image-source-url=common], "
                 + "[data-image-metadata-field=workPageUrl][data-image-source-url=work]")).hasSize(2);
         assertThat(bulk.select("[data-bulk-field=commonSourceUrl][data-image-source-url=common]"))

@@ -13,15 +13,53 @@ function ktoPhotoRelevanceRank(item, keyword) {
     return 3;
 }
 
+// 관광사진 API galPhotographyMonth(YYYYMM)만 촬영월로 본다. TourAPI 사진은 촬영일이 없어 null 이다
+function ktoPhotoPhotographyMonthKey(item) {
+    const month = String(item?.photographyMonth ?? "").trim();
+    return /^\d{6}$/.test(month) ? Number(month) : null;
+}
+
+// 촬영월 최신순, 촬영월이 없으면 뒤로 보낸다
+function compareKtoPhotoPhotographyMonth(left, right) {
+    if (left === right) return 0;
+    if (left === null) return 1;
+    if (right === null) return -1;
+    return right - left;
+}
+
+// 서버가 정한 licenseType 으로만 나눈다. 제3유형은 숨기지 않고 제1유형 뒤에 두며, 그 밖의 값은 맨 뒤로 보낸다
+function ktoPhotoLicenseRank(item) {
+    const licenseType = String(item?.licenseType ?? "").trim();
+    if (licenseType === "KOGL_TYPE_1") return 0;
+    if (licenseType === "KOGL_TYPE_3") return 1;
+    return 2;
+}
+
+// 1단계(관광사진 페이지를 넘기는 동안)에는 촬영월이 있는 제1유형만 바로 보여준다.
+// 촬영월 없는 제1유형(TourAPI 등)과 제3유형 등은 제1유형 페이지를 모두 본 뒤에 보여주려고 따로 보관한다
+function isImmediateKtoPhoto(item) {
+    return ktoPhotoLicenseRank(item) === 0 && ktoPhotoPhotographyMonthKey(item) !== null;
+}
+
+function isTrailingLicenseKtoPhoto(item) {
+    return ktoPhotoLicenseRank(item) !== 0;
+}
+
+// 유형 → 촬영월 최신순(없으면 그 유형 뒤) → 검색어 관련도 → 받은 순서. 관련도는 유형·촬영월을 뒤집지 않는다
 function stablySortKtoPhotos(items, keyword) {
     return items
         .map((item, originalIndex) => ({
             item,
             originalIndex,
-            rank: ktoPhotoRelevanceRank(item, keyword)
+            rank: ktoPhotoRelevanceRank(item, keyword),
+            licenseRank: ktoPhotoLicenseRank(item),
+            photographyMonth: ktoPhotoPhotographyMonthKey(item)
         }))
         .sort((left, right) =>
-            left.rank - right.rank || left.originalIndex - right.originalIndex
+            left.licenseRank - right.licenseRank
+            || compareKtoPhotoPhotographyMonth(left.photographyMonth, right.photographyMonth)
+            || left.rank - right.rank
+            || left.originalIndex - right.originalIndex
         )
         .map(entry => entry.item);
 }
@@ -142,11 +180,19 @@ document.addEventListener("DOMContentLoaded", () => {
         let currentKeyword = "";
         let currentPage = 0;
         let totalCount = 0;
-        let displayedCount = 0;
-        let fetchedCount = 0;
+        // 첫 페이지 전체 수(관광사진 + 덧붙인 TourAPI 사진). 상태 문구에만 쓴다
+        let resultTotalCount = 0;
         let loading = false;
-        let loadedItems = [];
-        let latestBatchStartIndex = -1;
+        // 화면에 그린 사진. 맨 뒤에 붙이기만 하고 이미 그린 카드의 순서는 바꾸지 않는다
+        let displayedItems = [];
+        // 1단계 동안 보여주지 않고 보관하는 사진: 촬영월 없는 제1유형 / 제3유형 등
+        let deferredUndatedPrimaryItems = [];
+        let deferredTrailingItems = [];
+        // 관광사진 페이지를 모두 받은 뒤(2단계) 보관분을 보여줄 순서대로 담은 대기열
+        let galleryExhausted = false;
+        let deferredQueue = null;
+        let latestBatchStartItem = null;
+        let firstTrailingItem = null;
         // 등록 요청을 보낸 뒤에는 화면을 떠날 때까지 다시 보내지 않는다(빠른 두 번 클릭으로 같은 사진이 두 번 저장되지 않게)
         let submitting = false;
         const submitLabel = submitButton?.textContent.trim() ?? "";
@@ -281,16 +327,15 @@ document.addEventListener("DOMContentLoaded", () => {
             body.className = "admin-kto-photo-card-body";
             body.append(textElement("h3", "admin-kto-photo-title", String(item.title ?? "제목 없음")));
 
+            // 촬영 정보는 응답에 있을 때만 작은 보조정보로 보이고, 없으면 줄 자체를 생략한다
             const photoDetails = [];
             const location = String(item.photographyLocation ?? "").trim();
             const month = formatPhotographyMonth(item.photographyMonth);
+            if (month) photoDetails.push(`${month} 촬영`);
             if (location) photoDetails.push(`촬영지 ${location}`);
-            if (month) photoDetails.push(`촬영월 ${month}`);
-            body.append(textElement(
-                "p",
-                "admin-kto-photo-details",
-                photoDetails.length > 0 ? photoDetails.join(" · ") : "촬영 정보 없음"
-            ));
+            if (photoDetails.length > 0) {
+                body.append(textElement("p", "admin-kto-photo-details", photoDetails.join(" · ")));
+            }
             body.append(textElement("p", "admin-kto-photo-source", attribution(item)));
             // 라이선스 라벨은 서버가 출처별 근거로 정한 값만 쓴다. 없으면 유형을 가정하지 않는다
             const licenseLabel = String(item.licenseLabel ?? "").trim();
@@ -374,23 +419,61 @@ document.addEventListener("DOMContentLoaded", () => {
             return marker;
         }
 
-        // loadedItems 순서가 곧 화면 순서다. 선택 상태가 바뀌어 다시 그려도 위치는 바뀌지 않는다
+        function createLicenseDivider() {
+            return textElement("p", "admin-kto-photo-license-divider", "공공누리 제3유형 사진");
+        }
+
+        // 화면에 그린 사진과 보관 중인 사진. 중복 제외 기준으로 쓴다
+        function knownItems() {
+            return displayedItems.concat(deferredUndatedPrimaryItems, deferredTrailingItems);
+        }
+
+        // 이번 더보기 묶음 앞에는 "새로 불러온 이미지", 첫 제3유형 앞에는 유형 구분 표시를 둔다
+        function appendPhotoCard(fragment, item) {
+            if (item === latestBatchStartItem) fragment.append(createNewBatchMarker());
+            if (item === firstTrailingItem) fragment.append(createLicenseDivider());
+            fragment.append(createCard(item));
+        }
+
+        // displayedItems 순서가 곧 화면 순서다. 선택 상태가 바뀌어 다시 그려도 위치는 바뀌지 않는다
         function renderLoadedPhotos() {
             const fragment = document.createDocumentFragment();
-            loadedItems.forEach((item, index) => {
-                if (index === latestBatchStartIndex) fragment.append(createNewBatchMarker());
-                fragment.append(createCard(item));
-            });
+            displayedItems.forEach(item => appendPhotoCard(fragment, item));
             results.replaceChildren(fragment);
         }
 
-        // 더보기 결과는 기존 카드를 다시 그리지 않고 목록 맨 뒤에만 붙인다
+        // 새 결과는 기존 카드를 다시 그리지 않고 항상 목록 맨 뒤에만 붙인다
         function appendLoadedPhotos(items) {
             results.querySelector("[data-kto-photo-new-batch]")?.remove();
             const fragment = document.createDocumentFragment();
-            fragment.append(createNewBatchMarker());
-            items.forEach(item => fragment.append(createCard(item)));
+            items.forEach(item => appendPhotoCard(fragment, item));
             results.append(fragment);
+        }
+
+        function showPhotos(items, markAsNewBatch) {
+            if (items.length === 0) return;
+            if (firstTrailingItem === null) {
+                firstTrailingItem = items.find(isTrailingLicenseKtoPhoto) ?? null;
+            }
+            if (markAsNewBatch) latestBatchStartItem = items[0];
+            displayedItems.push(...items);
+            appendLoadedPhotos(items);
+        }
+
+        // 2단계 대기열: 촬영월 없는 제1유형 → 제3유형 등. 관광사진 페이지를 모두 받은 시점에 한 번만 만든다
+        function startDeferredStage() {
+            if (deferredQueue !== null) return;
+            deferredQueue = stablySortKtoPhotos(
+                deferredUndatedPrimaryItems.concat(deferredTrailingItems),
+                currentKeyword
+            );
+        }
+
+        // 한 번에 pageSize 장씩 꺼내되, 제1유형이 남아 있으면 제3유형을 같은 묶음에 섞지 않는다
+        function takeDeferredBatch() {
+            const trailingStart = deferredQueue.findIndex(isTrailingLicenseKtoPhoto);
+            const groupEnd = trailingStart > 0 ? trailingStart : deferredQueue.length;
+            return deferredQueue.splice(0, Math.min(pageSize, groupEnd));
         }
 
         function renderSelectedPhotos() {
@@ -409,13 +492,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 : "대표사진 없음";
         }
 
-        function updateMoreButton(receivedCount) {
-            // 중복 제외로 화면 장수가 줄어도 서버에서 받은 장수 기준으로 다음 페이지 여부를 판단한다
-            moreButton.hidden = receivedCount === 0 || fetchedCount >= totalCount;
+        function updateMoreButton() {
+            moreButton.hidden = galleryExhausted && (deferredQueue?.length ?? 0) === 0;
+        }
+
+        function updateResultStatus() {
+            if (displayedItems.length === 0 && moreButton.hidden) {
+                setStatus("검색 결과가 없습니다.", "empty");
+            } else {
+                setStatus(`총 ${resultTotalCount.toLocaleString("ko-KR")}장의 관광사진`, "success");
+            }
         }
 
         async function loadPhotos(append) {
             if (loading) return;
+
+            if (append && galleryExhausted) {
+                // 2단계: 관광사진 페이지는 모두 받았으므로 보관해 둔 사진을 서버 요청 없이 맨 뒤에 붙인다
+                if (deferredQueue === null) return;
+                showPhotos(takeDeferredBatch(), true);
+                updateMoreButton();
+                updateResultStatus();
+                return;
+            }
 
             let requestKeyword = append ? currentKeyword : keywordInput.value.trim();
             if (!append && !requestKeyword) {
@@ -433,10 +532,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentKeyword = requestKeyword;
                 currentPage = 0;
                 totalCount = 0;
-                displayedCount = 0;
-                fetchedCount = 0;
-                loadedItems = [];
-                latestBatchStartIndex = -1;
+                resultTotalCount = 0;
+                displayedItems = [];
+                deferredUndatedPrimaryItems = [];
+                deferredTrailingItems = [];
+                galleryExhausted = false;
+                deferredQueue = null;
+                latestBatchStartItem = null;
+                firstTrailingItem = null;
                 results.replaceChildren();
                 moreButton.hidden = true;
             }
@@ -468,25 +571,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 currentPage = requestPage;
                 totalCount = Number.isFinite(Number(payload.totalCount)) ? Number(payload.totalCount) : 0;
-                fetchedCount += payload.items.length;
-                const newItems = excludeLoadedKtoPhotos(payload.items, loadedItems);
-                if (!append) {
-                    // 최초 조회 결과만 검색어 관련도로 정렬하고, 이후에는 이 순서를 고정한다
-                    loadedItems = stablySortKtoPhotos(newItems, currentKeyword);
-                    renderLoadedPhotos();
-                } else if (newItems.length > 0) {
-                    latestBatchStartIndex = loadedItems.length;
-                    loadedItems.push(...newItems);
-                    appendLoadedPhotos(newItems);
-                }
-                displayedCount = loadedItems.length;
+                if (requestPage === 1) resultTotalCount = totalCount;
 
-                if (displayedCount === 0) {
-                    setStatus("검색 결과가 없습니다.", "empty");
-                } else {
-                    setStatus(`총 ${totalCount.toLocaleString("ko-KR")}장의 관광사진`, "success");
+                // 1단계: 촬영월이 있는 제1유형만 이번 페이지 안에서 촬영월 최신순으로 정렬해 맨 뒤에 붙이고,
+                // 촬영월 없는 제1유형과 제3유형 등은 화면에 그리지 않고 보관한다
+                const newItems = excludeLoadedKtoPhotos(payload.items, knownItems());
+                const immediateItems = stablySortKtoPhotos(newItems.filter(isImmediateKtoPhoto), currentKeyword);
+                deferredUndatedPrimaryItems.push(...newItems.filter(item =>
+                    !isImmediateKtoPhoto(item) && !isTrailingLicenseKtoPhoto(item)));
+                deferredTrailingItems.push(...newItems.filter(isTrailingLicenseKtoPhoto));
+
+                // 관광사진은 pageSize 장씩 넘긴다. 첫 페이지 전체 수에는 TourAPI 사진 수가 더해져 있어
+                // 넉넉하게 판단되며, 그때는 다음 더보기에서 빈 페이지를 받아 소진을 확인한다
+                galleryExhausted = payload.items.length === 0 || requestPage * pageSize >= totalCount;
+                let shownItems = immediateItems;
+                if (galleryExhausted) {
+                    startDeferredStage();
+                    // 이번 요청에서 붙일 제1유형이 없으면 같은 클릭에서 바로 2단계 첫 묶음을 붙인다
+                    if (shownItems.length === 0) shownItems = takeDeferredBatch();
                 }
-                updateMoreButton(payload.items.length);
+                showPhotos(shownItems, append);
+                updateMoreButton();
+                updateResultStatus();
             } catch (error) {
                 setStatus(errorMessage, "error");
                 if (!append) results.replaceChildren();
