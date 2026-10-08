@@ -506,6 +506,31 @@ public class DestinationImageService {
         deleteFilesAfterCommit(Collections.singletonList(image.getImageUrl()));
     }
 
+    /**
+     * 관리 화면에서 고른 사진 여러 장을 한 번에 지운다.
+     *
+     * <p>하나라도 이 여행지의 사진이 아니면(이미 지워졌거나 다른 여행지 사진) 아무것도 지우지 않는다.
+     * 실제 삭제는 단건 삭제를 차례로 적용해 순서 재정렬·대표 이미지 승계(남은 첫 사진)·커밋 후 파일 정리 규칙을 그대로 따른다.
+     *
+     * @return 지운 사진 수
+     */
+    @Transactional
+    public int deleteImages(Long destinationId, List<Long> imageIds) {
+        if (imageIds == null || imageIds.isEmpty() || imageIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("삭제할 사진을 선택해 주세요.");
+        }
+        Set<Long> targetIds = new LinkedHashSet<>(imageIds);
+        Set<Long> currentIds = new LinkedHashSet<>();
+        destinationMapper.findImagesByDestinationId(destinationId)
+                .forEach(image -> currentIds.add(image.getId()));
+        if (!currentIds.containsAll(targetIds)) {
+            throw new IllegalArgumentException(
+                    "선택한 사진 중 이미 삭제되었거나 이 여행지의 사진이 아닌 것이 있습니다. 새로고침한 뒤 다시 선택해 주세요.");
+        }
+        targetIds.forEach(imageId -> deleteImage(destinationId, imageId));
+        return targetIds.size();
+    }
+
     public void deleteFilesAfterCommit(List<String> imageUrls) {
         List<String> managedImageUrls = imageUrls == null
                 ? List.of()

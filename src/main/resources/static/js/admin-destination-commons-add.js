@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectionField = root.querySelector('[data-commons-add-selection]');
   const submitButton = root.querySelector('[data-commons-add-submit]');
   const submitStatus = root.querySelector('[data-commons-add-status]');
+  const submitLabel = submitButton.textContent;
   const registeredFileNames = Array.from(root.querySelectorAll('[data-registered-commons-file]'))
     .map(node => node.textContent.trim()).filter(Boolean);
   let photos = [];
@@ -26,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSelection(next) {
     photos = next;
     selectionField.value = picker.serializeSelection(qid, photos);
-    submitButton.disabled = photos.length === 0;
+    submitButton.disabled = form.dataset.submitting === 'true' || photos.length === 0;
   }
 
   // 같은 위치(cursor)의 묶음은 한 번만 받는다. 실패한 요청은 남기지 않아 다시 시도할 수 있다.
@@ -86,15 +87,29 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       return;
     }
-    // 실제 제출이 시작된 뒤에만 잠근다. 결과는 서버가 돌려준 관리 화면에서 안내한다.
+    // 빠른 두 번 클릭이 두 번 제출되지 않도록 첫 제출 즉시 잠근다. 결과는 서버가 돌려준 관리 화면에서 안내한다.
+    form.dataset.submitting = 'true';
+    submitButton.disabled = true;
+    loadButton.disabled = true;
+    submitButton.textContent = '추가 중…';
+    submitStatus.hidden = false;
+    submitStatus.textContent = `선택한 사진 ${photos.length}장을 추가하는 중입니다. 서버가 출처·라이선스를 다시 확인하고 내려받은 뒤 이 화면으로 돌아옵니다.`;
+    // 다른 처리기가 제출을 취소했으면 다시 풀어 준다.
     setTimeout(() => {
-      if (event.defaultPrevented) return;
-      form.dataset.submitting = 'true';
-      submitButton.disabled = true;
-      loadButton.disabled = true;
-      submitButton.textContent = '추가 중…';
-      submitStatus.hidden = false;
-      submitStatus.textContent = `선택한 사진 ${photos.length}장을 추가하는 중입니다. 서버가 출처·라이선스를 다시 확인하고 내려받은 뒤 이 화면으로 돌아옵니다.`;
+      if (event.defaultPrevented) unlock();
     });
+  });
+
+  function unlock() {
+    delete form.dataset.submitting;
+    submitButton.textContent = submitLabel;
+    submitButton.disabled = photos.length === 0;
+    loadButton.disabled = false;
+    submitStatus.hidden = true;
+  }
+
+  // 오류 화면에서 뒤로 돌아오면(페이지 캐시) 다시 추가할 수 있게 풀어 준다.
+  window.addEventListener('pageshow', event => {
+    if (event.persisted && form.dataset.submitting === 'true') unlock();
   });
 });

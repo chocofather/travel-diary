@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
-    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261008-1";
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20261008-2";
 
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {

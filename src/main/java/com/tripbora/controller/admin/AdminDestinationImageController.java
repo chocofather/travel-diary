@@ -321,6 +321,21 @@ public class AdminDestinationImageController {
         return managementRedirect(destinationId);
     }
 
+    /** 등록된 사진 카드에서 고른 여러 장을 지운다. 대표 이미지 승계 등은 단건 삭제와 같다. */
+    @PostMapping("/{id}/images/delete/bulk")
+    public String deleteImages(@PathVariable Long id,
+                               @RequestParam(value = "imageIds", required = false) List<Long> imageIds,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            int deleted = destinationImageService.deleteImages(id, imageIds);
+            redirectAttributes.addFlashAttribute("bulkDeleteResult", "사진 " + deleted + "장을 삭제했습니다.");
+        } catch (IllegalArgumentException exception) {
+            // 선택이 비었거나 그 사이 지워진 사진이 섞인 경우(중복 제출 포함). 아무것도 지우지 않았다
+            redirectAttributes.addFlashAttribute("bulkDeleteError", exception.getMessage());
+        }
+        return managementRedirect(id) + "#registered-images";
+    }
+
     private ResponseStatusException invalidImageRequest() {
         return new ResponseStatusException(
                 HttpStatus.BAD_REQUEST,

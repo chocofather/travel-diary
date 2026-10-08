@@ -126,7 +126,26 @@ class AdminDestinationImageManagementUiContractTest {
         assertThat(search.select(".admin-kto-photo-results-area button[type=submit][data-kto-photo-submit][disabled]"))
                 .hasSize(1);
         assertThat(resource("/static/js/admin-kto-photo-search.js"))
-                .contains("submitButton.disabled = selections.length === 0");
+                .contains("submitButton.disabled = submitting || selections.length === 0")
+                // 빠른 두 번 클릭으로 같은 사진이 두 번 저장되지 않게 첫 제출 즉시 잠근다
+                .contains("if (submitting || selectionState.count() === 0)")
+                .contains("submitting = true;");
+    }
+
+    @Test
+    void registeredImagesCanBeSelectedAndDeletedTogether() throws IOException {
+        Document page = Jsoup.parse(resource("/templates/admin/destinations/image-upload.html"));
+
+        assertThat(page.select("form#image-bulk-delete-form[data-image-bulk-delete][method=post]"))
+                .singleElement()
+                .satisfies(form -> assertThat(form.attr("th:action")).contains("/images/delete/bulk"));
+        assertThat(page.select(".admin-destination-image-card input[type=checkbox][data-image-delete-select]"))
+                .singleElement()
+                .satisfies(choice -> assertThat(choice.attr("name")).isEqualTo("imageIds"))
+                .satisfies(choice -> assertThat(choice.attr("form")).isEqualTo("image-bulk-delete-form"));
+        assertThat(resource("/static/js/admin-destination-image-bulk-delete.js"))
+                .contains("선택한 이미지 ${targets.length}장을 삭제하시겠습니까?")
+                .contains("if (submitting || targets.length === 0");
     }
 
     @Test

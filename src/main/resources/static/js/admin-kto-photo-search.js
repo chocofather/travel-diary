@@ -147,6 +147,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let loading = false;
         let loadedItems = [];
         let latestBatchStartIndex = -1;
+        // 등록 요청을 보낸 뒤에는 화면을 떠날 때까지 다시 보내지 않는다(빠른 두 번 클릭으로 같은 사진이 두 번 저장되지 않게)
+        let submitting = false;
+        const submitLabel = submitButton?.textContent.trim() ?? "";
         const selectionState = createKtoPhotoSelectionState();
 
         function destinationName() {
@@ -396,7 +399,7 @@ document.addEventListener("DOMContentLoaded", () => {
             selections.forEach(selection => fragment.append(createSelectedPhoto(selection)));
             selectedList.replaceChildren(fragment);
             selectedPhotosJson.value = JSON.stringify(serializeKtoSelectedPhotos(selectionState.entries()));
-            if (submitButton) submitButton.disabled = selections.length === 0;
+            if (submitButton) submitButton.disabled = submitting || selections.length === 0;
 
             selectedCount.textContent = `${selectionState.count()}장`;
             selectedArea.hidden = selections.length === 0;
@@ -497,6 +500,29 @@ document.addEventListener("DOMContentLoaded", () => {
             keywordInput.value = destinationName();
         }
         renderSelectedPhotos();
+
+        const submitForm = submitButton?.form;
+        if (submitForm) {
+            submitForm.addEventListener("submit", event => {
+                if (submitting || selectionState.count() === 0) {
+                    event.preventDefault();
+                    return;
+                }
+                // 첫 제출 즉시 잠근다. 결과(성공·실패 원인)는 서버가 돌려준 관리 화면에서 안내한다
+                submitting = true;
+                submitButton.disabled = true;
+                submitButton.textContent = "등록 중...";
+                searchArea.setAttribute("aria-busy", "true");
+            });
+            // 오류 화면에서 뒤로 돌아오면(페이지 캐시) 다시 등록할 수 있게 풀어 준다
+            window.addEventListener("pageshow", event => {
+                if (!event.persisted || !submitting) return;
+                submitting = false;
+                submitButton.textContent = submitLabel;
+                searchArea.setAttribute("aria-busy", "false");
+                renderSelectedPhotos();
+            });
+        }
 
         searchButton.addEventListener("click", () => loadPhotos(false));
         moreButton.addEventListener("click", () => loadPhotos(true));

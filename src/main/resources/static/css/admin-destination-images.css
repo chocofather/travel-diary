@@ -780,6 +780,49 @@
     margin: 0;
 }
 
+/* 선택 삭제 체크박스: 삭제 버튼 바로 앞(오른쪽 끝)에 둔다. */
+.admin-image-delete-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 26px;
+    margin-left: auto;
+    padding: 0 4px;
+    color: #4d576b;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-image-delete-choice input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: #d95555;
+}
+
+.admin-destination-image-actions .admin-image-delete-choice + form {
+    margin-left: 0;
+}
+
+.admin-destination-image-card.is-delete-selected {
+    border-color: #e3a3a3;
+    box-shadow: 0 0 0 2px #f6d6d6;
+}
+
+.admin-image-bulk-delete {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+}
+
+.admin-image-bulk-delete-alert {
+    margin: 12px 0 0;
+}
+
 .admin-image-current-state {
     display: inline-flex;
     align-items: center;

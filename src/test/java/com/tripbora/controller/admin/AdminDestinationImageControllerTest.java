@@ -279,6 +279,31 @@ class AdminDestinationImageControllerTest {
     }
 
     @Test
+    void bulkDeleteEndpointDeletesSelectedImagesAndReportsCount() throws Exception {
+        when(destinationImageService.deleteImages(10L, List.of(2L, 3L))).thenReturn(2);
+
+        mockMvc.perform(post("/admin/destinations/10/images/delete/bulk")
+                        .param("imageIds", "2", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#registered-images"))
+                .andExpect(flash().attribute("bulkDeleteResult", "사진 2장을 삭제했습니다."));
+    }
+
+    /** 그 사이 지워진 사진이 섞인 선택(중복 제출 포함)은 오류 페이지가 아니라 관리 화면에서 안내한다. */
+    @Test
+    void bulkDeleteWithStaleSelectionReturnsToManagementWithMessage() throws Exception {
+        when(destinationImageService.deleteImages(10L, List.of(2L)))
+                .thenThrow(new IllegalArgumentException("선택한 사진 중 이미 삭제되었거나 이 여행지의 사진이 아닌 것이 있습니다."));
+
+        mockMvc.perform(post("/admin/destinations/10/images/delete/bulk")
+                        .param("imageIds", "2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#registered-images"))
+                .andExpect(flash().attribute("bulkDeleteError",
+                        "선택한 사진 중 이미 삭제되었거나 이 여행지의 사진이 아닌 것이 있습니다."));
+    }
+
+    @Test
     void wikidataDestinationPageExposesQidAndAlreadyRegisteredCommonsFiles() {
         List<DestinationImage> images = List.of(new DestinationImage());
         when(destinationImageService.getImages(10L)).thenReturn(images);

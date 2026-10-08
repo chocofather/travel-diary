@@ -127,6 +127,7 @@
         const reloadLink = form.querySelector("[data-image-upload-reload]");
         const uploadUrl = form.dataset.uploadUrl;
         const maxBytes = Number(form.dataset.uploadMaxBytes) || 0;
+        const submitLabel = submitButton.textContent;
         let entries = [];
         let running = false;
 
@@ -231,11 +232,13 @@
             running = true;
             input.disabled = true;
             submitButton.disabled = true;
+            submitButton.textContent = "업로드 중...";
             progress.hidden = false;
             render();
             await runUploadQueue(entries, send, entry => { setBadge(entry); render(); });
             running = false;
             input.disabled = false;
+            submitButton.textContent = submitLabel;
             // 남은 일은 '실패한 사진만 다시 업로드'뿐이다. 새로 고르면 다시 켠다.
             submitButton.disabled = true;
             render();

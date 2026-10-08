@@ -455,6 +455,79 @@ class DestinationImageServiceTest {
         assertThat(invocationsNamed("clearMainImagesByDestinationId")).isEmpty();
     }
 
+    /** 선택 삭제는 단건 삭제 규칙을 그대로 따른다: 대표가 지워지면 남은 사진 중 첫 사진이 대표가 된다. */
+    @Test
+    void bulkDeleteIncludingMainKeepsUnselectedImagesAndPromotesFirstRemaining() {
+        List<DestinationImage> stored = storedImages(
+                image(1L, 10L, 0, true), image(2L, 10L, 1, false),
+                image(3L, 10L, 2, false), image(4L, 10L, 3, false));
+
+        withTransactionSynchronization(() -> {
+            assertThat(service.deleteImages(10L, List.of(1L, 2L))).isEqualTo(2);
+            commitSynchronizations();
+        });
+
+        assertThat(stored).extracting(DestinationImage::getId).containsExactly(3L, 4L);
+        assertThat(stored).extracting(DestinationImage::getOrderIndex).containsExactly(0, 1);
+        assertThat(stored).extracting(DestinationImage::getIsMain).containsExactly(true, false);
+        verify(fileUploadService).deleteDestinationFile("/uploads/destinations/1.jpg");
+        verify(fileUploadService).deleteDestinationFile("/uploads/destinations/2.jpg");
+        verify(fileUploadService, never()).deleteDestinationFile("/uploads/destinations/3.jpg");
+    }
+
+    @Test
+    void bulkDeleteOfEveryImageLeavesNoMain() {
+        List<DestinationImage> stored = storedImages(image(1L, 10L, 0, true), image(2L, 10L, 1, false));
+
+        service.deleteImages(10L, List.of(2L, 1L));
+
+        assertThat(stored).isEmpty();
+        assertThat(invocationsNamed("setMainImage")).isEmpty();
+    }
+
+    /** 이미 지워진(중복 제출) 또는 다른 여행지 사진이 섞이면 아무것도 지우지 않는다. */
+    @Test
+    void bulkDeleteWithForeignOrMissingImageDeletesNothing() {
+        List<DestinationImage> stored = storedImages(image(1L, 10L, 0, true), image(2L, 10L, 1, false));
+
+        assertThatThrownBy(() -> service.deleteImages(10L, List.of(2L, 99L)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.deleteImages(10L, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(stored).hasSize(2);
+        assertThat(invocationsNamed("deleteImageById")).isEmpty();
+        verifyNoInteractions(fileUploadService);
+    }
+
+    /** 여행지 10의 사진 목록처럼 동작하는 mapper 대역. 삭제·순서·대표 변경이 목록에 반영된다. */
+    private List<DestinationImage> storedImages(DestinationImage... images) {
+        List<DestinationImage> stored = new java.util.ArrayList<>(List.of(images));
+        when(destinationMapper.findImagesByDestinationId(10L)).thenAnswer(invocation -> stored.stream()
+                .sorted(java.util.Comparator.comparing(DestinationImage::getOrderIndex)).toList());
+        when(destinationMapper.findImageById(anyLong())).thenAnswer(invocation -> stored.stream()
+                .filter(image -> image.getId().equals(invocation.getArgument(0))).findFirst().orElse(null));
+        doAnswer(invocation -> {
+            stored.removeIf(image -> image.getId().equals(invocation.getArgument(0)));
+            return null;
+        }).when(destinationMapper).deleteImageById(anyLong());
+        doAnswer(invocation -> {
+            stored.stream().filter(image -> image.getId().equals(invocation.getArgument(0)))
+                    .forEach(image -> image.setOrderIndex(invocation.getArgument(1)));
+            return null;
+        }).when(destinationMapper).updateImageOrder(anyLong(), org.mockito.ArgumentMatchers.anyInt());
+        doAnswer(invocation -> {
+            stored.forEach(image -> image.setIsMain(false));
+            return null;
+        }).when(destinationMapper).clearMainImagesByDestinationId(10L);
+        doAnswer(invocation -> {
+            stored.stream().filter(image -> image.getId().equals(invocation.getArgument(0)))
+                    .forEach(image -> image.setIsMain(true));
+            return null;
+        }).when(destinationMapper).setMainImage(anyLong());
+        return stored;
+    }
+
     @Test
     void individualImageFileIsDeletedOnlyAfterCommit() {
         DestinationImage deleted = image(2L, 10L, 0, false);
