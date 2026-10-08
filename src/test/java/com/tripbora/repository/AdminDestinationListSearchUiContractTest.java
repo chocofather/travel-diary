@@ -35,7 +35,25 @@ class AdminDestinationListSearchUiContractTest {
                 .contains(">국내<")
                 .contains(">해외<")
                 .contains("' active' : ''")
-                .contains("name=\"type\"");
+                .contains("name=\"scope\"")
+                // 분류·정렬 select 와 조건을 유지하는 쪽 이동
+                .contains("name=\"destinationType\"")
+                .contains("name=\"sort\"")
+                .contains("class=\"admin-pagination\"")
+                .contains("@{${listUrl}(page=${currentPage + 1})}")
+                // 번호는 DB ID 가 아니라 쪽을 넘겨도 이어지는 순번이다
+                .contains("${pageOffset + stat.index + 1}")
+                // 삭제 후에도 같은 조건으로 돌아온다
+                .contains("'/delete' + ${listQuery}");
+    }
+
+    @Test
+    void typeAndSortSelectsApplyImmediately() throws IOException {
+        String script = resource("/static/js/admin-destination-filter.js");
+
+        assertThat(script)
+                .contains("destinationTypeSelect?.addEventListener(\"change\", submitFilters)")
+                .contains("sortSelect?.addEventListener(\"change\", submitFilters)");
     }
 
     @Test
@@ -78,7 +96,7 @@ class AdminDestinationListSearchUiContractTest {
         assertThat(list)
                 .contains("/images'}")
                 .contains("/admin/destinations/edit/")
-                .contains("/delete'}")
+                .contains("'/delete' + ${listQuery}}")
                 .contains("정말 삭제하시겠습니까?")
                 // flash 메시지 영역 유지
                 .contains("th:if=\"${error}\"");
@@ -87,9 +105,23 @@ class AdminDestinationListSearchUiContractTest {
     @Test
     void listQueryFiltersByTheDisplayedKoreanNameWithBoundParameter() throws IOException {
         String mapper = resource("/mapper/DestinationMapper.xml");
-        String select = between(mapper, "<select id=\"findByRegionIds\"", "</select>");
+        String select = between(mapper, "<sql id=\"adminListFromWhere\"", "</sql>");
+        String page = between(mapper, "<select id=\"findAdminDestinationPage\"", "</select>");
+
+        assertThat(page)
+                // 기본은 최신 등록순(id DESC), 쪽 단위로만 가져온다
+                .contains("<include refid=\"adminListFromWhere\"/>")
+                .contains("ORDER BY d.id DESC")
+                .contains("ORDER BY d.id ASC")
+                .contains("ORDER BY dt.name ASC, d.id ASC")
+                .contains("LIMIT #{size} OFFSET #{offset}")
+                .doesNotContain("${sort}");
+        assertThat(between(mapper, "<select id=\"countAdminDestinations\"", "</select>"))
+                .contains("<include refid=\"adminListFromWhere\"/>");
 
         assertThat(select)
+                // 분류도 같은 조회 단계에서 bind parameter 로 건다
+                .contains("AND d.type = #{destinationType}")
                 // 목록에 보여주는 이름(dt.name) 그대로 부분 검색
                 .contains("<if test=\"keyword != null and keyword != ''\">")
                 .contains("AND dt.name LIKE CONCAT('%', #{keyword}, '%')")

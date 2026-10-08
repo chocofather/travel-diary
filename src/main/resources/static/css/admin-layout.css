@@ -688,6 +688,14 @@
     object-fit: cover;
 }
 
+/* 목록 위 조건에 맞는 전체 건수 */
+.admin-list-summary {
+    margin: 0 0 10px;
+    color: #66718a;
+    font-size: 0.84rem;
+    font-weight: 650;
+}
+
 .admin-pagination {
     display: flex;
     justify-content: center;

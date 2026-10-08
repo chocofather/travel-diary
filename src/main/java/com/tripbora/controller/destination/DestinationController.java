@@ -38,9 +38,12 @@ import java.nio.charset.StandardCharsets;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
@@ -800,6 +803,10 @@ public class DestinationController {
         if (selectedRegionId != null) {
             baseNames.putIfAbsent(selectedRegionId, selectedRegionBaseName);
         }
+        // 국내 여행지 카드의 광역지역 이름도 같은 요청 언어로 바꾼다.
+        Map<Long, CountryCategory> domesticProvinces = domesticProvincesByRegionId(destinations);
+        domesticProvinces.values().forEach(province ->
+                baseNames.putIfAbsent(province.getId(), province.getRegionName()));
 
         Map<Long, String> localizedRegionNames =
                 referenceNameLocalizationService.localizeCountryCategoryNames(
@@ -811,6 +818,7 @@ public class DestinationController {
         List<DestinationDto> localizedDestinations =
                 destinationService.convertToLocalizedDtoWithBookmark(
                         destinations, userId, requestedLanguage, localizedRegionNames);
+        prefixDomesticProvinces(localizedDestinations, destinations, domesticProvinces, localizedRegionNames);
         // 목록 카드는 원본 대신 카드 크기 썸네일을 쓴다. (메인 추천 카드와 같은 규칙)
         // 카드 사진 칸은 4:3 이다(destination.css 의 aspect-ratio).
         // 공공누리 제3유형(변경금지)은 줄이고 잘라 만든 썸네일 대신 원본을 쓴다.
@@ -825,6 +833,68 @@ public class DestinationController {
                 });
         return new DestinationListLocalization(
                 localizedDestinations, localizedRegionNames, selectedRegionName);
+    }
+
+    /**
+     * 국내 여행지 지역 → 그 지역이 속한 광역지역(국내 루트 바로 아래, 예: 강서구 → 서울).
+     * 국내 여부와 계층은 country_categories 부모 관계로만 판단한다(이름으로 추측하지 않는다).
+     * 지역 자신이 광역지역이거나 해외 지역이면 담지 않는다.
+     */
+    private Map<Long, CountryCategory> domesticProvincesByRegionId(List<Destination> destinations) {
+        Map<Long, CountryCategory> provinces = new LinkedHashMap<>();
+        if (destinations == null || destinations.isEmpty()) {
+            return provinces;
+        }
+        Set<Long> domesticRootIds = new HashSet<>(countryCategoryService.getDomesticRootIds());
+        Set<Long> checkedRegionIds = new HashSet<>();
+        for (Destination destination : destinations) {
+            Long regionId = destination == null ? null : destination.getRegionId();
+            if (regionId == null || !checkedRegionIds.add(regionId)) {
+                continue;
+            }
+            CountryCategory province = domesticProvinceOf(regionId, domesticRootIds);
+            if (province != null) {
+                provinces.put(regionId, province);
+            }
+        }
+        return provinces;
+    }
+
+    private CountryCategory domesticProvinceOf(Long regionId, Set<Long> domesticRootIds) {
+        Set<Long> visitedIds = new HashSet<>();
+        CountryCategory current = countryCategoryService.getById(regionId);
+        while (current != null && current.getParentId() != null && visitedIds.add(current.getId())) {
+            if (domesticRootIds.contains(current.getParentId())) {
+                return regionId.equals(current.getId()) ? null : current;
+            }
+            current = countryCategoryService.getById(current.getParentId());
+        }
+        return null;
+    }
+
+    /** 국내 여행지 카드 지역을 "광역지역 + 최하위 지역"(예: 서울 강서구)으로 바꾼다. 해외는 그대로 둔다. */
+    private void prefixDomesticProvinces(List<DestinationDto> localizedDestinations,
+                                         List<Destination> destinations,
+                                         Map<Long, CountryCategory> domesticProvinces,
+                                         Map<Long, String> localizedRegionNames) {
+        if (localizedDestinations == null || domesticProvinces.isEmpty()) {
+            return;
+        }
+        Map<Long, Long> regionIdByDestinationId = new HashMap<>();
+        for (Destination destination : destinations) {
+            if (destination != null && destination.getId() != null && destination.getRegionId() != null) {
+                regionIdByDestinationId.put(destination.getId(), destination.getRegionId());
+            }
+        }
+        for (DestinationDto dto : localizedDestinations) {
+            CountryCategory province = domesticProvinces.get(regionIdByDestinationId.get(dto.getId()));
+            if (province == null || dto.getRegionName() == null || dto.getRegionName().isBlank()) {
+                continue;
+            }
+            String provinceName = localizedDisplayName(
+                    localizedRegionNames, province.getId(), province.getRegionName());
+            dto.setRegionName(provinceName + " " + dto.getRegionName());
+        }
     }
 
     private void collectRegionBaseNames(Map<Long, String> baseNames,

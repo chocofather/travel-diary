@@ -409,10 +409,24 @@ public class DestinationService {
         return destinationMapper.findByCountryCategoryId(cityId);
     }
 
-    public List<Destination> getDestinationsByRegionIds(List<Long> regionIds, String keyword) {
+    /** 관리자 여행지 목록 한 쪽. 지역·분류·검색·정렬은 모두 DB 조회 단계에서 적용한다. */
+    public List<Destination> getAdminDestinationPage(List<Long> regionIds, String destinationType,
+                                                     String keyword, String sort, long offset, int size) {
+        if (regionIds == null || regionIds.isEmpty()) {
+            return List.of();
+        }
         DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
-        return destinationMapper.findByRegionIds(
-                regionIds, search.namePattern(), search.chosungPattern());
+        return destinationMapper.findAdminDestinationPage(regionIds, destinationType,
+                search.namePattern(), search.chosungPattern(), sort, offset, size);
+    }
+
+    public int countAdminDestinations(List<Long> regionIds, String destinationType, String keyword) {
+        if (regionIds == null || regionIds.isEmpty()) {
+            return 0;
+        }
+        DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
+        return destinationMapper.countAdminDestinations(regionIds, destinationType,
+                search.namePattern(), search.chosungPattern());
     }
 
 

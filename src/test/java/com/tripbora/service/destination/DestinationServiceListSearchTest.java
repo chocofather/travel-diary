@@ -68,28 +68,41 @@ class DestinationServiceListSearchTest {
 
     @Test
     void ordinaryKeywordIsSentAsAPartialNameCondition() {
-        destinationService.getDestinationsByRegionIds(REGION_IDS, "경복");
+        destinationService.getAdminDestinationPage(REGION_IDS, "ATTRACTION", "경복", "latest", 30, 30);
 
-        verify(destinationMapper).findByRegionIds(REGION_IDS, "경복", null);
+        verify(destinationMapper).findAdminDestinationPage(REGION_IDS, "ATTRACTION", "경복", null, "latest", 30, 30);
     }
 
     @Test
     void chosungKeywordIsSentAsAGeneratedPatternInsteadOfTheRawJamo() {
-        destinationService.getDestinationsByRegionIds(REGION_IDS, "ㄱㅂㄱ");
+        destinationService.getAdminDestinationPage(REGION_IDS, null, "ㄱㅂㄱ", "latest", 0, 30);
 
         ArgumentCaptor<String> chosung = ArgumentCaptor.forClass(String.class);
         verify(destinationMapper)
-                .findByRegionIds(org.mockito.ArgumentMatchers.eq(REGION_IDS),
+                .findAdminDestinationPage(org.mockito.ArgumentMatchers.eq(REGION_IDS),
                         org.mockito.ArgumentMatchers.isNull(),
-                        chosung.capture());
+                        org.mockito.ArgumentMatchers.isNull(),
+                        chosung.capture(),
+                        org.mockito.ArgumentMatchers.eq("latest"),
+                        org.mockito.ArgumentMatchers.eq(0L),
+                        org.mockito.ArgumentMatchers.eq(30));
         assertThat(Pattern.compile(chosung.getValue()).matcher("경복궁").find()).isTrue();
         assertThat(Pattern.compile(chosung.getValue()).matcher("창덕궁").find()).isFalse();
     }
 
     @Test
     void blankKeywordCarriesNoSearchCondition() {
-        destinationService.getDestinationsByRegionIds(REGION_IDS, "   ");
+        destinationService.countAdminDestinations(REGION_IDS, null, "   ");
 
-        verify(destinationMapper).findByRegionIds(REGION_IDS, null, null);
+        verify(destinationMapper).countAdminDestinations(REGION_IDS, null, null, null);
+    }
+
+    /** 지역 범위가 비면 IN () 쿼리를 만들지 않고 빈 결과로 끝낸다. */
+    @Test
+    void emptyRegionScopeSkipsTheQuery() {
+        assertThat(destinationService.getAdminDestinationPage(List.of(), null, null, "latest", 0, 30)).isEmpty();
+        assertThat(destinationService.countAdminDestinations(List.of(), null, null)).isZero();
+
+        org.mockito.Mockito.verifyNoInteractions(destinationMapper);
     }
 }

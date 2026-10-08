@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const citySelect = document.getElementById("destination-city-filter");
     const regionSelect = document.getElementById("destination-region-filter");
     const districtSelect = document.getElementById("destination-district-filter");
+    const destinationTypeSelect = document.getElementById("destination-type-filter");
+    const sortSelect = document.getElementById("destination-sort-filter");
 
     let searchTimer = null;
     let composing = false;
@@ -80,6 +82,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     districtSelect?.addEventListener("change", submitFilters);
+
+    // 분류·정렬도 바꾸는 즉시 조회한다. 쪽 번호는 폼에 없으므로 조건이 바뀌면 1쪽부터 본다.
+    destinationTypeSelect?.addEventListener("change", submitFilters);
+    sortSelect?.addEventListener("change", submitFilters);
 
     form.querySelectorAll(".admin-filter-tab[value]").forEach(button => {
         button.addEventListener("click", () => {

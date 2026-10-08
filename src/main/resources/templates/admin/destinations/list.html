@@ -2,7 +2,8 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <script src="/js/admin-destination-filter.js?v=20260821-5" defer></script>
+  <link rel="stylesheet" href="/css/admin-compact-lists.css">
+  <script src="/js/admin-destination-filter.js?v=20261009-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section">
@@ -30,21 +31,29 @@
                placeholder="여행지명 검색 (초성 검색 가능: ㄱㅂㄱ)" aria-label="여행지명 검색"
                autocomplete="off" th:value="${keyword}"/>
 
+        <!-- 범위 탭은 누르는 즉시 GET 으로 다시 조회한다(scope). 검색어·분류·정렬은 그대로 두고 지역 조건만 비운다. -->
         <div class="admin-filter-tabs" aria-label="여행지 범위 필터">
           <button type="submit" value="all"
                   class="admin-filter-tab"
-                  onclick="this.form.type.value='all'"
+                  onclick="this.form.scope.value=''"
                   th:classappend="${type} == null or ${type} == 'all' ? ' active' : ''">전체</button>
           <button type="submit" value="domestic"
                   class="admin-filter-tab"
-                  onclick="this.form.type.value='domestic'"
+                  onclick="this.form.scope.value='domestic'"
                   th:classappend="${type} == 'domestic' ? ' active' : ''">국내</button>
           <button type="submit" value="overseas"
                   class="admin-filter-tab"
-                  onclick="this.form.type.value='overseas'"
+                  onclick="this.form.scope.value='overseas'"
                   th:classappend="${type} == 'overseas' ? ' active' : ''">해외</button>
-          <input id="destination-filter-type" type="hidden" name="type" th:value="${type}" />
+          <input id="destination-filter-type" type="hidden" name="scope" th:value="${type}" />
         </div>
+
+        <!-- 분류(destinations.type)와 정렬은 바꾸는 즉시 조회한다. -->
+        <select id="destination-type-filter" name="destinationType" class="admin-select" aria-label="분류">
+          <option value="">분류 전체</option>
+          <option th:each="entry : ${destinationTypeLabels}" th:value="${entry.key}" th:text="${entry.value}"
+                  th:selected="${destinationType} == ${entry.key}">관광지</option>
+        </select>
 
         <select id="destination-continent-filter" name="continentId" class="admin-select"
                 th:if="${type} == 'overseas'">
@@ -78,11 +87,18 @@
                   th:selected="${districtId} == ${d.id}"></option>
         </select>
 
+        <select id="destination-sort-filter" name="sort" class="admin-select" aria-label="정렬">
+          <option th:each="entry : ${sortLabels}" th:value="${entry.key}" th:text="${entry.value}"
+                  th:selected="${sort} == ${entry.key}">최신 등록순</option>
+        </select>
+
         <div class="admin-filter-actions">
           <a th:href="@{/admin/destinations}" class="admin-btn is-small">초기화</a>
         </div>
       </form>
     </div>
+
+    <p class="admin-list-summary" th:text="|총 ${#numbers.formatInteger(totalCount, 1, 'COMMA')}곳|">총 0곳</p>
 
     <div class="admin-card is-table-card">
       <div class="admin-table-wrapper">
@@ -96,8 +112,12 @@
           </tr>
           </thead>
           <tbody>
+          <tr th:if="${#lists.isEmpty(destinationList)}">
+            <td colspan="4" class="admin-table-empty">조건에 맞는 여행지가 없습니다.</td>
+          </tr>
+          <!-- 번호는 DB ID 가 아니라 지금 조건·정렬에서의 순번이다(쪽을 넘겨도 이어진다). -->
           <tr th:each="dest, stat : ${destinationList}">
-            <td class="admin-table-number" th:text="${stat.index + 1}">1</td>
+            <td class="admin-table-number" th:text="${pageOffset + stat.index + 1}">1</td>
             <td th:text="${dest.name}">제주도</td>
             <td th:text="${dest.regionName}">제주</td>
             <td class="admin-table-actions">
@@ -106,7 +126,8 @@
                    class="admin-btn is-small">이미지 관리</a>
                 <a th:href="@{'/admin/destinations/edit/' + ${dest.id}}"
                    class="admin-btn is-small">수정</a>
-                <form th:action="@{'/admin/destinations/' + ${dest.id} + '/delete'}"
+                <!-- 삭제 후에도 지금 목록 조건(쪽 포함)으로 돌아오도록 조건을 주소에 함께 보낸다. -->
+                <form th:action="@{'/admin/destinations/' + ${dest.id} + '/delete' + ${listQuery}}"
                       method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');">
                   <button type="submit" class="admin-btn is-small is-danger">삭제</button>
                 </form>
@@ -117,6 +138,24 @@
         </table>
       </div>
     </div>
+
+    <!-- 쪽 이동. listUrl 에 지금 조건이 모두 들어 있어 page 만 바꿔 붙인다. -->
+    <nav th:if="${totalPages > 1}" aria-label="여행지 목록 페이지">
+      <ul class="admin-pagination">
+        <li th:if="${currentPage > 1}">
+          <a th:href="@{${listUrl}(page=${currentPage - 1})}">이전</a>
+        </li>
+        <li th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
+            th:classappend="${pageNumber == currentPage} ? 'active'">
+          <a th:href="${pageNumber == 1} ? @{${listUrl}} : @{${listUrl}(page=${pageNumber})}"
+             th:text="${pageNumber}"
+             th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+        </li>
+        <li th:if="${currentPage < totalPages}">
+          <a th:href="@{${listUrl}(page=${currentPage + 1})}">다음</a>
+        </li>
+      </ul>
+    </nav>
   </section>
 </th:block>
 </html>

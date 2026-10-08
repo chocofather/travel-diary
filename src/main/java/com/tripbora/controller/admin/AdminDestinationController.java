@@ -349,26 +349,47 @@ public class AdminDestinationController {
     }
 
 
-    // 여행지 관리 리스트 - 필터 추가
+    /** 관리자 여행지 목록 한 쪽 크기. 버튼 세 개가 있는 표 밀도에 맞춘다. */
+    static final int ADMIN_LIST_PAGE_SIZE = 30;
+    private static final String DEFAULT_ADMIN_LIST_SORT = "latest";
+    private static final Map<String, String> ADMIN_LIST_SORT_LABELS = orderedLabels(
+            "latest", "최신 등록순", "oldest", "오래된 등록순", "name", "이름순");
+
+    /**
+     * 여행지 관리 목록. 범위(전체/국내/해외)·분류·지역·검색·정렬은 모두 GET 조건이라
+     * 새로고침·뒤로가기·쪽 이동에도 그대로 남고, DB 조회 단계에서 한 쪽(30건)만 가져온다.
+     */
     @GetMapping
     public String showDestinationList(
-            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "scope", required = false) String scope,
+            @RequestParam(value = "destinationType", required = false) String destinationType,
             @RequestParam(value = "continentId", required = false) Long continentId,
             @RequestParam(value = "countryId", required = false) Long countryId,
             @RequestParam(value = "cityId", required = false) Long cityId,
             @RequestParam(value = "regionId", required = false) Long regionId,
             @RequestParam(value = "districtId", required = false) Long districtId,
             @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "sort", required = false) String sort,
+            @RequestParam(value = "page", required = false) String page,
             Model model) {
 
         // 공백만 입력한 검색어는 검색 조건 없음으로 본다.
         String searchKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
-
-      /*  // 기본값 설정
-        if (type == null) {
-            type = "overseas";  // 기본값을 "overseas"로 설정
+        // 알 수 없는 값은 조건 없음(전체 범위·전체 분류·최신 등록순)으로 본다.
+        String type = "domestic".equals(scope) || "overseas".equals(scope) ? scope : null;
+        String selectedDestinationType = DESTINATION_TYPE_LABELS.containsKey(destinationType) ? destinationType : null;
+        String selectedSort = ADMIN_LIST_SORT_LABELS.containsKey(sort) ? sort : DEFAULT_ADMIN_LIST_SORT;
+        // 지역 조건은 지금 범위에 속한 것만 쓴다(국내: 시/도·시/군/구, 해외: 대륙·국가·도시).
+        if (!"domestic".equals(type)) {
+            regionId = null;
+            districtId = null;
         }
-*/
+        if (!"overseas".equals(type)) {
+            continentId = null;
+            countryId = null;
+            cityId = null;
+        }
+
         List<Long> regionIds;
         Long koreaId = countryCategoryService.getKoreaRootId();
         CountryCategory selectedDistrict = null;
@@ -410,10 +431,35 @@ public class AdminDestinationController {
             }
         }
 
-        var destinationList = destinationService.getDestinationsByRegionIds(regionIds, searchKeyword);
+        int totalCount = destinationService.countAdminDestinations(regionIds, selectedDestinationType, searchKeyword);
+        int totalPages = totalCount == 0 ? 0 : (totalCount + ADMIN_LIST_PAGE_SIZE - 1) / ADMIN_LIST_PAGE_SIZE;
+        int currentPage = totalPages == 0 ? 1 : Math.min(parsePage(page), totalPages);
+        long offset = (long) (currentPage - 1) * ADMIN_LIST_PAGE_SIZE;
+        var destinationList = destinationService.getAdminDestinationPage(
+                regionIds, selectedDestinationType, searchKeyword, selectedSort, offset, ADMIN_LIST_PAGE_SIZE);
+        int pageStart = Math.max(1, currentPage - 2);
+        int pageEnd = Math.min(totalPages, pageStart + 4);
+        pageStart = Math.max(1, pageEnd - 4);
+
         model.addAttribute("destinationList", destinationList);
         model.addAttribute("type", type);
         model.addAttribute("keyword", searchKeyword);
+        model.addAttribute("destinationType", selectedDestinationType);
+        model.addAttribute("destinationTypeLabels", DESTINATION_TYPE_LABELS);
+        model.addAttribute("sort", selectedSort);
+        model.addAttribute("sortLabels", ADMIN_LIST_SORT_LABELS);
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageStart", pageStart);
+        model.addAttribute("pageEnd", pageEnd);
+        model.addAttribute("pageOffset", offset);
+        // 쪽 이동 링크와 삭제 후 돌아올 주소. 지금 조건을 그대로 담고 page 만 바꿔 붙인다.
+        model.addAttribute("listUrl", adminListUrl(type, selectedDestinationType, continentId, countryId,
+                cityId, regionId, districtId, searchKeyword, selectedSort, null));
+        String currentListUrl = adminListUrl(type, selectedDestinationType, continentId, countryId,
+                cityId, regionId, districtId, searchKeyword, selectedSort, currentPage);
+        model.addAttribute("listQuery", currentListUrl.substring("/admin/destinations".length()));
 
         // 대륙 리스트 (depth=1)
         var continents = countryCategoryService.getRegionsByDepth(1);
@@ -477,10 +523,59 @@ public class AdminDestinationController {
     }
 
 
+    /** 삭제 후에는 삭제 전 목록 조건(범위·분류·지역·검색·정렬·쪽)으로 돌아간다. 조건은 폼 주소의 GET 값이다. */
     @PostMapping("/{id}/delete")
-    public String deleteDestination(@PathVariable Long id) {
+    public String deleteDestination(@PathVariable Long id,
+                                    @RequestParam(value = "scope", required = false) String scope,
+                                    @RequestParam(value = "destinationType", required = false) String destinationType,
+                                    @RequestParam(value = "continentId", required = false) Long continentId,
+                                    @RequestParam(value = "countryId", required = false) Long countryId,
+                                    @RequestParam(value = "cityId", required = false) Long cityId,
+                                    @RequestParam(value = "regionId", required = false) Long regionId,
+                                    @RequestParam(value = "districtId", required = false) Long districtId,
+                                    @RequestParam(value = "keyword", required = false) String keyword,
+                                    @RequestParam(value = "sort", required = false) String sort,
+                                    @RequestParam(value = "page", required = false) String page) {
         destinationService.deleteById(id);
-        return "redirect:/admin/destinations";
+        String type = "domestic".equals(scope) || "overseas".equals(scope) ? scope : null;
+        String selectedDestinationType = DESTINATION_TYPE_LABELS.containsKey(destinationType) ? destinationType : null;
+        String selectedSort = ADMIN_LIST_SORT_LABELS.containsKey(sort) ? sort : DEFAULT_ADMIN_LIST_SORT;
+        String searchKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
+        // 마지막 쪽의 마지막 한 건을 지워도 목록이 남은 마지막 쪽으로 맞춰 보여 준다.
+        return "redirect:" + adminListUrl(type, selectedDestinationType, continentId, countryId, cityId,
+                regionId, districtId, searchKeyword, selectedSort, parsePage(page));
+    }
+
+    private static int parsePage(String page) {
+        if (page == null || page.isBlank()) {
+            return 1;
+        }
+        try {
+            return Math.max(Integer.parseInt(page.strip()), 1);
+        } catch (NumberFormatException ignored) {
+            return 1;
+        }
+    }
+
+    /** 관리자 여행지 목록 주소. 기본값(전체·전체 분류·최신 등록순·1쪽)은 주소에 넣지 않는다. */
+    static String adminListUrl(String scope, String destinationType, Long continentId, Long countryId,
+                               Long cityId, Long regionId, Long districtId, String keyword,
+                               String sort, Integer page) {
+        return org.springframework.web.util.UriComponentsBuilder.fromPath("/admin/destinations")
+                .queryParamIfPresent("scope", Optional.ofNullable(scope))
+                .queryParamIfPresent("destinationType", Optional.ofNullable(destinationType))
+                .queryParamIfPresent("continentId", Optional.ofNullable(continentId))
+                .queryParamIfPresent("countryId", Optional.ofNullable(countryId))
+                .queryParamIfPresent("cityId", Optional.ofNullable(cityId))
+                .queryParamIfPresent("regionId", Optional.ofNullable(regionId))
+                .queryParamIfPresent("districtId", Optional.ofNullable(districtId))
+                .queryParamIfPresent("keyword", Optional.ofNullable(keyword))
+                .queryParamIfPresent("sort", Optional.ofNullable(sort)
+                        .filter(value -> !DEFAULT_ADMIN_LIST_SORT.equals(value)))
+                .queryParamIfPresent("page", Optional.ofNullable(page).filter(value -> value > 1))
+                .encode()
+                .build()
+                .toUriString();
     }
 
     // 여행지 수정 폼

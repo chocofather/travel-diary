@@ -107,9 +107,19 @@
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);
 
-        List<Destination> findByRegionIds(@Param("regionIds") List<Long> regionIds,
-                                          @Param("keyword") String keyword,
-                                          @Param("chosungPattern") String chosungPattern);
+        /** 관리자 여행지 목록 한 쪽. sort 는 latest / oldest / name 중 하나다. */
+        List<Destination> findAdminDestinationPage(@Param("regionIds") List<Long> regionIds,
+                                                   @Param("destinationType") String destinationType,
+                                                   @Param("keyword") String keyword,
+                                                   @Param("chosungPattern") String chosungPattern,
+                                                   @Param("sort") String sort,
+                                                   @Param("offset") long offset,
+                                                   @Param("size") int size);
+
+        int countAdminDestinations(@Param("regionIds") List<Long> regionIds,
+                                   @Param("destinationType") String destinationType,
+                                   @Param("keyword") String keyword,
+                                   @Param("chosungPattern") String chosungPattern);
 
         // 조회수 증가
         void incrementViewCount(Long id);

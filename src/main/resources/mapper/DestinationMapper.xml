@@ -455,24 +455,11 @@
             )
     </select>-->
 
-    <select id="findByRegionIds" resultType="com.tripbora.model.Destination">
-        SELECT
-        d.id,
-        dt.name AS name,
-        dt.description AS description,
-        dt.short_description AS shortDescription,
-        d.latitude,
-        d.longitude,
-        d.season,
-        d.user_id AS userID,
-        d.region_id AS regionId,
-        (
-        SELECT image_url
-        FROM destination_images
-        WHERE destination_id = d.id AND is_main = 1
-        LIMIT 1
-        ) AS thumbnailPath,
-        cc.region_name AS regionName
+    <!--
+      관리자 여행지 목록 조건. 지역 범위 + 분류 + 여행지명 검색을 모두 DB 조회 단계에서 AND 로 건다.
+      목록 쿼리와 건수 쿼리가 같은 조건을 쓴다.
+    -->
+    <sql id="adminListFromWhere">
         FROM destinations d
         JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
         JOIN country_categories cc ON d.region_id = cc.id
@@ -480,6 +467,10 @@
         <foreach item="id" collection="regionIds" open="(" separator="," close=")">
             #{id}
         </foreach>
+        <!-- 분류(destinations.type). 값은 서버에서 DestinationType 으로 확인한 것만 온다. -->
+        <if test="destinationType != null and destinationType != ''">
+            AND d.type = #{destinationType}
+        </if>
         <!-- 관리자 목록의 여행지명 검색. 목록에 보여주는 이름(dt.name)을 그대로 부분 검색한다. -->
         <if test="keyword != null and keyword != ''">
             AND dt.name LIKE CONCAT('%', #{keyword}, '%')
@@ -488,6 +479,38 @@
         <if test="chosungPattern != null and chosungPattern != ''">
             AND dt.name REGEXP #{chosungPattern}
         </if>
+    </sql>
+
+    <!--
+      관리자 여행지 목록 한 쪽. 기본은 최신 등록순(id DESC)이다.
+      created_at 은 NULL 을 허용하고 일괄 등록 때 같은 값이 몰릴 수 있어, AUTO_INCREMENT 로 등록 순서가
+      보장되는 id 를 기준으로 쓴다. 이름순은 같은 이름이면 id 로 고정해 쪽을 넘겨도 중복·누락이 없다.
+    -->
+    <select id="findAdminDestinationPage" resultType="com.tripbora.model.Destination">
+        SELECT
+        d.id,
+        dt.name AS name,
+        d.type,
+        d.region_id AS regionId,
+        cc.region_name AS regionName
+        <include refid="adminListFromWhere"/>
+        <choose>
+            <when test="sort == 'oldest'">
+                ORDER BY d.id ASC
+            </when>
+            <when test="sort == 'name'">
+                ORDER BY dt.name ASC, d.id ASC
+            </when>
+            <otherwise>
+                ORDER BY d.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countAdminDestinations" resultType="int">
+        SELECT COUNT(*)
+        <include refid="adminListFromWhere"/>
     </select>
 
     <!-- 조회수 증가 -->

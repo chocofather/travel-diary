@@ -155,6 +155,52 @@ class DestinationListLocalizationTest {
         }
     }
 
+    /** 국내 카드는 부모 계층의 광역지역을 요청 언어 이름으로 앞에 붙인다(종로구 → Seoul Jongno-gu). */
+    @Test
+    void domesticCardsShowTheProvinceBeforeTheLowestRegion() {
+        when(countryCategoryService.getById(235L)).thenReturn(jongno);
+        when(countryCategoryService.getById(38L)).thenReturn(seoul);
+        when(countryCategoryService.getSubregions(7L, 3)).thenReturn(List.of(seoul));
+
+        Model model = new ExtendedModelMap();
+        controller.destinationList("domestic", null, 1, 12, "default", null, null, request, model);
+
+        assertThat(localizedCard.getRegionName()).isEqualTo("Seoul Jongno-gu");
+    }
+
+    /** 해외 카드와 광역지역 자체에 등록된 국내 카드는 지금처럼 지역명만 둔다. */
+    @Test
+    void overseasAndProvinceLevelCardsKeepTheirRegionName() {
+        CountryCategory asia = region(2L, "아시아", 1, null);
+        CountryCategory japan = region(50L, "일본", 2, 2L);
+        CountryCategory fukuoka = region(51L, "후쿠오카", 3, 50L);
+        when(countryCategoryService.getById(2L)).thenReturn(asia);
+        when(countryCategoryService.getById(50L)).thenReturn(japan);
+        when(countryCategoryService.getById(51L)).thenReturn(fukuoka);
+        when(countryCategoryService.getById(38L)).thenReturn(seoul);
+        when(countryCategoryService.getSubregions(7L, 3)).thenReturn(List.of(seoul));
+        destination.setRegionId(51L);
+        Destination provinceLevel = new Destination();
+        provinceLevel.setId(16L);
+        provinceLevel.setRegionId(38L);
+        DestinationDto provinceCard = new DestinationDto();
+        provinceCard.setId(16L);
+        provinceCard.setRegionName("Seoul");
+        localizedCard.setRegionName("Fukuoka");
+        when(destinationService.getDestinationsByRegionIdsPaged(
+                List.of(7L, 38L, 235L), List.of(), 0, 12, "default"))
+                .thenReturn(List.of(destination, provinceLevel));
+        when(destinationService.convertToLocalizedDtoWithBookmark(
+                eq(List.of(destination, provinceLevel)), eq(null), eq(SupportedLanguage.ENGLISH), anyMap()))
+                .thenReturn(List.of(localizedCard, provinceCard));
+
+        Model model = new ExtendedModelMap();
+        controller.destinationList("domestic", null, 1, 12, "default", null, null, request, model);
+
+        assertThat(localizedCard.getRegionName()).isEqualTo("Fukuoka");
+        assertThat(provinceCard.getRegionName()).isEqualTo("Seoul");
+    }
+
     private CountryCategory region(Long id, String name, int depth, Long parentId) {
         CountryCategory region = new CountryCategory();
         region.setId(id);
