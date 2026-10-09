@@ -63,16 +63,14 @@
     margin: 12px auto;
     padding: 0 calc(44px + var(--region-rail-inset, 0px));
 }
-.region-selector.has-region-back { padding-left: calc(44px + var(--region-rail-inset, 0px) + var(--region-slot-width, 72px) + 20px); }
+/* 뒤로가기는 .region-buttons 안의 첫 항목이다. 지역 아이콘(.circle-btn)과 같은 폭·흐름을 쓴다. */
 .region-back {
-    position: absolute;
-    left: calc(44px + var(--region-rail-inset, 0px));
-    top: 8px;
+    flex: 0 0 auto;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    width: var(--region-slot-width, 72px);
+    min-width: 72px;
     color: #424957;
     font-size: 14px;
     line-height: 1.4;
@@ -98,7 +96,6 @@
     outline: 2px solid var(--tripbora-primary);
     outline-offset: 2px;
 }
-.region-selector.has-region-back > .arrow.prev { left: 0; }
 
 /* 여행지 목록 헤더도 white로 통일하고 얇은 neutral 경계만 둔다. */
 body:has(> main #region-fragment-container) .main-nav {
@@ -956,12 +953,11 @@ body:has(> main #region-fragment-container) #destination-list {
         margin: 0 auto;
         padding: 0 calc(16px + var(--region-rail-inset, 0px));
     }
-    #region-fragment-container .region-selector.has-region-back { padding-left: calc(16px + var(--region-rail-inset, 0px) + var(--region-slot-width, 76px) + 16px); }
     #region-fragment-container .region-back {
-        left: calc(16px + var(--region-rail-inset, 0px));
-        top: 10px;
-        width: var(--region-slot-width, 76px);
+        flex: 0 0 76px;
+        min-width: 0;
         font-size: 13px;
+        scroll-snap-align: start;
     }
 
     #region-fragment-container .region-selector .arrow,
@@ -1216,18 +1212,13 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 }
 
-/* 순환 위치 보정은 즉시 적용한다. native swipe/wheel은 그대로 사용한다. */
-#region-fragment-container .region-loop {
-    scroll-behavior: auto;
-    scroll-snap-type: none;
-}
-
-/* 태블릿/desktop 상위 rail만 동일 slot + 정수 개수 viewport를 사용한다. */
-@media (min-width: 601px) {
-    #region-fragment-container .region-buttons.region-complete-items .region-btn {
-        flex: 0 0 var(--region-slot-width);
-        min-width: 0;
-    }
+/*
+  지역 rail은 무한 순환 없이 원본 목록 한 벌만 가로 스크롤한다.
+  항목 수와 상관없이 항상 왼쪽부터 붙여 놓는다(가운데 정렬 없음).
+  화살표는 스크립트가 실제 넘침과 스크롤 위치로 hidden을 정한다. */
+#region-fragment-container .region-selector .arrow[hidden],
+#region-fragment-container .subregion-arrow[hidden] {
+    display: none;
 }
 
 @media (max-width: 600px) {
@@ -1236,8 +1227,7 @@ body:has(> main #region-fragment-container) #destination-list {
         padding: 8px 0;
     }
 
-    #region-fragment-container .region-selector.has-region-back { padding-left: 96px; }
-    #region-fragment-container .region-back { top: 8px; width: 68px; }
+    #region-fragment-container .region-back { flex-basis: 68px; }
     #region-fragment-container .region-back-visual { width: 60px; height: 60px; }
 
     #region-fragment-container .circle-btn {

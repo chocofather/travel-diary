@@ -18,24 +18,25 @@
     <div id="region-fragment-container">
         <!-- ─── 상단 region-bar ─── -->
         <div class="region-bar-wrapper" th:attr="data-type=${type}">
-            <section class="region-selector"
-                     th:classappend="${type == 'overseas' and selectedCityId != null} ? 'has-region-back' : ''">
-                <button class="arrow prev" th:if="${cities.size()} >= 12"
+            <section class="region-selector">
+                <!-- 화살표는 항목 개수가 아니라 실제 넘침으로 스크립트가 보인다. -->
+                <button type="button" class="arrow prev" hidden
                         th:aria-label="#{destination.list.region.previous}">‹</button>
-                <a th:if="${type == 'overseas' and selectedCityId != null}"
-                   class="region-back" data-region-back
-                   th:href="@{/destinations(type=${type},sort=${sort},size=${pageSize},category=${selectedCategoryId})}">
-                    <span class="region-back-visual" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
-                             stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m9 4-5 5 5 5M4 9h9a7 7 0 0 1 7 7v3"/>
-                        </svg>
-                    </span>
-                    <span class="region-back-label" th:text="#{destination.list.region.continents}">대륙</span>
-                </a>
                 <div th:class="'region-buttons ' +
                        (${cities.size()} <= 3 ? 'few' :
                         (${cities.size()} >= 7 ? 'scrollable' : 'normal'))">
+                    <!-- 뒤로가기도 지역 항목과 같은 rail 의 첫 항목으로 함께 스크롤된다. -->
+                    <a th:if="${type == 'overseas' and selectedCityId != null}"
+                       class="region-back" data-region-back
+                       th:href="@{/destinations(type=${type},sort=${sort},size=${pageSize},category=${selectedCategoryId})}">
+                        <span class="region-back-visual" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m9 4-5 5 5 5M4 9h9a7 7 0 0 1 7 7v3"/>
+                            </svg>
+                        </span>
+                        <span class="region-back-label" th:text="#{destination.list.region.continents}">대륙</span>
+                    </a>
                     <div th:each="c : ${cities}"
                          th:class="'circle-btn region-btn' + (${selectedCityId} == ${c.id} ? ' selected' : '')"
                          th:attr="data-region-id=${c.id},data-depth=${c.depth}">
@@ -47,7 +48,7 @@
                         <span th:text="${regionDisplayNames[c.id]}">도시명</span>
                     </div>
                 </div>
-                <button class="arrow next" th:if="${cities.size()} >= 12"
+                <button type="button" class="arrow next" hidden
                         th:aria-label="#{destination.list.region.next}">›</button>
             </section>
         </div>
@@ -102,7 +103,7 @@
             <!-- 하위 지역(구/군) -->
             <section class="subregion-selector"
                      th:if="${subregions != null and #lists.size(subregions) > 0}">
-                <button class="arrow prev subregion-arrow" th:if="${subregions.size()} >= 12"
+                <button type="button" class="arrow prev subregion-arrow" hidden
                         th:aria-label="#{destination.list.subregion.previous}">‹</button>
                 <div class="subregion-scroll-container">
                     <div class="subregion-list">
@@ -115,7 +116,7 @@
                         </button>
                     </div>
                 </div>
-                <button class="arrow next subregion-arrow" th:if="${subregions.size()} >= 12"
+                <button type="button" class="arrow next subregion-arrow" hidden
                         th:aria-label="#{destination.list.subregion.next}">›</button>
             </section>
 

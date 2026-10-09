@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 국가·지역 기준 데이터의 저장 경계. 빠진 행을 한 트랜잭션에서 모두 넣는다.
@@ -34,6 +36,14 @@ public class CountryCategorySeedTransactionService {
     private final CountryCategoryCache cache;
 
     /**
+     * JSON 기준 데이터에 들어 있는 지역 번호.
+     *
+     * <p>이 번호의 행을 지우면 다음 기동 때 "없는 행" 으로 보고 다시 채운다. 관리자 삭제는
+     * 이 값으로 기준 데이터 지역을 막는다 — 지운 지역이 재시작 뒤 번역 없이 되살아나지 않게 한다.
+     */
+    private volatile Set<Long> seedIds = Set.of();
+
+    /**
      * 아직 없는 지역만 넣는다.
      *
      * @param categories 평탄화한 지역 목록 (트리 순서 그대로여야 부모가 먼저 들어간다)
@@ -41,6 +51,10 @@ public class CountryCategorySeedTransactionService {
      */
     @Transactional
     public int insertMissing(List<CountryCategory> categories) {
+        seedIds = categories.stream()
+                .map(CountryCategory::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
         Set<Integer> existingIds = new HashSet<>(mapper.selectAllIds());
 
         int inserted = 0;
@@ -62,5 +76,10 @@ public class CountryCategorySeedTransactionService {
         */
         cache.invalidate();
         return inserted;
+    }
+
+    /** JSON 기준 데이터에 들어 있는 지역인지. 기동 때 적재한 목록으로 판단한다. */
+    public boolean isSeedRegion(Long id) {
+        return id != null && seedIds.contains(id);
     }
 }

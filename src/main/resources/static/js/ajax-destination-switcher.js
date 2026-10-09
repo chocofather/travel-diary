@@ -228,24 +228,20 @@ function bindFragmentPagination() {
     });
 }
 
-// 상단 캐러셀 좌우
+// 상단 지역 rail(대륙·국가·도시·국내 광역지역) 좌우. 화살표 표시는 실제 넘침으로 정한다.
 function bindRegionScrollArrows() {
     const cont = document.querySelector('.region-buttons');
-    const loop = window.DestinationRailLoop.create(cont, cont, '.region-btn', 'regionId');
-    document.querySelectorAll('.region-selector .arrow').forEach(btn => {
-        if (!cont) return;
-        btn.onclick = () => loop?.move(btn.classList.contains('prev') ? -1 : 1);
-    });
+    window.DestinationRegionRail.create(cont, cont, '.region-btn',
+        document.querySelectorAll('.region-selector .arrow.prev'),
+        document.querySelectorAll('.region-selector .arrow.next'));
 }
 
-// 하위 서브지역 좌우
+// 하위 지역 rail 좌우. 상단 rail과 같은 방식을 쓴다.
 function bindSubregionScrollArrows() {
     const cont = document.querySelector('.subregion-scroll-container');
-    const loop = window.DestinationRailLoop.create(cont, cont?.querySelector('.subregion-list'), '.subregion-btn', 'cityId');
-    document.querySelectorAll('.subregion-arrow').forEach(btn => {
-        if (!cont) return;
-        btn.onclick = () => loop?.move(btn.classList.contains('prev') ? -1 : 1, 150);
-    });
+    window.DestinationRegionRail.create(cont, cont?.querySelector('.subregion-list'), '.subregion-btn',
+        document.querySelectorAll('.subregion-arrow.prev'),
+        document.querySelectorAll('.subregion-arrow.next'));
 }
 
 // 최초 바인딩 & 클릭 위임
@@ -264,12 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (regionBack) {
             e.preventDefault();
             fetchRegionFragment(getCurrentType(), null, getCurrentSort())
-                .then(() => document.querySelector('.region-btn:not([data-rail-clone])')?.focus({preventScroll: true}));
+                .then(() => document.querySelector('.region-btn')?.focus({preventScroll: true}));
             return;
         }
         // 1) 상단 아이콘(region-btn) 클릭
-        const regionItem = e.target.closest('.region-btn');
-        const rb = regionItem ? window.DestinationRailLoop.original(regionItem) : null;
+        const rb = e.target.closest('.region-btn');
         if (rb) {
             e.preventDefault();
             const regionId = rb.dataset.regionId;
@@ -282,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchRegionFragment(type, regionId, sort);
             } else {
                 // 같은 depth 이동: 리스트만 (정렬·쪽 크기·카테고리 유지, 다른 지역이므로 1쪽부터)
-                window.DestinationRailLoop.select(rb);
+                window.DestinationRegionRail.select(rb);
                 fetchListFragmentByUrl(listFragmentUrl({region: regionId, sort}));
             }
             return;
@@ -290,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2) 서브지역(subregion-btn) 클릭
         const subregionItem = e.target.closest('.subregion-btn');
-        const sb = subregionItem ? window.DestinationRailLoop.select(subregionItem) : null;
+        const sb = subregionItem ? window.DestinationRegionRail.select(subregionItem) : null;
         if (sb) {
             e.preventDefault();
             // 서브는 page=1로, 카테고리는 유지

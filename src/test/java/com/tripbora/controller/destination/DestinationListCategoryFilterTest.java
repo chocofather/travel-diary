@@ -247,7 +247,7 @@ class DestinationListCategoryFilterTest {
     }
 
     @Test
-    void overseasRegionBackStaysOutsideTheLoopAndKeepsFiltersWithoutRegionOrPage() {
+    void overseasRegionBackIsTheFirstRailItemAndKeepsFiltersWithoutRegionOrPage() {
         Map<String, Object> variables = new HashMap<>();
         CountryCategory country = region(8L, "일본", 2, 1L);
         country.setIconPath("/images/japan.png");
@@ -270,7 +270,8 @@ class DestinationListCategoryFilterTest {
         assertThat(back.select(".region-back-visual[aria-hidden=true] svg path")).hasSize(1);
         assertThat(back.hasClass("region-btn")).isFalse();
         assertThat(back.attr("href")).isEqualTo("/destinations?type=overseas&sort=views&size=8&category=5");
-        assertThat(continent.select(".region-buttons [data-region-back]")).isEmpty();
+        // 뒤로가기도 같은 rail(.region-buttons)의 첫 항목이라 지역 아이콘과 함께 스크롤된다.
+        assertThat(continent.selectFirst(".region-buttons > :first-child")).isEqualTo(back);
         variables.put("selectedCityId", 8L);
         assertThat(renderFragment(variables, Locale.ENGLISH, "regionFragment")
                 .selectFirst("[data-region-back]").text()).isEqualTo("Continents");
@@ -279,6 +280,43 @@ class DestinationListCategoryFilterTest {
         variables.put("type", "domestic");
         variables.put("selectedCityId", 38L);
         assertThat(renderFragment(variables, Locale.KOREAN, "regionFragment").select("[data-region-back]")).isEmpty();
+    }
+
+    /**
+     * 지역 rail 은 서버 목록 한 벌만 그리고, 화살표는 개수와 상관없이 숨긴 채로 둔다.
+     * 실제로 넘칠 때만 스크립트(destination-region-rail.js)가 보인다.
+     */
+    @Test
+    void regionRailsRenderEachRegionOnceWithArrowsLeftToTheOverflowCheck() {
+        Map<String, Object> variables = new HashMap<>();
+        List<CountryCategory> continents = List.of(region(1L, "아시아", 1, null), region(2L, "유럽", 1, null),
+                region(3L, "북미", 1, null));
+        continents.forEach(continent -> continent.setIconPath("/images/continent.png"));
+        List<CountryCategory> cities = List.of(region(30L, "카이로", 3, 6L), region(31L, "룩소르", 3, 6L));
+        variables.put("cities", continents);
+        variables.put("destinations", List.of());
+        variables.put("regionDisplayNames", Map.of(1L, "아시아", 2L, "유럽", 3L, "북미", 30L, "카이로", 31L, "룩소르"));
+        variables.put("selectedCityId", 2L);
+        variables.put("selectedSubregionId", 31L);
+        variables.put("subregions", cities);
+        variables.put("totalPages", 0);
+        variables.put("currentPage", 1);
+        variables.put("pageSize", 12);
+        variables.put("sort", "default");
+        variables.put("type", "overseas");
+
+        Document page = renderFragment(variables, Locale.KOREAN, "regionFragment");
+
+        assertThat(page.select(".region-buttons .region-btn")).extracting(e -> e.attr("data-region-id"))
+                .containsExactly("1", "2", "3");
+        assertThat(page.select(".region-btn.selected")).hasSize(1);
+        assertThat(page.select(".subregion-list .subregion-btn")).extracting(e -> e.attr("data-city-id"))
+                .containsExactly("30", "31");
+        assertThat(page.select("[data-rail-clone]")).isEmpty();
+        // 항목이 적어도 화살표 자리는 있고, 처음에는 숨겨 둔다
+        assertThat(page.select(".region-selector > .arrow.prev[hidden], .region-selector > .arrow.next[hidden]"))
+                .hasSize(2);
+        assertThat(page.select(".subregion-arrow.prev[hidden], .subregion-arrow.next[hidden]")).hasSize(2);
     }
 
     @SuppressWarnings("unchecked")

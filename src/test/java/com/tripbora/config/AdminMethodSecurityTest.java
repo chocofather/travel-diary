@@ -51,6 +51,8 @@ class AdminMethodSecurityTest {
     @MockitoBean
     private CountryCategoryService countryCategoryService;
     @MockitoBean
+    private com.tripbora.service.category.CountryCategoryAdminService countryCategoryAdminService;
+    @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;

@@ -203,6 +203,36 @@ public class FileUploadService {
     }
 
     /**
+     * {@link #saveFile(MultipartFile, String)} 가 만든 파일 하나를 지운다.
+     *
+     * <p>그 하위 폴더 바로 아래의 서버가 만든 이름(UUID + 판별한 확장자)만 다룬다.
+     * 예전 방식의 경로나 다른 폴더를 가리키는 값은 건드리지 않고 {@code false} 를 돌려준다.
+     */
+    public boolean deleteSavedFile(String fileUrl, String subDir) {
+        if (fileUrl == null || subDir == null || subDir.isBlank()) {
+            return false;
+        }
+        String prefix = UPLOAD_URL_PREFIX + subDir + "/";
+        if (!fileUrl.startsWith(prefix)) {
+            return false;
+        }
+        String fileName = fileUrl.substring(prefix.length());
+        if (!MANAGED_CONTENT_IMAGE_NAME.matcher(fileName).matches()) {
+            return false;
+        }
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path directory = uploadRoot.resolve(subDir).normalize();
+        ensureContained(uploadRoot, directory);
+        Path target = directory.resolve(fileName).normalize();
+        ensureContained(directory, target);
+        try {
+            return Files.deleteIfExists(target);
+        } catch (IOException exception) {
+            throw new RuntimeException("파일 삭제 실패", exception);
+        }
+    }
+
+    /**
      * 일반 이미지 업로드(에디터·게시글·댓글·다이어리·표지·이벤트)의 공통 검증.
      *
      * <p>파일 앞머리 signature 로 형식을 정하고, 그 형식으로 실제로 읽히는지까지 확인한다.

@@ -1,0 +1,208 @@
+/* 관리자 지역 관리: 등록 대화상자와 카드 삭제 액션 */
+
+.admin-alert.is-success {
+    color: #276b4d;
+    background: #eaf7f0;
+    border: 1px solid #c9e8d8;
+}
+
+.admin-page-section > .admin-alert {
+    margin: 0 0 16px;
+}
+
+.admin-filter-back {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-region-parent-name {
+    color: #3d4962;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+/*
+  지역 카드: 위 줄은 아이콘 + 지역명/코드, 아래 줄은 액션.
+  액션을 이름과 같은 줄에 두면 버튼 폭만큼 이름 칸이 줄어들어 가려지므로 줄을 나눈다.
+*/
+.admin-item-card.admin-region-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    grid-template-areas:
+        "icon info"
+        "actions actions";
+    align-items: center;
+    gap: 12px 14px;
+}
+
+.admin-region-card .admin-region-card-icon { grid-area: icon; }
+
+.admin-region-card .admin-item-card-info { grid-area: info; }
+
+.admin-region-card .admin-item-card-info > div { min-width: 0; }
+
+/* 지역명은 말줄임 없이 전부 보인다. 긴 이름은 줄바꿈한다. */
+.admin-region-card .admin-item-card-name {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* 카드 액션: 좁으면 이 줄 안에서만 줄바꿈한다. 삭제는 작은 텍스트 액션으로 오른쪽 끝에 둔다. */
+.admin-region-card-actions {
+    grid-area: actions;
+    min-width: 0;
+}
+
+.admin-region-card-actions .admin-region-delete-btn {
+    margin-left: auto;
+}
+
+.admin-region-delete-form {
+    display: contents;
+}
+
+.admin-region-delete-btn {
+    min-height: 34px;
+    padding: 7px 6px;
+    color: #a65a5a;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-region-delete-btn:hover,
+.admin-region-delete-btn:focus-visible {
+    color: #c74747;
+    background: #fff5f5;
+}
+
+.admin-region-delete-btn:focus-visible {
+    outline: 2px solid #d95555;
+    outline-offset: 1px;
+}
+
+/* 등록 대화상자. 바깥 클릭으로 닫히도록 여백은 form 에 둔다. */
+.admin-region-dialog {
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    color: #35415a;
+    background: #fff;
+    border: 1px solid var(--admin-border, #e4e0ed);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(40, 52, 86, 0.16);
+}
+
+.admin-region-dialog::backdrop {
+    background: rgba(31, 38, 56, 0.32);
+}
+
+.admin-region-form {
+    padding: 22px 24px;
+}
+
+.admin-region-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.admin-region-dialog-header h2 {
+    margin: 0;
+    color: #25345e;
+    font-size: 1.15rem;
+    letter-spacing: -0.02em;
+}
+
+.admin-region-dialog-close {
+    width: 34px;
+    height: 34px;
+    color: #687080;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.admin-region-dialog-close:hover,
+.admin-region-dialog-close:focus-visible {
+    color: #25345e;
+    background: #f5f7fb;
+}
+
+.admin-region-dialog-alert {
+    margin: 0 0 16px;
+}
+
+.admin-region-form .admin-form-fields {
+    gap: 16px;
+}
+
+.admin-region-form .admin-form-actions {
+    margin-top: 20px;
+    padding-top: 16px;
+}
+
+.admin-region-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.admin-region-form-row.is-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-region-translations {
+    margin: 0;
+    padding: 14px 0 0;
+    border: 0;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-region-translations legend {
+    padding: 0 8px 0 0;
+    color: #3d4962;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.admin-region-translations legend span {
+    color: var(--admin-muted, #717b91);
+    font-weight: 500;
+}
+
+.admin-region-translations > .admin-help-text {
+    margin: 4px 0 12px;
+}
+
+.admin-region-form .admin-form-field > .admin-help-text {
+    margin: 0;
+}
+
+/* .admin-form-field 의 display:grid 가 hidden 을 덮지 않게 한다. */
+.admin-region-form [hidden] {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .admin-region-form {
+        padding: 18px 16px;
+    }
+
+    .admin-region-form-row,
+    .admin-region-form-row.is-three {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

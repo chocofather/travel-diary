@@ -296,10 +296,6 @@ public class DestinationController {
         // 비어 있으면 목록이 지역 필터를 적용하지 못한다.
         model.addAttribute("type", resolveRegionType(region));
 
-        String code = region.getCode(); // 또는 countryCategoryService.getCodeById(region.getId());
-        String countryCode = code != null ? code.split("-")[0] : null;
-        model.addAttribute("countryCode", countryCode);
-
         CountryCategory parentRegion = null;
         if (region.getParentId() != null) {
             parentRegion = countryCategoryService.getById(region.getParentId());
@@ -307,6 +303,12 @@ public class DestinationController {
         } else {
             model.addAttribute("regionPathId", null);
         }
+
+        // 관리자가 등록한 도시·시/군/구는 code 를 비워 둔다. 그때는 부모(국가·시/도)의 code 로 국가를 정한다.
+        String code = region.getCode() != null ? region.getCode()
+                : parentRegion != null ? parentRegion.getCode() : null;
+        String countryCode = code != null ? code.split("-")[0] : null;
+        model.addAttribute("countryCode", countryCode);
 
         List<CountryCategory> detailRegions = new ArrayList<>();
         detailRegions.add(region);

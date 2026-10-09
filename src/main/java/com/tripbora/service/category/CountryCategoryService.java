@@ -14,7 +14,7 @@ import java.util.*;
 public class CountryCategoryService {
 
     /** 지역 아이콘을 두는 곳. 예전에 올린 아이콘과 같은 자리라 기존 경로가 그대로 열린다. */
-    private static final String ICON_DIRECTORY = "icons";
+    static final String ICON_DIRECTORY = "icons";
 
     private final CountryCategoryMapper mapper;
     /** 이미지 검증과 저장은 다른 업로드와 한 벌을 쓴다. 여기에 따로 만들지 않는다. */

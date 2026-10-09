@@ -202,4 +202,67 @@
         ORDER BY RAND()
         LIMIT #{limit}
     </select>
+
+    <!-- ─── 관리자 지역 등록/삭제 ─── -->
+
+    <insert id="insertRegion" parameterType="com.tripbora.model.CountryCategory"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO country_categories (
+            region_name, name_en, icon_path, code,
+            parent_id, depth, subregion, is_visible
+        )
+        VALUES (
+            #{regionName}, #{nameEn}, #{iconPath}, #{code},
+            #{parentId}, #{depth}, #{subregion}, #{isVisible}
+        )
+    </insert>
+
+    <insert id="insertTranslation" parameterType="com.tripbora.model.CountryCategoryTranslation"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO country_category_translations (country_category_id, language_code, name)
+        VALUES (#{countryCategoryId}, #{languageCode}, #{name})
+    </insert>
+
+    <!-- country_category_translations, region_tag_map 은 FK ON DELETE CASCADE 로 함께 지워진다. -->
+    <delete id="deleteById">
+        DELETE FROM country_categories WHERE id = #{id}
+    </delete>
+
+    <select id="countChildren" resultType="int">
+        SELECT COUNT(*) FROM country_categories WHERE parent_id = #{id}
+    </select>
+
+    <select id="countDestinationsByRegionId" resultType="int">
+        SELECT COUNT(*) FROM destinations WHERE region_id = #{id}
+    </select>
+
+    <select id="countCoursesByCountryId" resultType="int">
+        SELECT COUNT(*) FROM courses WHERE country_id = #{id}
+    </select>
+
+    <select id="countByCode" resultType="int">
+        SELECT COUNT(*) FROM country_categories WHERE code = #{code}
+    </select>
+
+    <select id="countOtherRegionsByIconPath" resultType="int">
+        SELECT COUNT(*)
+        FROM country_categories
+        WHERE icon_path = #{iconPath}
+          AND id &lt;&gt; #{id}
+    </select>
+
+    <select id="selectChildDepths" resultType="int">
+        SELECT DISTINCT depth
+        FROM country_categories
+        WHERE parent_id = #{parentId}
+          AND depth IS NOT NULL
+    </select>
+
+    <select id="selectGrandchildDepths" resultType="int">
+        SELECT DISTINCT child.depth
+        FROM country_categories child
+        JOIN country_categories parent ON parent.id = child.parent_id
+        WHERE parent.parent_id = #{grandParentId}
+          AND child.depth IS NOT NULL
+    </select>
 </mapper>
