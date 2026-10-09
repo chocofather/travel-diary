@@ -3,6 +3,7 @@ package com.tripbora.controller.admin;
 import com.tripbora.dto.CountryCategoryForm;
 import com.tripbora.model.CountryCategory;
 import com.tripbora.service.category.CountryCategoryAdminService;
+import com.tripbora.service.category.CountryCategoryBulkCreateService;
 import com.tripbora.service.category.CountryCategoryDeleteBlockedException;
 import com.tripbora.service.category.CountryCategoryService;
 import com.tripbora.service.category.CountryCategoryValidationException;
@@ -30,6 +31,7 @@ public class AdminCountryCategoryController {
 
     private final CountryCategoryService countryCategoryService;
     private final CountryCategoryAdminService countryCategoryAdminService;
+    private final CountryCategoryBulkCreateService countryCategoryBulkCreateService;
     private static final Long KOREA_ID = 7L;
 
     /** 1) 국내/해외 + depth별 리스트 */
@@ -68,6 +70,8 @@ public class AdminCountryCategoryController {
         PageInfo<CountryCategory> pageInfo = new PageInfo<>(pageOf(list, page));
 
         model.addAttribute("pageInfo", pageInfo);
+        // 수정 대화상자가 현재 일본어·중국어 이름을 채우는 데 쓴다.
+        model.addAttribute("regionTranslations", countryCategoryAdminService.translationsByRegion(pageInfo.getList()));
         model.addAttribute("type", type);
         model.addAttribute("depth", depth);
         model.addAttribute("parentId", parentId);
@@ -80,6 +84,9 @@ public class AdminCountryCategoryController {
         // 지역 등록 대화상자. 검증 실패로 돌아왔으면 입력값과 사유를 그대로 다시 보여 준다.
         if (!model.containsAttribute("regionForm")) {
             model.addAttribute("regionForm", new CountryCategoryForm());
+        }
+        if (!model.containsAttribute("editForm")) {
+            model.addAttribute("editForm", new CountryCategoryForm());
         }
         CountryCategoryForm regionForm = (CountryCategoryForm) model.getAttribute("regionForm");
         model.addAttribute("parentOptionGroups", countryCategoryAdminService.getParentOptionGroups());
@@ -115,6 +122,43 @@ public class AdminCountryCategoryController {
         int count = countryCategoryService.getRegionsByDepthAndParent(created.getDepth(), created.getParentId()).size();
         int lastPage = Math.max(1, (count + PAGE_SIZE - 1) / PAGE_SIZE);
         return listRedirect(domestic ? "domestic" : "overseas", created.getDepth(), listParent, lastPage);
+    }
+
+    /** 2-1) 지역 일괄 등록. 행마다 따로 저장하고 결과를 대화상자에 다시 보여 준다. */
+    @PostMapping("/bulk")
+    public String bulkCreate(@RequestParam(value = "json", required = false) String json,
+                             @RequestParam(value = "listType", defaultValue = "domestic") String listType,
+                             @RequestParam(value = "listDepth", defaultValue = "3") int listDepth,
+                             @RequestParam(value = "listParentId", required = false) Long listParentId,
+                             @RequestParam(value = "listPage", defaultValue = "1") int listPage,
+                             RedirectAttributes redirectAttributes) {
+        CountryCategoryBulkCreateService.Result result = countryCategoryBulkCreateService.create(json);
+        redirectAttributes.addFlashAttribute("bulkResult", result);
+        // 전부 등록됐으면 입력란을 비우고, 아니면 고쳐서 다시 보낼 수 있게 남긴다.
+        if (result.fileError() != null || result.created() < result.total()) {
+            redirectAttributes.addFlashAttribute("bulkJson", json);
+        }
+        return listRedirect(listType, listDepth, listParentId, listPage);
+    }
+
+    /** 2-2) 지역 이름·번역 수정. id·부모·계층·코드는 바꾸지 않는다. */
+    @PostMapping("/{id}/edit")
+    public String update(@PathVariable Long id,
+                         @ModelAttribute("editForm") CountryCategoryForm form,
+                         @RequestParam(value = "listType", defaultValue = "domestic") String listType,
+                         @RequestParam(value = "listDepth", defaultValue = "3") int listDepth,
+                         @RequestParam(value = "listParentId", required = false) Long listParentId,
+                         @RequestParam(value = "listPage", defaultValue = "1") int listPage,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            CountryCategory updated = countryCategoryAdminService.update(id, form);
+            redirectAttributes.addFlashAttribute("message", "'" + updated.getRegionName() + "' 지역을 수정했습니다.");
+        } catch (CountryCategoryValidationException exception) {
+            redirectAttributes.addFlashAttribute("editForm", form);
+            redirectAttributes.addFlashAttribute("editRegionId", id);
+            redirectAttributes.addFlashAttribute("editFormError", exception.getMessage());
+        }
+        return listRedirect(listType, listDepth, listParentId, listPage);
     }
 
     /** 3) 지역 삭제. 지울 수 없으면 이유를 목록에 표시한다. */

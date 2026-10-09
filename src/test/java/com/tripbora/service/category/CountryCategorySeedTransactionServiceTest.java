@@ -96,6 +96,25 @@ class CountryCategorySeedTransactionServiceTest {
     }
 
     /**
+     * 관리자가 고친 이름·번역은 재시작해도 그대로다. 기준 데이터 적재는 이미 있는 행의 이름을 고치거나
+     * 번역 줄을 넣고 지우지 않는다.
+     */
+    @Test
+    void existingRowsNamesAndTranslationsAreNeverOverwritten() {
+        when(mapper.selectAllIds()).thenReturn(List.of(1, 2));
+        CountryCategory renamedInSeed = category(1L);
+        renamedInSeed.setRegionName("기준 데이터 이름");
+
+        service.insertMissing(List.of(renamedInSeed, category(2L)));
+
+        verify(mapper, never()).insert(any());
+        verify(mapper, never()).updateRegionNames(any(), any(), any());
+        verify(mapper, never()).insertTranslation(any());
+        verify(mapper, never()).upsertTranslation(any());
+        verify(mapper, never()).deleteTranslation(any(), any());
+    }
+
+    /**
      * 중간에 실패하면 되돌린다.
      *
      * <p>첫 행은 이미 insert 를 불렀지만 커밋은 요청되지 않고 롤백이 요청된다 —

@@ -60,6 +60,16 @@ public interface CountryCategoryMapper {
 
     int insertTranslation(CountryCategoryTranslation translation);
 
+    /** 지역 이름만 바꾼다. id·parent_id·depth·code 는 그대로 둔다. */
+    int updateRegionNames(@Param("id") Long id, @Param("regionName") String regionName,
+                          @Param("nameEn") String nameEn);
+
+    /** (지역, 언어) 줄이 있으면 이름만 바꾸고 없으면 넣는다. */
+    int upsertTranslation(CountryCategoryTranslation translation);
+
+    int deleteTranslation(@Param("countryCategoryId") Long countryCategoryId,
+                          @Param("languageCode") String languageCode);
+
     /** 번역·지역 태그 매핑은 FK ON DELETE CASCADE 로 함께 지워진다. */
     int deleteById(@Param("id") Long id);
 

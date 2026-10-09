@@ -223,6 +223,29 @@
         VALUES (#{countryCategoryId}, #{languageCode}, #{name})
     </insert>
 
+    <!-- ─── 관리자 지역 수정: id·parent_id·depth·code 는 바꾸지 않는다 ─── -->
+
+    <update id="updateRegionNames">
+        UPDATE country_categories
+        SET region_name = #{regionName},
+            name_en = #{nameEn}
+        WHERE id = #{id}
+    </update>
+
+    <!-- uk_country_category_translation (country_category_id, language_code) 로 기존 줄을 찾는다. -->
+    <insert id="upsertTranslation" parameterType="com.tripbora.model.CountryCategoryTranslation">
+        INSERT INTO country_category_translations (country_category_id, language_code, name)
+        VALUES (#{countryCategoryId}, #{languageCode}, #{name})
+        ON DUPLICATE KEY UPDATE
+            name = #{name}
+    </insert>
+
+    <delete id="deleteTranslation">
+        DELETE FROM country_category_translations
+        WHERE country_category_id = #{countryCategoryId}
+          AND language_code = #{languageCode}
+    </delete>
+
     <!-- country_category_translations, region_tag_map 은 FK ON DELETE CASCADE 로 함께 지워진다. -->
     <delete id="deleteById">
         DELETE FROM country_categories WHERE id = #{id}

@@ -294,7 +294,113 @@ class CountryCategoryAdminServiceTest {
         verify(fileUploadService, never()).deleteSavedFile(anyString(), eq(CountryCategoryService.ICON_DIRECTORY));
     }
 
+    // ---------- 수정 ----------
+
+    @Test
+    void editingALeafUpdatesNamesAndTranslationsInPlaceKeepingIdAndStructure() {
+        CountryCategoryForm form = form(null, " 베를린시 ", "Berlin City");
+        form.setNameJa("ベルリン市");
+        form.setNameZhCn("柏林市");
+        form.setNameZhTw(" ");
+
+        CountryCategory updated = service.update(100L, form);
+
+        // 같은 행을 고친다: 새 지역을 넣거나 지우지 않고, id·부모·계층·코드는 그대로다
+        verify(mapper).updateRegionNames(100L, "베를린시", "Berlin City");
+        verify(mapper, never()).insertRegion(any());
+        verify(mapper, never()).deleteById(anyLong());
+        assertThat(updated.getId()).isEqualTo(100L);
+        assertThat(updated.getParentId()).isEqualTo(20L);
+        assertThat(updated.getDepth()).isEqualTo(3);
+        assertThat(updated.getCode()).isEqualTo("DE-BER");
+
+        ArgumentCaptor<CountryCategoryTranslation> saved = ArgumentCaptor.forClass(CountryCategoryTranslation.class);
+        verify(mapper, times(4)).upsertTranslation(saved.capture());
+        Map<String, String> byLanguage = saved.getAllValues().stream()
+                .peek(t -> assertThat(t.getCountryCategoryId()).isEqualTo(100L))
+                .collect(Collectors.toMap(CountryCategoryTranslation::getLanguageCode, CountryCategoryTranslation::getName));
+        assertThat(byLanguage).containsExactlyInAnyOrderEntriesOf(Map.of(
+                "ko", "베를린시", "en", "Berlin City", "ja", "ベルリン市", "zh-CN", "柏林市"));
+        // 비운 언어는 번역 줄을 지운다
+        verify(mapper).deleteTranslation(100L, "zh-TW");
+        verify(mapper, never()).insertTranslation(any());
+    }
+
+    @Test
+    void savingTheCurrentNamesAgainIsNotADuplicate() {
+        CountryCategoryForm same = form(null, "베를린", "Berlin");
+        same.setNameJa("ベルリン");
+
+        service.update(100L, same);
+
+        verify(mapper).updateRegionNames(100L, "베를린", "Berlin");
+    }
+
+    @Test
+    void renamingToAnotherSiblingsNameIsRejectedInEveryLanguage() {
+        CountryCategory munich = region(101L, "뮌헨", "Munich", "DE-BY", 20L, 3);
+        when(mapper.selectByParentId(20L)).thenReturn(List.of(regions.get(100L), munich));
+        when(mapper.findTranslationsByCountryCategoryIds(List.of(101L)))
+                .thenReturn(List.of(translation(101L, "zh-TW", "慕尼黑")));
+
+        assertUpdateRejected(form(null, " 뮌헨 ", "Berlin"), "regionName");
+        assertUpdateRejected(form(null, "베를린", "MUNICH"), "nameEn");
+        CountryCategoryForm sameTraditional = form(null, "베를린", "Berlin");
+        sameTraditional.setNameZhTw("慕尼黑");
+        assertUpdateRejected(sameTraditional, "nameZhTw");
+
+        verify(mapper, never()).updateRegionNames(anyLong(), anyString(), anyString());
+        verify(mapper, never()).upsertTranslation(any());
+    }
+
+    @Test
+    void rootsMissingRegionsAndBlankNamesCannotBeSaved() {
+        assertUpdateRejected(form(null, "유럽 대륙", "Europe"), 2L, "id");
+        assertUpdateRejected(form(null, "없는 지역", "None"), 999L, "id");
+        assertUpdateRejected(form(null, " ", "Berlin"), "regionName");
+        assertUpdateRejected(form(null, "베를린", null), "nameEn");
+        verify(mapper, never()).updateRegionNames(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void seedRegionsCanBeEditedAndTheCacheIsDropped() {
+        // 기준 데이터 지역도 고칠 수 있다. 기동 시 적재는 없는 행만 넣으므로 수정값이 되돌아가지 않는다.
+        when(seedService.isSeedRegion(100L)).thenReturn(true);
+        countryCategoryService.getById(100L);
+        assertThat(cache.size()).isPositive();
+
+        service.update(100L, form(null, "베를린", "Berlin"));
+
+        verify(mapper).updateRegionNames(100L, "베를린", "Berlin");
+        assertThat(cache.size()).isZero();
+        assertThat(countryCategoryService.getById(100L).getRegionName()).isEqualTo("베를린");
+    }
+
+    // ---------- 일괄 등록의 부모 찾기 ----------
+
+    @Test
+    void parentCandidatesComeFromRootsAndTheirVisibleChildrenOnly() {
+        when(mapper.selectByParentId(2L)).thenReturn(List.of(regions.get(20L)));
+
+        assertThat(service.findParentCandidates(" 독일 ")).extracting(CountryCategory::getId).containsExactly(20L);
+        assertThat(service.findParentCandidates("유럽")).extracting(CountryCategory::getId).containsExactly(2L);
+        assertThat(service.findParentCandidates("서울")).extracting(CountryCategory::getId).containsExactly(38L);
+        // 도시 leaf 는 부모 후보가 아니다
+        assertThat(service.findParentCandidates("베를린")).isEmpty();
+        assertThat(service.findParentCandidates("없는 나라")).isEmpty();
+    }
+
     // ---------- 도우미 ----------
+
+    private void assertUpdateRejected(CountryCategoryForm form, String field) {
+        assertUpdateRejected(form, 100L, field);
+    }
+
+    private void assertUpdateRejected(CountryCategoryForm form, Long id, String field) {
+        assertThatThrownBy(() -> service.update(id, form))
+                .isInstanceOfSatisfying(CountryCategoryValidationException.class,
+                        exception -> assertThat(exception.getField()).isEqualTo(field));
+    }
 
     private void assertRejected(CountryCategoryForm form, String field) {
         assertThatThrownBy(() -> service.create(form))

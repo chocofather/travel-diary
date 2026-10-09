@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * 관리자 지역 등록·삭제.
+ * 관리자 지역 등록·수정·삭제.
  *
  * <p>계층은 "최상위(대륙·대한민국) → 국가·시/도 → 도시·시/군/구" 세 단계다. 공개 여행지 목록과
  * 여행지 등록폼이 이 세 단계만 다루므로, 관리자도 최상위 바로 아래와 그 아래까지만 등록한다.
@@ -127,24 +127,17 @@ public class CountryCategoryAdminService {
             throw new CountryCategoryValidationException("parentId", "이 지역 아래에는 하위 지역을 등록할 수 없습니다.");
         }
 
-        String regionName = requiredName(form.getRegionName(), "regionName", "한국어명");
-        String nameEn = requiredName(form.getNameEn(), "nameEn", "영어명");
-        Map<String, String> names = new LinkedHashMap<>();
-        names.put(KO, regionName);
-        names.put(EN, nameEn);
-        names.put(JA, optionalName(form.getNameJa(), "nameJa", "일본어명"));
-        names.put(ZH_CN, optionalName(form.getNameZhCn(), "nameZhCn", "중국어 간체명"));
-        names.put(ZH_TW, optionalName(form.getNameZhTw(), "nameZhTw", "중국어 번체명"));
+        Map<String, String> names = namesOf(form);
 
         // 최상위 바로 아래(국가·시/도)만 코드가 필요하다. 그 아래 leaf 는 임의 코드를 만들지 않고 비워 둔다.
         boolean codeRequired = path.size() == 1;
         String code = codeRequired ? requiredCode(form.getCode(), root, domestic) : null;
 
-        ensureNoDuplicateSibling(parent.getId(), names);
+        ensureNoDuplicateSibling(parent.getId(), names, null);
 
         CountryCategory region = new CountryCategory();
-        region.setRegionName(regionName);
-        region.setNameEn(nameEn);
+        region.setRegionName(names.get(KO));
+        region.setNameEn(names.get(EN));
         region.setCode(code);
         region.setParentId(parent.getId());
         region.setDepth(resolveDepth(parent));
@@ -164,6 +157,106 @@ public class CountryCategoryAdminService {
 
         invalidateCache();
         return region;
+    }
+
+    /**
+     * 지역 이름과 번역만 고친다. 같은 행(id)을 그대로 두므로 여행지·코스의 region_id 참조는 바뀌지 않는다.
+     *
+     * <p>parent_id·depth·code 는 바꾸지 않는다. code 는 코스 국가 목록, 해외 지도 국가 판별,
+     * Wikidata ISO 매칭이 읽으므로 이름처럼 고칠 수 있게 두지 않는다.
+     * 최상위(대륙·대한민국)는 JSON 일괄등록 계약이 이름으로 국내를 판별하므로 고치지 않는다.
+     *
+     * <p>기준 데이터(JSON) 지역도 고칠 수 있다. 기동 시 적재는 없는 행만 넣고 번역은 건드리지 않아
+     * 재시작해도 되돌아가지 않는다.
+     *
+     * @throws CountryCategoryValidationException 이름·중복 검증 실패. 아무것도 바꾸지 않는다.
+     */
+    @Transactional
+    public CountryCategory update(Long id, CountryCategoryForm form) {
+        CountryCategory region = id == null ? null : mapper.selectById(id);
+        if (region == null) {
+            throw new CountryCategoryValidationException("id", "수정할 지역을 찾을 수 없습니다.");
+        }
+        if (region.getParentId() == null) {
+            throw new CountryCategoryValidationException("id", "최상위 지역은 수정할 수 없습니다.");
+        }
+        if (form == null) {
+            throw new CountryCategoryValidationException("regionName", "한국어명을 입력해 주세요.");
+        }
+        Map<String, String> names = namesOf(form);
+        ensureNoDuplicateSibling(region.getParentId(), names, region.getId());
+
+        mapper.updateRegionNames(region.getId(), names.get(KO), names.get(EN));
+        names.forEach((languageCode, name) -> {
+            if (name == null) {
+                // 비운 선택 언어는 번역 줄을 지운다. 등록 때 비운 언어에 줄을 만들지 않는 것과 같은 상태가 된다.
+                mapper.deleteTranslation(region.getId(), languageCode);
+                return;
+            }
+            CountryCategoryTranslation translation = new CountryCategoryTranslation();
+            translation.setCountryCategoryId(region.getId());
+            translation.setLanguageCode(languageCode);
+            translation.setName(name);
+            mapper.upsertTranslation(translation);
+        });
+
+        region.setRegionName(names.get(KO));
+        region.setNameEn(names.get(EN));
+        invalidateCache();
+        return region;
+    }
+
+    /** 지역별 번역 이름 (지역 id → 언어 → 이름). 수정 대화상자에 현재 값을 채우는 데 쓴다. */
+    public Map<Long, Map<String, String>> translationsByRegion(List<CountryCategory> regions) {
+        List<Long> ids = regions == null ? List.of()
+                : regions.stream().map(CountryCategory::getId).filter(Objects::nonNull).toList();
+        Map<Long, Map<String, String>> result = new HashMap<>();
+        if (ids.isEmpty()) {
+            return result;
+        }
+        List<CountryCategoryTranslation> translations = mapper.findTranslationsByCountryCategoryIds(ids);
+        if (translations != null) {
+            for (CountryCategoryTranslation translation : translations) {
+                result.computeIfAbsent(translation.getCountryCategoryId(), key -> new HashMap<>())
+                        .put(translation.getLanguageCode(), translation.getName());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 일괄 등록의 부모 이름에 맞는 지역. 등록 화면의 부모 선택지와 같은 범위
+     * (최상위와 그 바로 아래 노출 지역)에서 한국어명으로 찾는다. 여러 곳이면 호출하는 쪽이 거절한다.
+     */
+    public List<CountryCategory> findParentCandidates(String name) {
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
+        String wanted = comparable(name);
+        List<CountryCategory> roots = new ArrayList<>();
+        for (Long rootId : countryCategoryService.getDomesticRootIds()) {
+            CountryCategory root = countryCategoryService.getById(rootId);
+            if (root != null) {
+                roots.add(root);
+            }
+        }
+        roots.addAll(countryCategoryService.getOverseasContinentRegions());
+
+        List<CountryCategory> matches = new ArrayList<>();
+        for (CountryCategory root : roots) {
+            if (sameName(root, wanted)) {
+                matches.add(root);
+            }
+            mapper.selectByParentId(root.getId()).stream()
+                    .filter(CountryCategoryAdminService::visible)
+                    .filter(child -> sameName(child, wanted))
+                    .forEach(matches::add);
+        }
+        return matches;
+    }
+
+    private static boolean sameName(CountryCategory region, String comparableName) {
+        return region.getRegionName() != null && comparable(region.getRegionName()).equals(comparableName);
     }
 
     /**
@@ -218,6 +311,17 @@ public class CountryCategoryAdminService {
         return region;
     }
 
+    /** 등록·수정이 같이 쓰는 이름 검증. 한국어·영어는 필수, 나머지 세 언어는 선택이다. */
+    private Map<String, String> namesOf(CountryCategoryForm form) {
+        Map<String, String> names = new LinkedHashMap<>();
+        names.put(KO, requiredName(form.getRegionName(), "regionName", "한국어명"));
+        names.put(EN, requiredName(form.getNameEn(), "nameEn", "영어명"));
+        names.put(JA, optionalName(form.getNameJa(), "nameJa", "일본어명"));
+        names.put(ZH_CN, optionalName(form.getNameZhCn(), "nameZhCn", "중국어 간체명"));
+        names.put(ZH_TW, optionalName(form.getNameZhTw(), "nameZhTw", "중국어 번체명"));
+        return names;
+    }
+
     private String requiredName(String value, String field, String label) {
         String name = optionalName(value, field, label);
         if (name == null) {
@@ -269,10 +373,16 @@ public class CountryCategoryAdminService {
     /**
      * 같은 부모 아래에서 같은 언어의 이름이 이미 쓰이면 막는다.
      * (한국어명은 region_name 과 ko 번역, 영어명은 name_en 과 en 번역까지 함께 본다)
+     *
+     * @param selfId 수정 중인 지역. 자기 자신의 현재 이름은 중복으로 보지 않는다. 등록이면 null
      */
-    private void ensureNoDuplicateSibling(Long parentId, Map<String, String> names) {
+    private void ensureNoDuplicateSibling(Long parentId, Map<String, String> names, Long selfId) {
         List<CountryCategory> siblings = mapper.selectByParentId(parentId);
-        if (siblings == null || siblings.isEmpty()) {
+        if (siblings == null) {
+            return;
+        }
+        siblings = siblings.stream().filter(sibling -> !Objects.equals(sibling.getId(), selfId)).toList();
+        if (siblings.isEmpty()) {
             return;
         }
         Map<String, Set<String>> taken = new HashMap<>();
@@ -290,7 +400,7 @@ public class CountryCategoryAdminService {
         for (Map.Entry<String, String> entry : names.entrySet()) {
             String name = entry.getValue();
             if (name != null && taken.getOrDefault(entry.getKey(), Set.of()).contains(comparable(name))) {
-                throw new CountryCategoryValidationException(fieldOf(entry.getKey()),
+                throw new CountryCategoryDuplicateNameException(fieldOf(entry.getKey()),
                         "같은 부모 아래에 이미 같은 이름의 지역이 있습니다: " + name);
             }
         }
@@ -303,7 +413,8 @@ public class CountryCategoryAdminService {
         taken.computeIfAbsent(languageCode, key -> new HashSet<>()).add(comparable(name));
     }
 
-    private static String comparable(String name) {
+    /** 이름 중복 비교용 정규화. 일괄 등록의 파일 안 중복 검사도 같은 기준을 쓴다. */
+    static String comparable(String name) {
         return name.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 

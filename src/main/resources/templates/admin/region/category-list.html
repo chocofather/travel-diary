@@ -5,8 +5,8 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'regions')}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin-region-categories.css?v=20261009-card">
-  <script src="/js/admin-region-categories.js?v=20261009" defer></script>
+  <link rel="stylesheet" href="/css/admin-region-categories.css?v=20261010-wrap">
+  <script src="/js/admin-region-categories.js?v=20261010-edit" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section">
@@ -21,6 +21,10 @@
         <p class="admin-page-description">국내 도시와 해외 대륙·국가·도시 계층 및 아이콘을 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
+        <!-- 여행지 JSON 일괄 등록 화면과 같은 기준 데이터. 지역을 바꾼 직후 바로 받을 수 있게 여기에도 둔다. -->
+        <a th:href="@{/admin/api/destinations/import-json/master}" class="admin-btn is-small"
+           download="destination-import-master.json">마스터 데이터 내보내기</a>
+        <button type="button" class="admin-btn is-small" data-region-bulk-open>지역 일괄 등록</button>
         <button type="button" class="admin-btn is-primary is-small" data-region-dialog-open>지역 등록</button>
       </div>
     </header>
@@ -62,6 +66,12 @@
           <a th:if="${showSubregionLink}"
              th:href="@{/admin/region-categories(type=${type},depth=${depth+1},parentId=${c.id})}"
              class="admin-btn is-small">하위 보기</a>
+          <button th:if="${c.parentId != null}" type="button" class="admin-btn is-small" data-region-edit-open
+                  th:with="t=${regionTranslations[c.id]}"
+                  th:attr="data-id=${c.id},data-name-ko=${c.regionName},data-name-en=${c.nameEn},
+                           data-name-ja=${t?.get('ja')},data-name-zh-cn=${t?.get('zh-CN')},
+                           data-name-zh-tw=${t?.get('zh-TW')},data-code=${c.code},
+                           aria-label=${c.regionName + ' 수정'}">수정</button>
           <form th:action="@{/admin/region-categories/{id}/delete(id=${c.id})}" method="post"
                 class="admin-region-delete-form"
                 onsubmit="return confirm('이 지역을 삭제하시겠습니까?')">
@@ -173,6 +183,128 @@
       <div class="admin-form-actions">
         <button type="button" class="admin-btn is-small" data-region-dialog-close>취소</button>
         <button type="submit" class="admin-btn is-primary is-small">등록</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 지역 수정. 이름·번역만 바꾼다. 부모·계층·코드는 바꾸지 않는다. -->
+  <dialog class="admin-region-dialog" id="region-edit-dialog" aria-labelledby="region-edit-title"
+          th:attr="data-open-on-load=${editFormError != null},
+                   data-action-base=@{/admin/region-categories/}">
+    <form th:action="@{/admin/region-categories/{id}/edit(id=${editRegionId != null ? editRegionId : 0})}"
+          th:object="${editForm}" method="post" class="admin-region-form" data-region-edit-form>
+      <div class="admin-region-dialog-header">
+        <h2 id="region-edit-title">지역 수정</h2>
+        <button type="button" class="admin-region-dialog-close" data-region-dialog-close
+                aria-label="닫기">×</button>
+      </div>
+
+      <div th:if="${editFormError}" class="admin-alert admin-region-dialog-alert" role="alert"
+           th:text="${editFormError}"></div>
+
+      <input type="hidden" name="listType" th:value="${type}">
+      <input type="hidden" name="listDepth" th:value="${depth}">
+      <input type="hidden" name="listParentId" th:value="${parentId}">
+      <input type="hidden" name="listPage" th:value="${pageInfo.pageNum}">
+
+      <div class="admin-form-fields">
+        <div class="admin-region-form-row">
+          <div class="admin-form-field">
+            <label for="region-edit-name-ko">한국어명</label>
+            <input id="region-edit-name-ko" type="text" class="admin-input" th:field="*{regionName}"
+                   maxlength="100" required data-edit-name="ko">
+          </div>
+          <div class="admin-form-field">
+            <label for="region-edit-name-en">영어명</label>
+            <input id="region-edit-name-en" type="text" class="admin-input" th:field="*{nameEn}"
+                   maxlength="100" required data-edit-name="en">
+          </div>
+        </div>
+
+        <p class="admin-help-text admin-region-edit-code" data-edit-code-row hidden>
+          코드 <strong data-edit-code></strong> · 코스·지도·외부 연동이 사용하므로 여기서 바꾸지 않습니다.
+        </p>
+
+        <fieldset class="admin-region-translations">
+          <legend>번역 <span>(선택)</span></legend>
+          <p class="admin-help-text">비우면 해당 언어 번역을 지웁니다. 상위 지역·계층은 바뀌지 않습니다.</p>
+          <div class="admin-region-form-row is-three">
+            <div class="admin-form-field">
+              <label for="region-edit-name-ja">일본어</label>
+              <input id="region-edit-name-ja" type="text" class="admin-input" th:field="*{nameJa}"
+                     maxlength="100" data-edit-name="ja">
+            </div>
+            <div class="admin-form-field">
+              <label for="region-edit-name-zh-cn">중국어 간체</label>
+              <input id="region-edit-name-zh-cn" type="text" class="admin-input" th:field="*{nameZhCn}"
+                     maxlength="100" data-edit-name="zh-cn">
+            </div>
+            <div class="admin-form-field">
+              <label for="region-edit-name-zh-tw">중국어 번체</label>
+              <input id="region-edit-name-zh-tw" type="text" class="admin-input" th:field="*{nameZhTw}"
+                     maxlength="100" data-edit-name="zh-tw">
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="admin-form-actions">
+        <button type="button" class="admin-btn is-small" data-region-dialog-close>취소</button>
+        <button type="submit" class="admin-btn is-primary is-small">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 지역 일괄 등록. 행마다 단건 등록과 같은 규칙으로 따로 저장한다. -->
+  <dialog class="admin-region-dialog is-wide" id="region-bulk-dialog" aria-labelledby="region-bulk-title"
+          th:attr="data-open-on-load=${bulkResult != null}">
+    <form th:action="@{/admin/region-categories/bulk}" method="post" class="admin-region-form">
+      <div class="admin-region-dialog-header">
+        <h2 id="region-bulk-title">지역 일괄 등록</h2>
+        <button type="button" class="admin-region-dialog-close" data-region-dialog-close
+                aria-label="닫기">×</button>
+      </div>
+
+      <th:block th:if="${bulkResult != null}">
+        <div th:if="${bulkResult.fileError() != null}" class="admin-alert admin-region-dialog-alert" role="alert"
+             th:text="${bulkResult.fileError()}"></div>
+        <div th:if="${bulkResult.fileError() == null}" class="admin-region-bulk-result" role="status">
+          <p class="admin-region-bulk-summary"
+             th:text="|총 ${bulkResult.total()}건 · 등록 ${bulkResult.created()}건 · 중복 ${bulkResult.duplicates()}건 · 실패 ${bulkResult.failed()}건|">요약</p>
+          <ul class="admin-region-bulk-rows">
+            <li th:each="row : ${bulkResult.rows()}"
+                th:classappend="${'is-' + #strings.toLowerCase(row.status().name())}">
+              <span class="admin-region-bulk-name"
+                    th:text="|${row.number()}. ${row.name() ?: '(이름 없음)'}${row.parent() != null ? ' ← ' + row.parent() : ''}|">이름</span>
+              <span class="admin-region-bulk-status" th:text="${row.status().label}">상태</span>
+              <span th:if="${row.message() != null}" class="admin-region-bulk-message"
+                    th:text="${row.message()}">사유</span>
+            </li>
+          </ul>
+        </div>
+      </th:block>
+
+      <input type="hidden" name="listType" th:value="${type}">
+      <input type="hidden" name="listDepth" th:value="${depth}">
+      <input type="hidden" name="listParentId" th:value="${parentId}">
+      <input type="hidden" name="listPage" th:value="${pageInfo.pageNum}">
+
+      <div class="admin-form-fields">
+        <div class="admin-form-field">
+          <label for="region-bulk-json">지역 JSON (최대 30건)</label>
+          <textarea id="region-bulk-json" name="json" class="admin-input admin-region-bulk-input" rows="10"
+                    spellcheck="false" required th:text="${bulkJson}"
+                    placeholder='[{"parent": "인도네시아", "ko": "중부 자바", "en": "Central Java", "ja": "中部ジャワ州", "zh-CN": "中爪哇省", "zh-TW": "中爪哇省"}]'></textarea>
+          <p class="admin-help-text">
+            parent 는 부모 지역의 한국어명입니다(최상위 지역 또는 국가·시/도). ko·en 은 필수이고,
+            국가·시/도를 등록할 때만 code 를 함께 씁니다. 행마다 따로 저장되어 실패한 행만 빠집니다.
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-form-actions">
+        <button type="button" class="admin-btn is-small" data-region-dialog-close>닫기</button>
+        <button type="submit" class="admin-btn is-primary is-small">일괄 등록</button>
       </div>
     </form>
   </dialog>

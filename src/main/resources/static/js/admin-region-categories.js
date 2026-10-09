@@ -1,6 +1,26 @@
-/* 관리자 지역 관리: 지역 등록 대화상자. 검증은 서버가 다시 한다. */
+/* 관리자 지역 관리: 등록·수정·일괄 등록 대화상자. 검증은 서버가 다시 한다. */
 (function () {
-    function init() {
+    function openDialog(dialog, focusTarget) {
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+        focusTarget?.focus();
+    }
+
+    function closeDialog(dialog) {
+        if (typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+    }
+
+    // 닫기 버튼과 바깥(배경) 클릭으로 닫는다.
+    function bindClose(dialog) {
+        dialog.querySelectorAll('[data-region-dialog-close]').forEach(button =>
+            button.addEventListener('click', () => closeDialog(dialog)));
+        dialog.addEventListener('click', event => {
+            if (event.target === dialog) closeDialog(dialog);
+        });
+    }
+
+    function initCreate() {
         const dialog = document.getElementById('region-create-dialog');
         if (!dialog) return;
         const parent = dialog.querySelector('[data-region-parent]');
@@ -24,26 +44,65 @@
 
         function open() {
             syncCodeField();
-            if (typeof dialog.showModal === 'function') dialog.showModal();
-            else dialog.setAttribute('open', '');
-            parent.focus();
-        }
-
-        function close() {
-            if (typeof dialog.close === 'function') dialog.close();
-            else dialog.removeAttribute('open');
+            openDialog(dialog, parent);
         }
 
         parent.addEventListener('change', syncCodeField);
         document.querySelectorAll('[data-region-dialog-open]').forEach(button => button.addEventListener('click', open));
-        dialog.querySelectorAll('[data-region-dialog-close]').forEach(button => button.addEventListener('click', close));
-        // 바깥(배경)을 누르면 닫는다.
-        dialog.addEventListener('click', event => {
-            if (event.target === dialog) close();
-        });
+        bindClose(dialog);
 
         syncCodeField();
         if (dialog.dataset.openOnLoad === 'true') open();
+    }
+
+    // 카드의 [수정]이 들고 있는 현재 값으로 채운다. 저장 실패로 돌아왔으면 서버가 채운 입력값을 그대로 둔다.
+    function initEdit() {
+        const dialog = document.getElementById('region-edit-dialog');
+        if (!dialog) return;
+        const form = dialog.querySelector('[data-region-edit-form]');
+        const alert = dialog.querySelector('.admin-region-dialog-alert');
+        const codeRow = dialog.querySelector('[data-edit-code-row]');
+        const codeValue = dialog.querySelector('[data-edit-code]');
+        const fields = {
+            ko: 'nameKo', en: 'nameEn', ja: 'nameJa', 'zh-cn': 'nameZhCn', 'zh-tw': 'nameZhTw'
+        };
+
+        function open(button) {
+            const data = button.dataset;
+            form.action = dialog.dataset.actionBase + encodeURIComponent(data.id) + '/edit';
+            Object.entries(fields).forEach(([language, key]) => {
+                const input = dialog.querySelector(`[data-edit-name="${language}"]`);
+                if (input) input.value = data[key] || '';
+            });
+            codeValue.textContent = data.code || '';
+            codeRow.hidden = !data.code;
+            if (alert) alert.hidden = true;
+            openDialog(dialog, dialog.querySelector('[data-edit-name="ko"]'));
+        }
+
+        document.querySelectorAll('[data-region-edit-open]').forEach(button =>
+            button.addEventListener('click', () => open(button)));
+        bindClose(dialog);
+
+        if (dialog.dataset.openOnLoad === 'true') {
+            openDialog(dialog, dialog.querySelector('[data-edit-name="ko"]'));
+        }
+    }
+
+    function initBulk() {
+        const dialog = document.getElementById('region-bulk-dialog');
+        if (!dialog) return;
+        const input = dialog.querySelector('textarea');
+        document.querySelectorAll('[data-region-bulk-open]').forEach(button =>
+            button.addEventListener('click', () => openDialog(dialog, input)));
+        bindClose(dialog);
+        if (dialog.dataset.openOnLoad === 'true') openDialog(dialog, input);
+    }
+
+    function init() {
+        initCreate();
+        initEdit();
+        initBulk();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
