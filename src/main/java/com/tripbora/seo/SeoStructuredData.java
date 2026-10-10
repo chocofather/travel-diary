@@ -29,8 +29,8 @@ public final class SeoStructuredData {
         Map<String, Object> website = new LinkedHashMap<>();
         website.put("@context", CONTEXT);
         website.put("@type", "WebSite");
-        website.put("name", "TripBora");
-        website.put("alternateName", "트립보라");
+        website.put("name", "트립보라");
+        website.put("alternateName", "TripBora");
         website.put("url", url);
         model.addAttribute("seoJsonLd", scriptSafeJson(website));
     }
