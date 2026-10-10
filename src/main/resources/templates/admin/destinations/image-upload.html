@@ -11,9 +11,9 @@
   <script src="/js/admin-destination-image-cards.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-image-bulk-delete.js?v=20261009-2" defer></script>
   <script src="/js/admin-destination-image-order.js?v=20260927-3" defer></script>
-  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
-  <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
-  <script src="/js/admin-destination-commons-add.js?v=20261008-1" defer></script>
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20261010-1">
+  <script src="/js/admin-commons-photo-picker.js?v=20261010-1" defer></script>
+  <script src="/js/admin-destination-commons-add.js?v=20261010-2" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-destination-images-page">
@@ -38,7 +38,8 @@
       <div class="admin-destination-section-header">
         <div>
           <h2>새 이미지 추가</h2>
-          <p>직접 보유한 이미지 또는 한국관광공사 관광사진을 추가할 수 있습니다.</p>
+          <p th:text="${overseasDestination} ? '직접 보유한 이미지를 올리거나 아래 Wikimedia Commons 사진을 추가할 수 있습니다.'
+                       : '직접 보유한 이미지 또는 한국관광공사 관광사진을 추가할 수 있습니다.'">직접 보유한 이미지 또는 한국관광공사 관광사진을 추가할 수 있습니다.</p>
         </div>
       </div>
 
@@ -91,7 +92,8 @@
           </div>
         </form>
 
-        <div id="kto-add" class="admin-image-add-kto">
+        <!-- 한국관광공사 관광사진은 국내 여행지에만 보인다. 해외 여행지는 아래 Wikimedia Commons 사진을 쓴다. -->
+        <div id="kto-add" class="admin-image-add-kto" th:unless="${overseasDestination}">
           <div th:if="${ktoAddError}" class="admin-alert" role="alert">
             <p th:text="${ktoAddError}">이미지 등록 중 일부 항목 처리에 실패했습니다.</p>
             <p th:if="${ktoAddErrorDetail}" th:text="${ktoAddErrorDetail}"></p>
@@ -105,16 +107,20 @@
       </div>
     </section>
 
-    <!-- Wikidata 여행지에만 보인다. 후보는 이 여행지의 QID로만 불러오고, 저장 때 서버가 출처·라이선스를 다시 확인한다. -->
+    <!--
+      해외 여행지(또는 Wikidata 여행지)에만 보인다. QID가 있으면 그 QID 후보(P18·Commons 카테고리)를 불러오고,
+      없거나 후보가 없으면 검색으로 찾는다. 상업적 이용이 가능한 라이선스 사진만 보여주며,
+      저장 때 서버가 출처·라이선스를 다시 확인한다.
+    -->
     <section id="commons-add" class="admin-destination-section admin-commons-add"
-             th:if="${wikidataQid != null}" data-commons-add th:attr="data-qid=${wikidataQid}">
+             th:if="${overseasDestination or wikidataQid != null}" data-commons-add th:attr="data-qid=${wikidataQid}">
       <div class="admin-destination-section-header">
         <div>
-          <h2>Wikimedia Commons 사진 추가</h2>
+          <h2>Wikimedia Commons 사진</h2>
           <p>
-            이 여행지의 Wikidata(<span th:text="${wikidataQid}">Q243</span>) 사진 후보에서 고른 사진만 추가합니다.
-            저장할 때 서버가 원본 출처·라이선스를 다시 확인하고 내려받습니다.
-            현재 대표 사진은 새 사진을 대표로 지정할 때만 바뀝니다.
+            해외 여행지의 Wikimedia Commons 사진을 검색하고 사용할 사진을 선택합니다.
+            퍼블릭 도메인·CC0·CC BY·CC BY-SA 라이선스 사진만 보여주며, 저장할 때 서버가 원본 출처·라이선스를
+            다시 확인하고 내려받습니다. 현재 대표 사진은 새 사진을 대표로 지정할 때만 바뀝니다.
           </p>
         </div>
       </div>
@@ -122,14 +128,32 @@
             th:text="${fileName}"></span>
       <div th:if="${commonsAddError}" class="admin-alert" role="alert" th:text="${commonsAddError}"></div>
       <div th:if="${commonsAddResult}" class="admin-alert" role="status" th:text="${commonsAddResult}"></div>
-      <button type="button" class="admin-btn" data-commons-add-load>Commons 사진 후보 불러오기</button>
+      <div class="admin-commons-add-source" th:if="${wikidataQid != null}">
+        <span>Wikidata 연결됨: <strong th:text="${wikidataQid}">Q243</strong></span>
+        <button type="button" class="admin-btn" data-commons-add-load>Commons 사진 불러오기</button>
+      </div>
+      <p class="admin-field-help" th:if="${wikidataQid == null}">
+        Wikidata QID가 연결되지 않은 여행지입니다. 검색어로 Commons 사진을 찾아 주세요.
+      </p>
+      <!-- 검색은 화면 안에서만 한다(서버로 보내는 값 없음). 저장은 아래 추가 폼 하나로만 한다. -->
+      <form class="admin-destination-form admin-kto-photo-search-controls" role="search" data-commons-search-form>
+        <label class="admin-kto-photo-search-field">
+          <span class="admin-form-label">Commons 사진 검색어</span>
+          <input type="search" maxlength="200" autocomplete="off" placeholder="예: Eiffel Tower Paris France"
+                 th:value="${commonsSearchQuery}" data-commons-search-query>
+        </label>
+        <button type="submit" class="admin-btn is-primary">검색</button>
+      </form>
+      <p class="admin-field-help">
+        검색 결과는 이 여행지와 관련이 없을 수 있습니다. 'Commons에서 보기'로 원본 파일 페이지를 확인한 뒤 선택해 주세요.
+      </p>
       <p class="admin-wikidata-review-note" role="status" aria-live="polite" data-commons-add-message hidden></p>
       <div class="admin-wikidata-commons" data-commons-add-candidates></div>
       <form th:action="@{/admin/destinations/{id}/images/commons(id=${destinationId})}" method="post"
             class="admin-commons-add-form" data-commons-add-form>
         <input type="hidden" name="commonsSelectedPhotosJson" data-commons-add-selection>
         <p class="admin-wikidata-review-note" role="status" aria-live="polite" data-commons-add-status hidden></p>
-        <button type="submit" class="admin-btn is-primary" data-commons-add-submit disabled>선택한 사진 추가</button>
+        <button type="submit" class="admin-btn is-primary" data-commons-add-submit disabled>선택한 Commons 사진 추가</button>
       </form>
     </section>
 

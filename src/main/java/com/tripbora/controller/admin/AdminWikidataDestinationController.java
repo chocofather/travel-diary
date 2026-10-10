@@ -99,6 +99,20 @@ public class AdminWikidataDestinationController {
         }
     }
 
+    /**
+     * QID가 없거나 연결된 Commons 사진이 없는 해외 여행지의 수동 검색. 바로 저장할 수 있는 사진만 돌려준다.
+     * cursor 는 앞 묶음이 준 nextCursor. Commons 일시 오류는 응답 status(ERROR·PARTIAL)와 message 로 알린다.
+     */
+    @GetMapping("/commons-search")
+    public ResponseEntity<?> commonsSearch(@RequestParam(required = false) String query,
+                                           @RequestParam(required = false) String cursor) {
+        try {
+            return timed(() -> commonsPhotoPreviewService.search(query, cursor));
+        } catch (IllegalArgumentException exception) {
+            return error(HttpStatus.BAD_REQUEST, exception.getMessage());
+        }
+    }
+
     private ResponseEntity<ErrorResponse> error(HttpStatus status, String message) {
         return ResponseEntity.status(status).body(new ErrorResponse(message));
     }

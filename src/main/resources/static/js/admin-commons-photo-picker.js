@@ -11,6 +11,8 @@
 
   /** 서버 저장 검증과 같은 기본 선택 한도. 응답의 selectionLimit 이 있으면 그 값을 쓴다. */
   const DEFAULT_SELECTION_LIMIT = 5;
+  /** hideBlocked 에서 숨기는 작은 사진 기준(짧은 변). 서버 수동 검색(CommonsPhotoPreviewService.MIN_PHOTO_SHORT_SIDE)과 같다. */
+  const MIN_PHOTO_SHORT_SIDE = 400;
   /** 같은 영역을 다시 그리면(QID 변경 등) 이전 그리기의 늦은 '더 보기' 응답을 버린다. */
   const renders = new WeakMap();
 
@@ -73,14 +75,16 @@
     try {
       const parsed = new URL(url);
       if (!(parsed.protocol === 'https:' || (allowHttp && parsed.protocol === 'http:'))
-        || !allowedHost(parsed.hostname)) return;
+        || !allowedHost(parsed.hostname)) return null;
       const link = element('a', '', label);
       link.href = parsed.href;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       container.append(link);
+      return link;
     } catch (_) {
       // An invalid upstream URL is not rendered as a link.
+      return null;
     }
   }
 
@@ -138,6 +142,7 @@
    * @param options.registeredFileNames 이미 이 여행지에 있는 Commons 파일명. 선택할 수 없게 표시한다
    * @param options.loadMore       cursor 를 받아 다음 묶음 응답(Promise)을 돌려준다. 없으면 '사진 더 보기'를 숨긴다
    * @param options.selectionLimit 서버 한도보다 좁힐 선택 수. 1이면 새로 고른 사진으로 바꾼다
+   * @param options.hideBlocked    저장할 수 없는 사진(라이선스·형식·이용 제한)과 너무 작은 사진은 카드로 그리지 않는다
    */
   function render(section, data, options = {}) {
     const renderId = {};
@@ -216,8 +221,13 @@
 
     let placeholder = null;
 
+    function hidden(photo) {
+      if (!options.hideBlocked || registered.has(photo.fileName)) return false;
+      return !photo.savable || Math.min(photo.width || 0, photo.height || 0) < MIN_PHOTO_SHORT_SIDE;
+    }
+
     function addCard(photo) {
-      if (!photo?.fileName || shown.has(photo.fileName)) return;
+      if (!photo?.fileName || shown.has(photo.fileName) || hidden(photo)) return;
       shown.add(photo.fileName);
       placeholder?.remove();
       placeholder = null;
@@ -257,7 +267,11 @@
       mainButton.type = 'button';
       mainButton.hidden = true;
       mainButton.addEventListener('click', () => change(setMain(photos, photo.fileName, mainMode)));
-      body.append(title, meta, status, mainButton, sourceDetails(photo));
+      body.append(title, meta, status, mainButton);
+      // 사진 자체는 선택 영역이라, 원본 파일 페이지는 별도 링크로 새 탭에서 연다.
+      const filePageLink = safeLink(body, photo.filePageUrl, 'Commons에서 보기', host => host === 'commons.wikimedia.org');
+      if (filePageLink) filePageLink.className = 'admin-commons-card-link';
+      body.append(sourceDetails(photo));
 
       card.append(media, body);
       controls.push({fileName: photo.fileName, selectable, checkbox, mainButton, mainBadge, card});
@@ -294,8 +308,10 @@
     });
 
     (data.photos || []).forEach(addCard);
-    if (!data.photos?.length) {
-      placeholder = element('p', 'admin-wikidata-review-note', '앞쪽 파일에 표시할 사진이 없습니다. 사진 더 보기로 이어서 찾아보세요.');
+    if (!shown.size) {
+      placeholder = element('p', 'admin-wikidata-review-note', nextCursor
+        ? '앞쪽 파일에 표시할 사진이 없습니다. 사진 더 보기로 이어서 찾아보세요.'
+        : '사용할 수 있는 라이선스의 사진이 없습니다.');
       grid.append(placeholder);
     }
     refreshSelection();

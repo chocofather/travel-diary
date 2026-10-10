@@ -312,6 +312,67 @@ class CommonsPhotoImportServiceTest {
         verifyNoInteractions(wikidata, commons, downloads);
     }
 
+    /** 수동 검색 선택값은 source=SEARCH 표시와 파일명·대표 여부만 받는다. QID가 섞이면 거부한다. */
+    @Test
+    void searchSelectionIsRecognisedAndParsedWithoutQid() {
+        String json = "{\"source\":\"SEARCH\",\"photos\":[{\"fileName\":\"petronas_Towers.jpg\",\"main\":false,"
+                + "\"author\":\"forged\"}]}";
+
+        assertThat(service.isSearchSelection(json)).isTrue();
+        assertThat(service.isSearchSelection("{\"qid\":\"Q243\",\"photos\":[]}")).isFalse();
+        assertThat(service.isSearchSelection("not json")).isFalse();
+        assertThat(service.parseSearchSelections(json))
+                .containsExactly(new CommonsPhotoImportService.Selection("Petronas Towers.jpg", false));
+        assertThatThrownBy(() -> service.parseSearchSelections(
+                "{\"source\":\"SEARCH\",\"qid\":\"Q1\",\"photos\":[{\"fileName\":\"A.jpg\"}]}"))
+                .isInstanceOf(CommonsPhotoSelectionException.class);
+        assertThatThrownBy(() -> service.parseSearchSelections("{\"photos\":[{\"fileName\":\"A.jpg\"}]}"))
+                .isInstanceOf(CommonsPhotoSelectionException.class);
+        assertThatThrownBy(() -> service.parseSearchSelections(photosJson(6).replace("\"qid\":\"Q243\"", "\"source\":\"SEARCH\"")))
+                .isInstanceOf(CommonsPhotoSelectionException.class).hasMessageContaining("최대 5장");
+    }
+
+    /**
+     * 검색으로 고른 사진은 Wikidata 후보 확인 없이, QID 후보와 같은 라이선스·형식 규칙으로 Commons에서 새로 확인한다.
+     * 출처에는 QID 없이 Commons 파일 제목·페이지·원본 URL·저작자·라이선스를 남긴다.
+     */
+    @Test
+    void searchResultsAreRevalidatedWithTheSameLicenseRulesAndStoredWithoutQid() throws Exception {
+        ObjectNode towers = page("File:Petronas Towers.jpg", "cc-by-sa-3.0", "CC BY-SA 3.0",
+                "https://creativecommons.org/licenses/by-sa/3.0", "<b>Someone</b>", "image/jpeg");
+        ObjectNode nonCommercial = page("File:Nc.jpg", "cc-by-nc-4.0", "CC BY-NC 4.0",
+                "https://creativecommons.org/licenses/by-nc/4.0", "Someone", "image/jpeg");
+        when(commons.getImageInfoForSave(List.of("File:Petronas Towers.jpg"))).thenReturn(imageInfo(towers));
+        when(commons.getImageInfoForSave(List.of("File:Nc.jpg"))).thenReturn(imageInfo(nonCommercial));
+        when(downloads.downloadCommonsImage(rendition("File:Petronas Towers.jpg"))).thenReturn(
+                new KtoDownloadedPhoto("/uploads/destinations/p.jpg", RENDITION, "image/jpeg", 10));
+
+        List<PreparedCommonsPhoto> prepared = service.prepareSearchResultsForExistingDestination(
+                List.of(new CommonsPhotoImportService.Selection("Petronas Towers.jpg", false)), true);
+
+        var source = prepared.get(0).source();
+        assertThat(prepared.get(0).main()).isFalse();
+        assertThat(source.getWikidataQid()).isNull();
+        assertThat(source.getSourceName()).isEqualTo("Wikimedia Commons");
+        assertThat(source.getCommonsFileTitle()).isEqualTo("File:Petronas Towers.jpg");
+        assertThat(source.getWorkPageUrl()).isEqualTo("https://commons.wikimedia.org/wiki/File:Petronas_Towers.jpg");
+        assertThat(source.getOriginalImageUrl()).isEqualTo("https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour.jpg");
+        assertThat(source.getAuthorText()).isEqualTo("Someone");
+        assertThat(source.getLicenseName()).isEqualTo("CC BY-SA 3.0");
+        assertThat(source.getLicenseUrl()).isEqualTo("https://creativecommons.org/licenses/by-sa/3.0/");
+        assertThat(source.getAttributionText()).isEqualTo("Someone, CC BY-SA 3.0, via Wikimedia Commons");
+        verifyNoInteractions(wikidata);
+        verify(commons, never()).listCategoryFiles(anyString());
+        // 상업 이용 제한(NC) 라이선스는 검색 경로에서도 저장하지 않는다.
+        assertThatThrownBy(() -> service.prepareSearchResultsForExistingDestination(
+                List.of(new CommonsPhotoImportService.Selection("Nc.jpg", false)), true))
+                .isInstanceOf(CommonsPhotoSelectionException.class).hasMessageContaining("Nc.jpg");
+        // 여행지에 대표 사진이 없으면 첫 사진을 대표로 둔다(QID 후보 추가와 같은 규칙).
+        assertThat(service.prepareSearchResultsForExistingDestination(
+                List.of(new CommonsPhotoImportService.Selection("Petronas Towers.jpg", false)), false)
+                .get(0).main()).isTrue();
+    }
+
     /** 저장 전 재검증은 P18·P373 claims와 commonswiki 연결을 새로 받는다(전체 claims 아님). */
     private void stubPhotoEntity(String p18, String category) {
         when(wikidata.getCommonsSitelinkEntity("Q243")).thenReturn(mapper.createObjectNode().put("id", "Q243"));

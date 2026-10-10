@@ -129,6 +129,10 @@
 .admin-commons-picker-more .admin-wikidata-review-note { flex-basis: 100%; }
 .admin-commons-add { display: grid; gap: 12px; }
 .admin-commons-add > .admin-btn { justify-self: start; }
+.admin-commons-add > .admin-field-help { margin: 0; }
+.admin-commons-add-source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: #5d6b82; font-size: 0.9rem; }
+.admin-commons-add-source strong { color: #27375f; }
+.admin-commons-card-link { justify-self: start; font-size: 0.8rem; color: #2e4d79; }
 .admin-commons-add-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .admin-commons-add-form .admin-wikidata-review-note { flex-basis: 100%; }
 .admin-form-actions [data-wikipedia-save-warning] { flex-basis: 100%; }

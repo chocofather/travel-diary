@@ -271,6 +271,130 @@ class CommonsPhotoPreviewServiceTest {
         verify(commons, never()).getCategoryImageInfo(anyString(), anyInt(), any());
     }
 
+    /**
+     * QID가 없는 여행지의 수동 검색: 상업적 이용이 가능한 라이선스(PD·CC0·CC BY·CC BY-SA)의
+     * JPEG·PNG 사진만, 검색 순위(index) 순서대로 남긴다. NC·미국 한정 PD·SVG·작은 사진·중복 원본은 뺀다.
+     */
+    @Test
+    void searchKeepsOnlyCommerciallyReusablePhotosInSearchOrder() {
+        ObjectNode ccBy = searchPhoto("File:By.jpg", 3);
+        ObjectNode ccBySa = searchPage("File:BySa.jpg", 1, "cc-by-sa-4.0", "CC BY-SA 4.0",
+                "https://creativecommons.org/licenses/by-sa/4.0");
+        ObjectNode cc0 = searchPage("File:Zero.png", 2, "cc0", "CC0",
+                "https://creativecommons.org/publicdomain/zero/1.0/");
+        mime(cc0, "image/png");
+        ObjectNode publicDomain = searchPage("File:Old.jpg", 4, "pd", "Public domain", null);
+        ((ObjectNode) publicDomain.path("imageinfo").get(0).path("extmetadata")).putObject("Copyrighted").put("value", "False");
+        templates(publicDomain, "PD-old-70");
+        ObjectNode nonCommercial = searchPage("File:Nc.jpg", 5, "cc-by-nc-4.0", "CC BY-NC 4.0",
+                "https://creativecommons.org/licenses/by-nc/4.0");
+        ObjectNode usOnly = searchPage("File:Us.jpg", 6, "pd", "Public domain", null);
+        ((ObjectNode) usOnly.path("imageinfo").get(0).path("extmetadata")).putObject("Copyrighted").put("value", "False");
+        templates(usOnly, "PD-US");
+        ObjectNode unknown = searchPage("File:Unknown.jpg", 7, "", "", null);
+        ObjectNode svg = mime(searchPhoto("File:Map.svg", 8), "image/svg+xml");
+        when(commons.searchImageInfo("Petronas Twin Towers", 8, 0)).thenReturn(imageInfo(
+                ccBy, ccBySa, cc0, publicDomain, nonCommercial, usOnly, unknown, svg));
+
+        var result = service.search("  Petronas   Twin Towers ", null);
+
+        assertThat(result.qid()).isNull();
+        assertThat(result.status()).isEqualTo("AVAILABLE");
+        assertThat(result.photos()).extracting("fileName").containsExactly("BySa.jpg", "Zero.png", "By.jpg", "Old.jpg");
+        assertThat(result.photos()).extracting("licenseType").containsExactly("CC_BY_SA", "CC0", "CC_BY", "PUBLIC_DOMAIN");
+        assertThat(result.photos()).allMatch(photo -> photo.savable() && "SEARCH".equals(photo.source()));
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    void searchDropsSmallImagesDuplicateOriginalsAndBrokenItemsWithoutFailingTheRest() {
+        ObjectNode small = searchPhoto("File:Icon.jpg", 1);
+        ((ObjectNode) small.path("imageinfo").get(0)).put("width", 300).put("height", 200);
+        ObjectNode first = searchPhoto("File:Tower.jpg", 2);
+        ObjectNode sameOriginal = searchPhoto("File:Tower copy.jpg", 3);
+        ((ObjectNode) sameOriginal.path("imageinfo").get(0)).put("url",
+                first.path("imageinfo").get(0).path("url").asText());
+        ObjectNode missing = mapper.createObjectNode().put("title", "File:Gone.jpg").put("index", 4).put("missing", true);
+        ObjectNode noInfo = mapper.createObjectNode().put("title", "File:NoInfo.jpg").put("index", 5);
+        ObjectNode last = searchPhoto("File:Night.jpg", 6);
+        when(commons.searchImageInfo("Tower", 8, 0)).thenReturn(imageInfo(small, first, sameOriginal, missing, noInfo, last));
+
+        var result = service.search("Tower", null);
+
+        assertThat(result.photos()).extracting("fileName").containsExactly("Tower.jpg", "Night.jpg");
+        assertThat(result.status()).isEqualTo("AVAILABLE");
+    }
+
+    /** '사진 더 보기'는 Commons 공식 이어받기 값(gsroffset)으로 다음 위치부터 받는다. 앞 결과는 다시 받지 않는다. */
+    @Test
+    void searchContinuesFromTheOfficialOffsetAndValidatesTheCursor() {
+        JsonNode firstBatch = withOffset(imageInfo(searchPhoto("File:A.jpg", 1)), 8);
+        JsonNode secondBatch = withOffset(imageInfo(searchPhoto("File:B.jpg", 9)), 16);
+        when(commons.searchImageInfo("Tower", 8, 0)).thenReturn(firstBatch);
+        when(commons.searchImageInfo("Tower", 8, 8)).thenReturn(secondBatch);
+        when(commons.searchImageInfo("Tower", 8, 16)).thenReturn(imageInfo(searchPhoto("File:C.jpg", 17)));
+
+        var first = service.search("Tower", null);
+        var more = service.search("Tower", "8");
+
+        // 한 묶음은 PAGE_SIZE 를 채우거나 이어받을 위치가 없을 때까지 이어 받는다.
+        assertThat(first.photos()).extracting("fileName").containsExactly("A.jpg", "B.jpg", "C.jpg");
+        assertThat(first.nextCursor()).isNull();
+        assertThat(more.photos()).extracting("fileName").containsExactly("B.jpg", "C.jpg");
+        assertThatThrownBy(() -> service.search("Tower", "0")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("Tower", "10000")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("Tower", "8&x=1")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.search("  ", null)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("검색어");
+    }
+
+    @Test
+    void searchExplainsNoResultsNoReusablePhotosAndApiFailures() {
+        when(commons.searchImageInfo("Nothing", 8, 0)).thenReturn(mapper.createObjectNode().put("batchcomplete", true));
+        when(commons.searchImageInfo("Restricted", 8, 0)).thenReturn(imageInfo(searchPage("File:Nc.jpg", 1,
+                "cc-by-nc-4.0", "CC BY-NC 4.0", "https://creativecommons.org/licenses/by-nc/4.0")));
+        when(commons.searchImageInfo("Down", 8, 0)).thenThrow(new CommonsApiException("Commons에 연결하지 못했습니다."));
+        when(commons.searchImageInfo("Later", 8, 0)).thenReturn(withOffset(imageInfo(searchPhoto("File:A.jpg", 1)), 8));
+        when(commons.searchImageInfo("Later", 8, 8)).thenThrow(new CommonsApiException("Commons 응답 시간이 초과되었습니다."));
+
+        var none = service.search("Nothing", null);
+        var restricted = service.search("Restricted", null);
+        var down = service.search("Down", null);
+        var partial = service.search("Later", null);
+
+        assertThat(none.status()).isEqualTo("NO_PHOTOS");
+        assertThat(none.message()).contains("검색 결과가 없습니다");
+        assertThat(restricted.status()).isEqualTo("NO_PHOTOS");
+        assertThat(restricted.message()).contains("사용할 수 있는 사진이 없습니다");
+        assertThat(down.status()).isEqualTo("ERROR");
+        assertThat(down.message()).contains("연결하지 못했습니다");
+        assertThat(down.nextCursor()).isNull();
+        // 받은 사진은 보여주고, 실패한 위치에서 다시 '사진 더 보기'를 할 수 있다.
+        assertThat(partial.status()).isEqualTo("PARTIAL");
+        assertThat(partial.photos()).extracting("fileName").containsExactly("A.jpg");
+        assertThat(partial.nextCursor()).isEqualTo("8");
+    }
+
+    /** 검색 결과 한 건. 실제 Commons 처럼 파일마다 원본 URL이 다르다. */
+    private ObjectNode searchPhoto(String title, int index) {
+        return searchPage(title, index, "cc-by-4.0", "CC BY 4.0", "https://creativecommons.org/licenses/by/4.0");
+    }
+
+    private ObjectNode searchPage(String title, int index, String license, String licenseShort, String licenseUrl) {
+        ObjectNode page = page(title, license, licenseShort, licenseUrl, "Artist");
+        page.put("ns", 6).put("index", index).put("pageid", 1000 + index);
+        String file = title.substring(5).replace(' ', '_');
+        ((ObjectNode) page.path("imageinfo").get(0))
+                .put("url", "https://upload.wikimedia.org/wikipedia/commons/a/ab/" + file)
+                .put("thumburl", "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/" + file + "/240px-" + file);
+        return page;
+    }
+
+    private JsonNode withOffset(JsonNode response, int offset) {
+        ((ObjectNode) response).putObject("continue").put("gsroffset", offset).put("continue", "gsroffset||");
+        return response;
+    }
+
     /** 사진 후보에는 P18·P373 claims와 commonswiki 연결만 받는다. */
     private void stubPhotoEntity(String p18, String category) {
         when(wikidata.getCommonsSitelinkEntity("Q243")).thenReturn(mapper.createObjectNode().put("id", "Q243"));

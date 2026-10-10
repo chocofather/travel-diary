@@ -66,13 +66,14 @@ class AdminDestinationListSearchUiContractTest {
         String script = resource("/static/js/admin-destination-filter.js");
 
         assertThat(script)
-                // 검색창만 debounce (약 300ms), timer 중첩 방지
-                .contains("300")
+                // 검색창만 debounce (약 500ms), timer 중첩 방지
+                .contains("SEARCH_DEBOUNCE_MS = 500")
                 .contains("clearTimeout")
                 .contains("setTimeout")
-                // IME 한글 조합 중에는 검색하지 않는다
+                // IME 한글 조합 중에는 검색하지 않는다. 다음 음절 조합이 시작되면 앞 음절이 건 조회를 취소한다.
                 .contains("compositionstart")
                 .contains("compositionend")
+                .containsPattern("\"compositionstart\", \\(\\) => \\{\\s+composing = true;[\\s\\S]*?cancelScheduledSearch\\(\\);")
                 // Enter 는 이중 submit 없이 즉시 검색
                 .contains("Enter")
                 .contains("preventDefault")

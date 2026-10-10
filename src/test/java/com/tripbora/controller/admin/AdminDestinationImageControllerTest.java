@@ -129,6 +129,25 @@ class AdminDestinationImageControllerTest {
         assertThat(model.get("destinationName")).isEqualTo("경복궁");
         assertThat(model.get("imageList")).isSameAs(images);
         assertThat(model.get("imageCount")).isEqualTo(2);
+        // 국내 여행지는 한국관광공사 관광사진 화면을 그대로 쓰고 Commons 검색어를 만들지 않는다.
+        assertThat(model.get("overseasDestination")).isEqualTo(false);
+        assertThat(model.get("commonsSearchQuery")).isEqualTo("");
+        verify(commonsImageManagementService, never()).defaultSearchQuery(any());
+    }
+
+    /** 해외 여행지는 Commons 영역을 쓰고, QID가 없어도 이름·도시·국가로 만든 기본 검색어를 넘긴다. */
+    @Test
+    void overseasImageManagementGetsCommonsSearchDefaults() {
+        when(destinationImageService.getImages(10L)).thenReturn(List.of());
+        when(commonsImageManagementService.isOverseasDestination(10L)).thenReturn(true);
+        when(commonsImageManagementService.defaultSearchQuery(10L)).thenReturn("Petronas Twin Towers Kuala Lumpur Malaysia");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        controller.showImageUploadForm(10L, model);
+
+        assertThat(model.get("overseasDestination")).isEqualTo(true);
+        assertThat(model.get("commonsSearchQuery")).isEqualTo("Petronas Twin Towers Kuala Lumpur Malaysia");
+        assertThat(model.get("wikidataQid")).isNull();
     }
 
     @Test

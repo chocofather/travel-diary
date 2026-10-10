@@ -160,4 +160,36 @@ class AdminWikidataDestinationControllerTest {
                         .param("qid", "Q243").with(user("user").roles("USER")))
                 .andExpect(status().isForbidden());
     }
+
+    /** QID가 없는 해외 여행지의 Commons 수동 검색도 ADMIN 전용 조회 API다. 잘못된 입력은 400으로 이유를 알린다. */
+    @Test
+    void commonsSearchIsAdminOnlyAndPassesTheContinuationCursor() throws Exception {
+        when(commonsPhotoPreviewService.search("Petronas Twin Towers", null))
+                .thenReturn(new CommonsPhotoPreview(null, null, "AVAILABLE", null, List.of(), "8", 5));
+        when(commonsPhotoPreviewService.search("Petronas Twin Towers", "8"))
+                .thenReturn(new CommonsPhotoPreview(null, null, "AVAILABLE", null, List.of(), null, 5));
+        when(commonsPhotoPreviewService.search(" ", null))
+                .thenThrow(new IllegalArgumentException("검색어를 입력해 주세요."));
+
+        mockMvc.perform(get("/admin/api/wikidata/destinations/commons-search")
+                        .param("query", "Petronas Twin Towers").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nextCursor").value("8"))
+                .andExpect(jsonPath("$.selectionLimit").value(5));
+        mockMvc.perform(get("/admin/api/wikidata/destinations/commons-search")
+                        .param("query", "Petronas Twin Towers").param("cursor", "8")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nextCursor").doesNotExist());
+        mockMvc.perform(get("/admin/api/wikidata/destinations/commons-search")
+                        .param("query", " ").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("검색어를 입력해 주세요."));
+        mockMvc.perform(get("/admin/api/wikidata/destinations/commons-search")
+                        .param("query", "Petronas Twin Towers").with(user("user").roles("USER")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/admin/api/wikidata/destinations/commons-search")
+                        .param("query", "Petronas Twin Towers"))
+                .andExpect(status().is3xxRedirection());
+    }
 }

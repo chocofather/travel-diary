@@ -40,6 +40,8 @@ public class CommonsPhotoImportService {
     static final String SOURCE_NAME = "Wikimedia Commons";
     static final String LICENSE_TYPE = "CREATIVE_COMMONS";
     static final String PUBLIC_DOMAIN_LICENSE_TYPE = "PUBLIC_DOMAIN";
+    /** 이미지 관리 화면의 수동 검색 선택값 표시. 이 사진은 Wikidata 후보가 아니라 관리자가 검색으로 고른 파일이다. */
+    static final String SEARCH_SELECTION_SOURCE = "SEARCH";
     private static final int MAX_SELECTION_JSON_LENGTH = 8 * 1024;
     private static final int MAX_FILE_NAME_LENGTH = 240;
     /** destination_image_sources 의 TEXT 컬럼 한도. 넘으면 자르지 않고 저장을 막는다. */
@@ -126,6 +128,42 @@ public class CommonsPhotoImportService {
             throw new CommonsPhotoSelectionException(
                     "Wikidata 후보가 바뀌어 사진 선택이 초기화되었습니다. 사진을 다시 선택해 주세요.");
         }
+        return readPhotos(photos);
+    }
+
+    /** 이미지 관리 화면의 수동 검색에서 고른 선택값인지. 형식 검증은 {@link #parseSearchSelections}가 한다. */
+    public boolean isSearchSelection(String json) {
+        if (json == null || json.isBlank() || json.length() > MAX_SELECTION_JSON_LENGTH) return false;
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            return root != null && SEARCH_SELECTION_SOURCE.equals(root.path("source").asText(null));
+        } catch (JsonProcessingException exception) {
+            return false;
+        }
+    }
+
+    /**
+     * 수동 검색 선택값 {"source":"SEARCH","photos":[{"fileName":"...","main":false}]}를 해석한다.
+     * Wikidata 후보가 아니므로 QID를 받지 않는다(같이 오면 거부한다).
+     */
+    public List<Selection> parseSearchSelections(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        if (json.length() > MAX_SELECTION_JSON_LENGTH) throw invalidSelection();
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(json);
+        } catch (JsonProcessingException exception) {
+            throw invalidSelection();
+        }
+        if (root == null || !root.isObject() || !SEARCH_SELECTION_SOURCE.equals(root.path("source").asText(null))
+                || root.has("qid") || !root.path("photos").isArray()) {
+            throw invalidSelection();
+        }
+        return readPhotos(root.path("photos"));
+    }
+
+    private List<Selection> readPhotos(JsonNode photos) {
+        if (photos.isEmpty()) return List.of();
         if (photos.size() > CommonsPhotoPreviewService.MAX_PHOTOS) {
             throw new CommonsPhotoSelectionException(
                     "Commons 사진은 최대 " + CommonsPhotoPreviewService.MAX_PHOTOS + "장까지 선택할 수 있습니다.");
@@ -193,23 +231,36 @@ public class CommonsPhotoImportService {
         return verifyAndDownload(qid, selections, !destinationHasMain, null);
     }
 
+    /**
+     * 이미지 관리 화면의 수동 검색에서 고른 사진을 더한다. Wikidata 후보 소속은 확인하지 않지만,
+     * 라이선스·이용 제한·형식·파일 판본은 QID 후보와 같은 규칙으로 Commons에서 새로 조회해 다시 확인한다.
+     * 출처에는 Wikidata QID를 남기지 않고 Commons 파일 제목·페이지로 역추적한다.
+     */
+    public List<PreparedCommonsPhoto> prepareSearchResultsForExistingDestination(List<Selection> selections,
+                                                                                 boolean destinationHasMain) {
+        if (selections == null || selections.isEmpty()) return List.of();
+        return verifyAndDownload(null, selections, !destinationHasMain, null);
+    }
+
+    /** @param qid null 이면 수동 검색 선택: Wikidata 후보 확인을 건너뛴다. */
     private List<PreparedCommonsPhoto> verifyAndDownload(String qid, List<Selection> selections,
                                                          boolean assignDefaultMain, JsonNode freshEntity) {
         boolean commonsMainSelected = selections.stream().anyMatch(Selection::main);
-        String normalizedQid = qid.strip().toUpperCase();
+        String normalizedQid = qid == null ? null : qid.strip().toUpperCase();
 
         // 후보 목록(P18·카테고리)과 선택 파일의 원본 메타데이터는 서로 독립이라 함께 조회한다.
         // 후보에 없는 파일은 아래에서 거부하므로, 메타데이터를 먼저 받아도 내려받지는 않는다.
-        CompletableFuture<CommonsPhotoPreviewService.Candidates> candidateLookup = CompletableFuture.supplyAsync(
-                () -> freshEntity == null ? previewService.candidates(normalizedQid) : previewService.candidates(freshEntity),
-                executor);
+        CompletableFuture<CommonsPhotoPreviewService.Candidates> candidateLookup = normalizedQid == null
+                ? CompletableFuture.completedFuture(null)
+                : CompletableFuture.supplyAsync(() -> freshEntity == null
+                        ? previewService.candidates(normalizedQid) : previewService.candidates(freshEntity), executor);
         List<String> titles = selections.stream().map(selection -> "File:" + selection.fileName()).toList();
         CompletableFuture<JsonNode> imageInfo = CompletableFuture.supplyAsync(
                 () -> commonsApiClient.getImageInfoForSave(titles), executor);
 
         CommonsPhotoPreviewService.Candidates candidates = WikidataAutofillCache.join(candidateLookup);
         List<String> rejections = new ArrayList<>();
-        for (Selection selection : selections) {
+        for (Selection selection : candidates == null ? List.<Selection>of() : selections) {
             CommonsPhotoPreviewService.Candidate candidate = candidates.files().get(selection.fileName());
             if (candidate == null) {
                 rejections.add(selection.fileName() + ": " + (candidates.warning() == null
@@ -230,7 +281,8 @@ public class CommonsPhotoImportService {
                 rejections.add(selection.fileName() + ": Commons 파일을 찾을 수 없습니다.");
                 continue;
             }
-            String source = candidates.files().get(selection.fileName()).source();
+            String source = candidates == null ? SEARCH_SELECTION_SOURCE
+                    : candidates.files().get(selection.fileName()).source();
             CommonsFileMetadata metadata = previewService.evaluate(page, source);
             String reason = metadata == null ? "Commons 파일 정보를 확인하지 못했습니다." : saveBlockReason(metadata);
             if (reason != null) {

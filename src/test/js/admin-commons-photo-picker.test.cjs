@@ -41,15 +41,20 @@ const candidates = {
     saveBlockReason: fileName === 'Public.jpg' ? '미국 기준 퍼블릭 도메인으로만 확인돼 국외 적용 범위가 불명확합니다.' : null,
     reviewReason: fileName === 'Public.jpg' ? '미국 기준 퍼블릭 도메인으로만 확인돼 국외 적용 범위가 불명확합니다.' : null,
     thumbnailUrl: `https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/${encodeURIComponent(fileName)}/240px-x.jpg`,
+    filePageUrl: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(fileName)}`,
+    width: 3000, height: 2000,
     author: 'Artist', licenseName: 'CC BY-SA 4.0', reuseStatus: fileName === 'Public.jpg' ? 'RIGHTS_UNCLEAR' : 'ELIGIBLE'
   }))
 };
 
-function loadImagePage(response = candidates) {
+function loadImagePage(response = candidates, {qid = 'Q243', query = ''} = {}) {
   const body = new FakeElement('body');
-  const root = new FakeElement('section', {'data-commons-add': '', 'data-qid': 'Q243'});
+  const root = new FakeElement('section', qid ? {'data-commons-add': '', 'data-qid': qid} : {'data-commons-add': ''});
   const registered = Object.assign(new FakeElement('span', {'data-registered-commons-file': ''}), {textContent: 'Old.jpg'});
+  // QID 후보 불러오기 버튼은 QID가 있는 여행지에만 있다. 검색 폼은 늘 있다.
   const load = new FakeElement('button', {'data-commons-add-load': ''});
+  const searchForm = new FakeElement('form', {'data-commons-search-form': ''});
+  searchForm.append(new FakeElement('input', {'data-commons-search-query': '', value: query}), new FakeElement('button'));
   const message = Object.assign(new FakeElement('p', {'data-commons-add-message': ''}), {hidden: true});
   const area = new FakeElement('div', {'data-commons-add-candidates': ''});
   const form = new FakeElement('form', {'data-commons-add-form': ''});
@@ -57,7 +62,8 @@ function loadImagePage(response = candidates) {
   const status = Object.assign(new FakeElement('p', {'data-commons-add-status': ''}), {hidden: true});
   const submit = Object.assign(new FakeElement('button', {'data-commons-add-submit': ''}), {disabled: true});
   form.append(field, status, submit);
-  root.append(registered, load, message, area, form);
+  if (qid) root.append(registered, load); else root.append(registered);
+  root.append(searchForm, message, area, form);
   body.append(root);
   const requests = [];
   let ready = null;
@@ -81,7 +87,7 @@ function loadImagePage(response = candidates) {
   const card = fileName => area.querySelectorAll('article').find(node => node.text().includes(fileName));
   const checkbox = fileName => card(fileName).querySelectorAll('input')[0];
   const mainButton = fileName => card(fileName).querySelectorAll('button')[0];
-  return {root, load, message, area, form, field, status, submit, requests, card, checkbox, mainButton};
+  return {root, load, searchForm, message, area, form, field, status, submit, requests, card, checkbox, mainButton};
 }
 
 function check(box, checked = true) {
@@ -89,21 +95,39 @@ function check(box, checked = true) {
   box.dispatchEvent(new FakeEvent('change'));
 }
 
-test('existing destination: loads candidates for its own QID and marks registered or blocked photos', async () => {
+test('existing destination: loads candidates for its own QID, marks registered photos and hides blocked ones', async () => {
   const page = loadImagePage();
   page.load.click();
   await flush();
 
   assert.deepEqual(page.requests, ['/admin/api/wikidata/destinations/commons-photos?qid=Q243']);
-  assert.equal(page.area.querySelectorAll('article').length, 4);
+  // 저장할 수 없는 라이선스(Public.jpg)는 이미지 관리 화면 결과에서 뺀다.
+  assert.equal(page.area.querySelectorAll('article').length, 3);
+  assert.equal(page.card('Public.jpg'), undefined);
   assert.equal(page.checkbox('Old.jpg').disabled, true, '이미 등록된 사진은 다시 고를 수 없다');
   assert.match(page.card('Old.jpg').text(), /이미 이 여행지에 등록된 사진/);
-  assert.equal(page.checkbox('Public.jpg').disabled, true, '자동 저장 불가 사진은 고를 수 없다');
-  assert.match(page.card('Public.jpg').text(), /권리 상태 불명확 · 미국 기준 퍼블릭 도메인/);
   assert.doesNotMatch(page.area.text(), /관리자 확인 필요/);
   assert.match(page.card('New A.jpg').text(), /Artist · CC BY-SA 4.0 저장 가능/);
+  assert.match(page.card('New A.jpg').text(), /Commons에서 보기/);
   assert.equal(page.checkbox('New A.jpg').disabled, false);
   assert.equal(page.submit.disabled, true);
+});
+
+test('image management search: sends the query, serializes a SEARCH selection without QID and hides small photos', async () => {
+  const photo = (fileName, size = 3000) => ({...candidates.photos[1], fileName, width: size, height: size});
+  const results = {qid: null, status: 'AVAILABLE', selectionLimit: 5, nextCursor: null,
+    photos: [photo('Petronas.jpg'), photo('Tiny.jpg', 120)]};
+  const page = loadImagePage(results, {qid: '', query: 'Petronas Twin Towers Kuala Lumpur'});
+  const submitted = new FakeEvent('submit');
+  page.searchForm.dispatchEvent(submitted);
+  await flush();
+
+  assert.equal(submitted.defaultPrevented, true, '검색은 화면 안에서만 한다');
+  assert.deepEqual(page.requests,
+    [`/admin/api/wikidata/destinations/commons-search?query=${encodeURIComponent('Petronas Twin Towers Kuala Lumpur')}`]);
+  assert.equal(page.area.querySelectorAll('article').length, 1);
+  check(page.checkbox('Petronas.jpg'));
+  assert.deepEqual(JSON.parse(page.field.value), {source: 'SEARCH', photos: [{fileName: 'Petronas.jpg', main: false}]});
 });
 
 test('existing destination: several photos are sent together and the main photo changes only when chosen', async () => {

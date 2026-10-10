@@ -2,6 +2,8 @@ package com.tripbora.service.wikidata;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -15,14 +17,21 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class CommonsApiClient {
     private static final int MAX_RESPONSE_BYTES = 512 * 1024;
     /** 라이선스 판별에 쓰는 파일 페이지 템플릿만 받는다(퍼블릭 도메인 근거·Licensed-PD의 사진 라이선스). */
     private static final String LICENSE_TEMPLATES = String.join("|", CommonsLicenseRules.REQUESTED_TEMPLATES);
+    private static final Set<String> LICENSE_TEMPLATE_TITLES = Set.copyOf(CommonsLicenseRules.REQUESTED_TEMPLATES);
+    /** 미리보기 한 묶음의 템플릿을 이어 받는 요청 수 상한. 파일 8개는 보통 1~2번이면 끝난다. */
+    private static final int MAX_TEMPLATE_REQUESTS = 6;
     /** 미리보기에서 실제로 읽는 extmetadata 항목. 긴 설명·카테고리 목록을 빼 응답을 줄인다. 저장 재검증은 전체를 받는다. */
     private static final String PREVIEW_EXTMETADATA = "Artist|Credit|Source|Attribution|License|LicenseShortName"
             + "|LicenseUrl|AttributionRequired|Copyrighted|Restrictions";
@@ -105,13 +114,11 @@ public class CommonsApiClient {
                     .queryParam("gcmtitle", "Category:" + category)
                     .queryParam("gcmtype", "file")
                     .queryParam("gcmlimit", limit)
-                    .queryParam("prop", "imageinfo|templates")
+                    .queryParam("prop", "imageinfo")
                     .queryParam("iiprop", "url|size|mime|extmetadata")
                     .queryParam("iiurlwidth", 240)
                     .queryParam("iiextmetadatalanguage", "en")
-                    .queryParam("iiextmetadatafilter", PREVIEW_EXTMETADATA)
-                    .queryParam("tltemplates", LICENSE_TEMPLATES)
-                    .queryParam("tllimit", "max");
+                    .queryParam("iiextmetadatafilter", PREVIEW_EXTMETADATA);
             if (continueToken != null) {
                 builder.queryParam("cmcontinue", continueToken).queryParam("gcmcontinue", continueToken);
             }
@@ -120,7 +127,89 @@ public class CommonsApiClient {
         if (!response.path("query").path("categorymembers").isArray()) {
             throw new CommonsApiException("Commons 사진 목록 응답을 해석하지 못했습니다.");
         }
-        return response;
+        return withLicenseTemplates(response);
+    }
+
+    /**
+     * QID가 없는 여행지의 수동 검색: File 네임스페이스에서 비트맵 파일만 검색해 각 파일의 240px 미리보기
+     * 메타데이터를 함께 받는다. 결과 순서는 query.pages[].index(검색 순위)이고, 다음 묶음은
+     * 응답의 continue.gsroffset 을 offset 으로 넘겨 이어 받는다. 결과가 없으면 응답에 query 가 없다.
+     */
+    public JsonNode searchImageInfo(String query, int limit, int offset) {
+        if (query == null || query.isBlank() || query.length() > 200
+                || query.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("올바르지 않은 Commons 검색어입니다.");
+        }
+        if (limit < 1 || limit > 50 || offset < 0 || offset >= CommonsPhotoPreviewService.MAX_SEARCH_OFFSET) {
+            throw new IllegalArgumentException("올바르지 않은 Commons 검색 요청입니다.");
+        }
+        JsonNode response = request(builder -> {
+            // filetype:bitmap 은 SVG·PDF·음성·영상을 검색 단계에서 뺀다. 최종 형식은 imageinfo 의 MIME 으로 다시 거른다.
+            builder.queryParam("generator", "search")
+                    .queryParam("gsrsearch", query + " filetype:bitmap")
+                    .queryParam("gsrnamespace", 6)
+                    .queryParam("gsrlimit", limit)
+                    .queryParam("prop", "imageinfo")
+                    .queryParam("iiprop", "url|size|mime|extmetadata")
+                    .queryParam("iiurlwidth", 240)
+                    .queryParam("iiextmetadatalanguage", "en")
+                    .queryParam("iiextmetadatafilter", PREVIEW_EXTMETADATA);
+            if (offset > 0) builder.queryParam("gsroffset", offset);
+            return builder;
+        });
+        return withLicenseTemplates(response);
+    }
+
+    /**
+     * 미리보기 묶음(검색·카테고리)의 파일들에 라이선스 판별 템플릿을 붙인다. 묶음 전체를 pageids 한 요청으로 묻고,
+     * 템플릿이 많아 잘리면 tlcontinue 로 끝까지 이어 받는다(파일 수만큼 따로 묻지 않는다).
+     *
+     * <p>generator 나 여러 pageids 에 tltemplates 를 함께 걸면 Commons가 20초 넘게 걸리는 경우가 있어
+     * (2026-10 'Eiffel Tower' 검색 확인, 같은 파일을 tltemplates 없이 물으면 1초 안팎) 이름 거르기는 여기서 한다.
+     * 판별에 쓰는 템플릿만 남기므로 라이선스 판정에 들어가는 값은 tltemplates 로 받던 것과 같다.
+     * 끝까지 받지 못하면 일부 템플릿만으로 판정하지 않도록 묶음을 실패로 돌린다.</p>
+     */
+    private JsonNode withLicenseTemplates(JsonNode response) {
+        Map<Long, ArrayNode> templates = new LinkedHashMap<>();
+        for (JsonNode page : response.path("query").path("pages")) {
+            long pageId = page.path("pageid").asLong(0);
+            if (pageId > 0) templates.put(pageId, objectMapper.createArrayNode());
+        }
+        if (templates.isEmpty()) return response;
+        String pageIds = templates.keySet().stream().map(String::valueOf).collect(Collectors.joining("|"));
+        String token = null;
+        for (int requests = 0; ; requests++) {
+            if (requests >= MAX_TEMPLATE_REQUESTS) {
+                throw new CommonsApiException("Commons 라이선스 정보를 모두 받지 못했습니다. 다시 시도해 주세요.");
+            }
+            String continueToken = token;
+            JsonNode part = request(builder -> {
+                builder.queryParam("prop", "templates")
+                        .queryParam("pageids", pageIds)
+                        .queryParam("tlnamespace", 10)
+                        .queryParam("tllimit", "max");
+                if (continueToken != null) builder.queryParam("tlcontinue", continueToken);
+                return builder;
+            });
+            for (JsonNode page : part.path("query").path("pages")) {
+                ArrayNode target = templates.get(page.path("pageid").asLong(0));
+                if (target == null) continue;
+                for (JsonNode template : page.path("templates")) {
+                    if (LICENSE_TEMPLATE_TITLES.contains(template.path("title").asText(""))) target.add(template);
+                }
+            }
+            token = part.path("continue").path("tlcontinue").asText("");
+            if (token.isEmpty()) break;
+            if (token.length() > 600 || token.chars().anyMatch(Character::isISOControl)) {
+                throw new CommonsApiException("Commons 라이선스 정보 응답을 해석하지 못했습니다.");
+            }
+        }
+        ObjectNode merged = response.deepCopy();
+        for (JsonNode page : merged.path("query").path("pages")) {
+            ArrayNode pageTemplates = templates.get(page.path("pageid").asLong(0));
+            if (pageTemplates != null && page instanceof ObjectNode node) node.set("templates", pageTemplates);
+        }
+        return merged;
     }
 
     public JsonNode getImageInfo(List<String> titles) {

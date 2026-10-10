@@ -2,7 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("admin-destination-filter-form");
     if (!form) return;
 
-    const SEARCH_DEBOUNCE_MS = 300;
+    const SEARCH_DEBOUNCE_MS = 500;
+    const KEYWORD_FOCUS_KEY = "tripbora.adminDestinationKeywordFocus";
 
     const typeInput = document.getElementById("destination-filter-type");
     const keywordInput = document.getElementById("destination-keyword-filter");
@@ -27,12 +28,47 @@ document.addEventListener("DOMContentLoaded", () => {
         form.submit();
     }
 
-    function scheduleSearch() {
+    function cancelScheduledSearch() {
         if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = null;
+    }
+
+    function scheduleSearch() {
+        cancelScheduledSearch();
         searchTimer = setTimeout(() => {
             searchTimer = null;
-            form.submit();
+            // 한글은 한 음절이 끝나면 compositionend 직후 다음 음절의 compositionstart 가 온다. 조합 중에는 조회하지 않는다.
+            if (composing) return;
+            submitKeywordSearch();
         }, SEARCH_DEBOUNCE_MS);
+    }
+
+    // 검색어 조회는 페이지를 다시 그리므로, 돌아온 화면에서 검색창 포커스를 이어 준다.
+    function submitKeywordSearch() {
+        try {
+            sessionStorage.setItem(KEYWORD_FOCUS_KEY, "1");
+        } catch (e) {
+            // 저장소를 못 쓰면 포커스 복원만 생략한다.
+        }
+        submitFilters();
+    }
+
+    function restoreKeywordFocus() {
+        let restore = false;
+        try {
+            restore = sessionStorage.getItem(KEYWORD_FOCUS_KEY) === "1";
+            sessionStorage.removeItem(KEYWORD_FOCUS_KEY);
+        } catch (e) {
+            return;
+        }
+        if (!restore || !keywordInput) return;
+        keywordInput.focus();
+        const end = keywordInput.value.length;
+        try {
+            keywordInput.setSelectionRange(end, end);
+        } catch (e) {
+            // type=search 에서 선택 범위를 지원하지 않는 브라우저는 포커스만 둔다.
+        }
     }
 
     function resetSelect(select, placeholder, disabled = true) {
@@ -44,23 +80,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // 하위 지역 목록은 선택 즉시 재조회되는 서버 렌더링 결과로 채워진다.
 
     // 검색창만 debounce, 그 외 필터는 변경 즉시 적용한다.
+    restoreKeywordFocus();
+
     keywordInput?.addEventListener("compositionstart", () => {
         composing = true;
+        // 앞 음절의 compositionend 가 걸어 둔 조회를 취소해야 다음 글자 입력 중에 페이지가 바뀌지 않는다.
+        cancelScheduledSearch();
     });
     keywordInput?.addEventListener("compositionend", () => {
         composing = false;
         scheduleSearch();
     });
-    keywordInput?.addEventListener("input", () => {
-        if (composing) return;
+    keywordInput?.addEventListener("input", event => {
+        if (composing || event.isComposing) return;
         scheduleSearch();
     });
     keywordInput?.addEventListener("keydown", event => {
         if (event.key !== "Enter") return;
         // 기본 submit(첫 필터 버튼 클릭)과 debounce 가 겹치지 않게 직접 조회한다.
         event.preventDefault();
-        if (composing) return;
-        submitFilters();
+        // 조합 중 Enter 는 글자를 확정만 한다. 이어지는 compositionend 가 조회를 예약한다.
+        if (composing || event.isComposing) return;
+        submitKeywordSearch();
     });
 
     // 부모 지역을 바꾸면 하위 조건은 비운 상태로 조회한다.

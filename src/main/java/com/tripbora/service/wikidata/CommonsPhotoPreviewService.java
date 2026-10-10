@@ -14,6 +14,7 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -32,8 +33,8 @@ public class CommonsPhotoPreviewService {
     /** 처음과 '사진 더 보기' 한 번에 보여줄 JPEG·PNG 사진 수의 목표. */
     static final int PAGE_SIZE = 16;
     /**
-     * 카테고리 한 번 요청에 받는 파일 수. 라이선스 템플릿(tltemplates) 조회는 파일 8개까지는 1초 안쪽이지만
-     * 16개를 한 번에 물으면 Commons에서 20초 넘게 걸리는 경우가 있어(2026-09 Category:Eiffel Tower 확인) 8개로 나눈다.
+     * 카테고리·검색 한 번 요청에 받는 파일 수. 파일 정보 한 요청과 그 파일들의 라이선스 템플릿 한두 요청으로 한 묶음을 만든다
+     * ({@link CommonsApiClient}). 묶음이 작을수록 첫 사진이 빨리 보이고, 실패해도 잃는 범위가 작다.
      */
     static final int CATEGORY_BATCH = 8;
     /** 한 번 표시할 때 이어서 보내는 카테고리 요청 수 상한. 음성·문서 파일이 많은 카테고리에서도 응답 시간을 묶어 둔다. */
@@ -47,6 +48,14 @@ public class CommonsPhotoPreviewService {
     private static final Pattern CURSOR = Pattern.compile("(\\d{1,3}):([A-Za-z0-9|]{1,1200})");
     /** 저장할 때 내려받는 Commons 렌디션 폭. 원본이 더 작으면 Commons가 원본 URL을 준다. */
     static final int SAVE_RENDITION_WIDTH = 1920;
+    /** Commons 검색(CirrusSearch)이 허용하는 결과 위치 상한. 이 위치부터는 이어 받을 수 없다. */
+    static final int MAX_SEARCH_OFFSET = 10_000;
+    /**
+     * 수동 검색 결과에 보여줄 사진의 짧은 변 최소 크기. 아이콘·작은 문서 스캔은 빼되 일반 관광사진은 남도록 낮게 둔다.
+     * 이미지 관리 화면(admin-commons-photo-picker.js 의 MIN_PHOTO_SHORT_SIDE)도 같은 값으로 QID 후보를 거른다.
+     */
+    static final int MIN_PHOTO_SHORT_SIDE = 400;
+    private static final Pattern SEARCH_CURSOR = Pattern.compile("[1-9][0-9]{0,4}");
     private static final int PREVIEW_TEXT_LIMIT = 500;
     private static final int PREVIEW_LINK_LIMIT = 8;
     private static final int PREVIEW_LINK_LABEL_LIMIT = 120;
@@ -89,6 +98,100 @@ public class CommonsPhotoPreviewService {
         String key = start == null ? qid : qid + "|" + cursor;
         return previewCache.getIf(key, () -> loadPreview(qid, start),
                 preview -> "AVAILABLE".equals(preview.status()) || "NO_PHOTOS".equals(preview.status()));
+    }
+
+    /**
+     * Wikidata QID가 없거나 연결된 Commons 사진이 없는 해외 여행지의 수동 검색 한 묶음.
+     * 검색 결과가 이 여행지와 관련 있는지는 판단하지 않는다. 관리자가 사진을 보고 고른다.
+     *
+     * <p>바로 저장할 수 있는 사진(허용 라이선스·이용 제한 없음·JPEG/PNG)만, 짧은 변이
+     * {@value #MIN_PHOTO_SHORT_SIDE}px 이상인 것만 검색 순서대로 담는다. cursor 는 앞 묶음의 nextCursor(검색 결과 위치)다.
+     * 한 파일의 메타데이터를 해석하지 못하면 그 파일만 빼고, 이어 받기가 실패하면 받은 데까지 보여준다.</p>
+     */
+    public CommonsPhotoPreview search(String query, String cursor) {
+        String normalized = query == null ? "" : query.strip().replaceAll("\\s+", " ");
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("검색어를 입력해 주세요.");
+        }
+        if (normalized.length() > 200 || normalized.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("검색어는 200자 이내로 입력해 주세요.");
+        }
+        int start = 0;
+        if (cursor != null && !cursor.isEmpty()) {
+            if (!SEARCH_CURSOR.matcher(cursor).matches() || Integer.parseInt(cursor) >= MAX_SEARCH_OFFSET) {
+                throw new IllegalArgumentException("사진 목록 위치가 올바르지 않습니다. 다시 검색해 주세요.");
+            }
+            start = Integer.parseInt(cursor);
+        }
+        int offset = start;
+        // QID 키(Q로 시작)와 섞이지 않는 접두어를 쓴다.
+        return previewCache.getIf("search|" + offset + "|" + normalized, () -> loadSearch(normalized, offset),
+                preview -> "AVAILABLE".equals(preview.status()) || "NO_PHOTOS".equals(preview.status()));
+    }
+
+    private CommonsPhotoPreview loadSearch(String query, int start) {
+        List<Photo> photos = new ArrayList<>();
+        Set<String> seenFiles = new HashSet<>();
+        Set<String> seenOriginals = new HashSet<>();
+        int offset = start;
+        Integer next = null;
+        int found = 0;
+        String warning = null;
+        try {
+            for (int requests = 0; requests < MAX_BATCHES_PER_PAGE; requests++) {
+                JsonNode response = commonsApiClient.searchImageInfo(query, CATEGORY_BATCH, offset);
+                List<JsonNode> pages = new ArrayList<>();
+                response.path("query").path("pages").forEach(pages::add);
+                // formatversion=2 의 pages 는 검색 순위 순서가 아니다. index(순위)로 다시 맞춘다.
+                pages.sort(Comparator.comparingInt(page -> page.path("index").asInt(Integer.MAX_VALUE)));
+                found += pages.size();
+                for (JsonNode page : pages) {
+                    addSearchPhoto(photos, page, seenFiles, seenOriginals);
+                }
+                JsonNode continuation = response.path("continue").path("gsroffset");
+                next = continuation.canConvertToInt() && continuation.asInt() > offset
+                        && continuation.asInt() < MAX_SEARCH_OFFSET ? continuation.asInt() : null;
+                if (next == null || photos.size() >= PAGE_SIZE) break;
+                offset = next;
+            }
+        } catch (CommonsApiException exception) {
+            // 받은 묶음까지는 보여주고, 실패한 위치에서 다시 '사진 더 보기'를 할 수 있게 둔다.
+            // 첫 검색이 아무것도 받지 못하고 실패하면 다시 검색하게 한다.
+            warning = exception.getMessage();
+            next = photos.isEmpty() && start == 0 ? null : offset;
+        }
+
+        String nextCursor = next == null ? null : String.valueOf(next);
+        boolean empty = photos.isEmpty() && nextCursor == null;
+        String status = empty ? (warning == null ? "NO_PHOTOS" : "ERROR")
+                : warning == null ? "AVAILABLE" : "PARTIAL";
+        String message = warning;
+        if (message == null && empty && start == 0) {
+            message = found == 0
+                    ? "검색 결과가 없습니다. 여행지 영문 이름이나 도시 이름으로 다시 검색해 보세요."
+                    : "검색 결과 중 사용할 수 있는 사진이 없습니다. 퍼블릭 도메인·CC0·CC BY·CC BY-SA 라이선스의 "
+                    + "JPEG·PNG 사진만 보여줍니다. 다른 검색어로 찾아보세요.";
+        }
+        return new CommonsPhotoPreview(null, null, status, message, List.copyOf(photos), nextCursor, MAX_PHOTOS);
+    }
+
+    /** 검색 결과 한 건. 바로 저장할 수 있고 너무 작지 않은 사진만, 같은 파일·같은 원본은 한 번만 담는다. */
+    private void addSearchPhoto(List<Photo> photos, JsonNode page, Set<String> seenFiles, Set<String> seenOriginals) {
+        if (page.path("ns").asInt(6) != 6 || page.has("missing") || !page.path("imageinfo").isArray()
+                || page.path("imageinfo").isEmpty()
+                || !SAVABLE_MIME_TYPES.contains(page.path("imageinfo").get(0).path("mime").asText(""))) return;
+        CommonsFileMetadata metadata;
+        try {
+            metadata = evaluate(page, "SEARCH");
+        } catch (RuntimeException exception) {
+            // 한 파일의 메타데이터가 이상해도 나머지 결과는 보여준다.
+            return;
+        }
+        if (metadata == null || metadata.saveBlockReason() != null
+                || Math.min(metadata.width(), metadata.height()) < MIN_PHOTO_SHORT_SIDE
+                || !seenFiles.add(normalizeFile(metadata.title()))
+                || !seenOriginals.add(metadata.originalUrl())) return;
+        photos.add(previewPhoto(metadata));
     }
 
     /** 기본정보 조회로 이미 받아 둔 엔티티가 있으면 쓰고, 없으면 사진에 필요한 값만 가볍게 받는다. */

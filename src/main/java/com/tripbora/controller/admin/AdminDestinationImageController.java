@@ -86,7 +86,14 @@ public class AdminDestinationImageController {
         // 아직 없는 썸네일은 화면 순서대로 뒤에서 미리 만든다(응답은 기다리지 않는다).
         cardThumbnailService.prewarm(images.stream().map(DestinationImage::getImageUrl).toList());
         model.addAttribute("imageCount", images.size());
-        // Wikidata 여행지에만 Commons 사진 추가를 보여준다. 이미 있는 파일은 후보에서 선택할 수 없게 표시한다.
+        /*
+          국내 여행지는 한국관광공사 관광사진, 해외 여행지는 Wikimedia Commons 사진을 쓴다.
+          QID가 있으면 Wikidata 후보를 바로 불러오고, 없거나 후보가 없으면 검색으로 찾는다(기본 검색어: 이름 + 도시 + 국가).
+          이미 있는 파일은 후보에서 선택할 수 없게 표시한다.
+        */
+        boolean overseas = commonsImageManagementService.isOverseasDestination(id);
+        model.addAttribute("overseasDestination", overseas);
+        model.addAttribute("commonsSearchQuery", overseas ? commonsImageManagementService.defaultSearchQuery(id) : "");
         model.addAttribute("wikidataQid", commonsImageManagementService.findWikidataQid(id));
         model.addAttribute("registeredCommonsFiles", commonsImageManagementService.registeredCommonsFileNames(images));
         model.addAttribute("imageLicenseOptions", DestinationImageLicenseType.values());
