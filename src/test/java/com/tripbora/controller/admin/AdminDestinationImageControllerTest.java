@@ -6,6 +6,7 @@ import com.tripbora.model.DestinationTranslation;
 import com.tripbora.service.destination.DestinationCommonsImageManagementService;
 import com.tripbora.service.destination.DestinationImageService;
 import com.tripbora.service.destination.DestinationKtoImageManagementService;
+import com.tripbora.service.destination.DestinationPixabayImageManagementService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.file.UnsupportedImageFormatException;
 import com.tripbora.service.kto.InvalidKtoSelectedPhotosException;
@@ -51,6 +52,7 @@ class AdminDestinationImageControllerTest {
     @Mock private KtoSelectedPhotoRequestParser requestParser;
     @Mock private DestinationKtoImageManagementService ktoImageManagementService;
     @Mock private DestinationCommonsImageManagementService commonsImageManagementService;
+    @Mock private DestinationPixabayImageManagementService pixabayImageManagementService;
 
     private AdminDestinationImageController controller;
     private MockMvc mockMvc;
@@ -64,7 +66,8 @@ class AdminDestinationImageControllerTest {
                 ktoImageManagementService,
                 commonsImageManagementService,
                 new com.tripbora.service.file.DestinationCardThumbnailService("build/tmp/no-uploads",
-                        org.mockito.Mockito.mock(DestinationImageService.class)));
+                        org.mockito.Mockito.mock(DestinationImageService.class)),
+                pixabayImageManagementService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -89,7 +92,8 @@ class AdminDestinationImageControllerTest {
         AdminDestinationImageController screen = new AdminDestinationImageController(
                 destinationImageService, destinationService, requestParser, ktoImageManagementService,
                 commonsImageManagementService,
-                new com.tripbora.service.file.DestinationCardThumbnailService(root.toString(), licenses));
+                new com.tripbora.service.file.DestinationCardThumbnailService(root.toString(), licenses),
+                pixabayImageManagementService);
         DestinationImage type1 = image(1L, "/uploads/destinations/kogl1.jpg", "KOGL_TYPE_1");
         DestinationImage type3 = image(3L, "/uploads/destinations/kogl3.jpg", "KOGL_TYPE_3");
         when(destinationImageService.getImages(10L)).thenReturn(List.of(type1, type3));
@@ -357,6 +361,39 @@ class AdminDestinationImageControllerTest {
         mockMvc.perform(post("/admin/destinations/10/images/commons").param("commonsSelectedPhotosJson", json))
                 .andExpect(flash().attribute("commonsAddError",
                         "Commons 사진 저장에 실패했습니다. 선택한 사진은 하나도 저장되지 않았습니다. 다시 시도해 주세요."));
+    }
+
+    /** Pixabay 추가는 사진 ID만 받는다. 주소 같은 다른 값은 서비스까지 가지 않는다. */
+    @Test
+    void pixabayAddSendsOnlyPhotoIdsAndShowsResultsInThePixabaySection() throws Exception {
+        when(pixabayImageManagementService.addPhotos(10L, List.of(195893L, 7L)))
+                .thenReturn(2)
+                .thenThrow(new com.tripbora.service.pixabay.PixabayPhotoException(
+                        "최근 검색 결과에서 확인할 수 없는 Pixabay 사진입니다(ID 7). 다시 검색한 뒤 선택해 주세요."))
+                .thenThrow(com.tripbora.service.pixabay.PixabayApiException.rateLimited())
+                .thenThrow(new IllegalStateException("db down"));
+
+        mockMvc.perform(post("/admin/destinations/10/images/pixabay")
+                        .param("pixabayImageIds", "195893", "7")
+                        .param("imageUrl", "http://169.254.169.254/latest/meta-data"))
+                .andExpect(redirectedUrl("/admin/destinations/10/images#pixabay-add"))
+                .andExpect(flash().attribute("pixabayAddResult", "Pixabay 사진 2장을 추가했습니다."));
+        mockMvc.perform(post("/admin/destinations/10/images/pixabay").param("pixabayImageIds", "195893", "7"))
+                .andExpect(flash().attribute("pixabayAddError",
+                        "최근 검색 결과에서 확인할 수 없는 Pixabay 사진입니다(ID 7). 다시 검색한 뒤 선택해 주세요."));
+        mockMvc.perform(post("/admin/destinations/10/images/pixabay").param("pixabayImageIds", "195893", "7"))
+                .andExpect(flash().attribute("pixabayAddError", "Pixabay 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요."));
+        mockMvc.perform(post("/admin/destinations/10/images/pixabay").param("pixabayImageIds", "195893", "7"))
+                .andExpect(flash().attribute("pixabayAddError",
+                        "Pixabay 사진 저장에 실패했습니다. 선택한 사진은 하나도 저장되지 않았습니다. 다시 시도해 주세요."));
+    }
+
+    @Test
+    void pixabayAddRejectsUrlsInPlaceOfIds() throws Exception {
+        mockMvc.perform(post("/admin/destinations/10/images/pixabay")
+                        .param("pixabayImageIds", "https://evil.example/photo.jpg"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(pixabayImageManagementService);
     }
 
     @Test

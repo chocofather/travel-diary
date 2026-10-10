@@ -123,6 +123,46 @@ class KtoPhotoUrlValidatorTest {
                 .hasMessage("허용되지 않은 관광사진 URL입니다.");
     }
 
+    /** Pixabay API가 주는 저장용 주소(pixabay.com/get/)와 CDN 주소만 HTTPS로 받는다. */
+    @Test
+    void pixabayValidatorAcceptsOnlyPixabayImageHostsOverHttps() throws Exception {
+        InetAddress publicAddress = InetAddress.getByAddress(new byte[]{(byte) 203, 0, 113, 10});
+        KtoPhotoUrlValidator validator = KtoPhotoUrlValidator.pixabay(host -> new InetAddress[]{publicAddress});
+
+        assertThat(validator.validate("https://pixabay.com/get/ed6a99fd0a76647_1280.jpg"))
+                .isEqualTo(URI.create("https://pixabay.com/get/ed6a99fd0a76647_1280.jpg"));
+        assertThat(validator.validate("https://cdn.pixabay.com/photo/2013/10/15/09/12/flower-195893_1280.jpg"))
+                .isEqualTo(URI.create("https://cdn.pixabay.com/photo/2013/10/15/09/12/flower-195893_1280.jpg"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://pixabay.com/get/ed6a99fd0a76647_1280.jpg",
+            "https://pixabay.com/api/?key=x",
+            "https://pixabay.com/get/../api/",
+            "https://pixabay.com.attacker.com/get/ed6a99fd0a76647_1280.jpg",
+            "https://attacker.com/get/ed6a99fd0a76647_1280.jpg",
+            "https://pixabay.com:8443/get/ed6a99fd0a76647_1280.jpg",
+            "https://user@pixabay.com/get/ed6a99fd0a76647_1280.jpg",
+            "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel.jpg",
+            "https://tong.visitkorea.or.kr/cms2/website/75/1002175.jpg"
+    })
+    void pixabayValidatorRejectsOtherHostsPathsAndSchemes(String imageUrl) throws Exception {
+        InetAddress publicAddress = InetAddress.getByAddress(new byte[]{(byte) 203, 0, 113, 10});
+        KtoPhotoUrlValidator validator = KtoPhotoUrlValidator.pixabay(host -> new InetAddress[]{publicAddress});
+
+        assertThatThrownBy(() -> validator.validate(imageUrl)).isInstanceOf(InvalidKtoPhotoUrlException.class);
+    }
+
+    @Test
+    void pixabayValidatorRejectsPixabayHostsResolvingToPrivateAddresses() throws Exception {
+        KtoPhotoUrlValidator validator = KtoPhotoUrlValidator.pixabay(
+                host -> new InetAddress[]{InetAddress.getByName("10.1.2.3")});
+
+        assertThatThrownBy(() -> validator.validate("https://pixabay.com/get/ed6a99fd0a76647_1280.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+    }
+
     private KtoPhotoUrlValidator publicAddressValidator() throws Exception {
         InetAddress publicAddress = InetAddress.getByAddress(new byte[]{(byte) 203, 0, 113, 10});
         return new KtoPhotoUrlValidator(host -> new InetAddress[]{publicAddress});

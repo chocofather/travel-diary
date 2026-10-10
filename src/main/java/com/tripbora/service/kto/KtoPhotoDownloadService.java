@@ -40,11 +40,15 @@ public class KtoPhotoDownloadService {
 
     private static final String COMMONS_USER_AGENT =
             "TripBoraCommonsImport/1.0 (https://github.com/chocofather/tripbora)";
+    private static final String PIXABAY_USER_AGENT =
+            "TripBoraPixabayImport/1.0 (https://github.com/chocofather/tripbora)";
 
     private final KtoPhotoUrlValidator urlValidator;
     private final KtoPhotoHttpTransport httpTransport;
     private final KtoPhotoUrlValidator commonsUrlValidator;
     private final KtoPhotoHttpTransport commonsHttpTransport;
+    private final KtoPhotoUrlValidator pixabayUrlValidator;
+    private final KtoPhotoHttpTransport pixabayHttpTransport;
     private final Path uploadRoot;
     private final long maxFileSize;
 
@@ -58,6 +62,8 @@ public class KtoPhotoDownloadService {
                 new JdkKtoPhotoHttpTransport(CONNECT_TIMEOUT, READ_TIMEOUT),
                 KtoPhotoUrlValidator.wikimediaCommons(),
                 new JdkKtoPhotoHttpTransport(CONNECT_TIMEOUT, READ_TIMEOUT, COMMONS_USER_AGENT),
+                KtoPhotoUrlValidator.pixabay(),
+                new JdkKtoPhotoHttpTransport(CONNECT_TIMEOUT, READ_TIMEOUT, PIXABAY_USER_AGENT),
                 Paths.get(uploadPath),
                 maxFileSize.toBytes());
     }
@@ -80,6 +86,20 @@ public class KtoPhotoDownloadService {
             Path uploadRoot,
             long maxFileSize
     ) {
+        this(urlValidator, httpTransport, commonsUrlValidator, commonsHttpTransport,
+                KtoPhotoUrlValidator.pixabay(), httpTransport, uploadRoot, maxFileSize);
+    }
+
+    KtoPhotoDownloadService(
+            KtoPhotoUrlValidator urlValidator,
+            KtoPhotoHttpTransport httpTransport,
+            KtoPhotoUrlValidator commonsUrlValidator,
+            KtoPhotoHttpTransport commonsHttpTransport,
+            KtoPhotoUrlValidator pixabayUrlValidator,
+            KtoPhotoHttpTransport pixabayHttpTransport,
+            Path uploadRoot,
+            long maxFileSize
+    ) {
         if (maxFileSize <= 0) {
             throw new IllegalArgumentException("maxFileSize must be positive");
         }
@@ -87,6 +107,8 @@ public class KtoPhotoDownloadService {
         this.httpTransport = httpTransport;
         this.commonsUrlValidator = commonsUrlValidator;
         this.commonsHttpTransport = commonsHttpTransport;
+        this.pixabayUrlValidator = pixabayUrlValidator;
+        this.pixabayHttpTransport = pixabayHttpTransport;
         this.uploadRoot = uploadRoot.toAbsolutePath().normalize();
         this.maxFileSize = maxFileSize;
     }
@@ -102,6 +124,14 @@ public class KtoPhotoDownloadService {
      */
     public KtoDownloadedPhoto downloadCommonsImage(String imageUrl) {
         return download(commonsUrlValidator.validate(imageUrl), commonsHttpTransport);
+    }
+
+    /**
+     * Pixabay 사진을 여행지 이미지 저장소에 내려받는다. 주소는 서버가 Pixabay 검색 응답에서 받은 값만 넘기며,
+     * pixabay.com·cdn.pixabay.com HTTPS만 허용한다. 크기·형식·경로 검증과 리다이렉트 거부는 관광사진과 같다.
+     */
+    public KtoDownloadedPhoto downloadPixabayImage(String imageUrl) {
+        return download(pixabayUrlValidator.validate(imageUrl), pixabayHttpTransport);
     }
 
     private KtoDownloadedPhoto download(URI sourceUri, KtoPhotoHttpTransport transport) {

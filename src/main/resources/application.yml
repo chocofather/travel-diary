@@ -144,6 +144,11 @@ kakao:
   # 비어 있으면 애플리케이션은 그대로 뜨고, SOCIAL_UNLINK task 실행 때만 설정 오류로 실패한다.
   admin-key: ${KAKAO_ADMIN_KEY:}
 
+pixabay:
+  # 관리자 여행지 이미지 관리의 Pixabay 스톡 사진 검색 키. 실제 값은 환경변수로만 넣고 저장소에 두지 않는다.
+  # 비어 있으면 애플리케이션은 그대로 뜨고, 관리 화면의 Pixabay 영역에 설정 안내만 보인다.
+  api-key: ${PIXABAY_API_KEY:}
+
 kto:
   photo:
     # 관광사진도 같은 공공데이터포털(B551011) 인증키를 쓴다.

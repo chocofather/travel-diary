@@ -46,6 +46,10 @@
         int countCommonsImageSource(@Param("destinationId") Long destinationId,
                                     @Param("commonsFileTitle") String commonsFileTitle);
 
+        /** 같은 여행지에 같은 Pixabay 사진 ID가 이미 연결됐는지 본다. */
+        int countPixabayImageSource(@Param("destinationId") Long destinationId,
+                                    @Param("pixabayImageId") String pixabayImageId);
+
         /** 여행지의 외부 식별자. 등록 출처(source_type)가 다르면 null. */
         String findExternalContentIdBySourceType(@Param("destinationId") Long destinationId,
                                                  @Param("sourceType") String sourceType);

@@ -7,12 +7,15 @@ import com.tripbora.model.DestinationTranslation;
 import com.tripbora.service.destination.DestinationCommonsImageManagementService;
 import com.tripbora.service.destination.DestinationImageService;
 import com.tripbora.service.destination.DestinationKtoImageManagementService;
+import com.tripbora.service.destination.DestinationPixabayImageManagementService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.file.DestinationCardThumbnailService;
 import com.tripbora.service.file.UnsupportedImageFormatException;
 import com.tripbora.service.kto.InvalidKtoSelectedPhotosException;
 import com.tripbora.service.kto.KtoPhotoItemFailureException;
 import com.tripbora.service.kto.KtoSelectedPhotoRequestParser;
+import com.tripbora.service.pixabay.PixabayApiException;
+import com.tripbora.service.pixabay.PixabayPhotoException;
 import com.tripbora.service.wikidata.CommonsApiException;
 import com.tripbora.service.wikidata.CommonsPhotoDownloadException;
 import com.tripbora.service.wikidata.WikidataApiException;
@@ -50,6 +53,7 @@ public class AdminDestinationImageController {
     private final DestinationKtoImageManagementService ktoImageManagementService;
     private final DestinationCommonsImageManagementService commonsImageManagementService;
     private final DestinationCardThumbnailService cardThumbnailService;
+    private final DestinationPixabayImageManagementService pixabayImageManagementService;
 
     /** 사진 한 장과 함께 가는 출처 입력값·multipart 머리말 여유. */
     static final long UPLOAD_REQUEST_OVERHEAD_BYTES = 64L * 1024;
@@ -96,6 +100,12 @@ public class AdminDestinationImageController {
         model.addAttribute("commonsSearchQuery", overseas ? commonsImageManagementService.defaultSearchQuery(id) : "");
         model.addAttribute("wikidataQid", commonsImageManagementService.findWikidataQid(id));
         model.addAttribute("registeredCommonsFiles", commonsImageManagementService.registeredCommonsFileNames(images));
+        // Pixabay 스톡 사진은 국내·해외 모두 쓸 수 있다. 키가 없으면 검색 대신 안내만 보인다.
+        boolean pixabayConfigured = pixabayImageManagementService.isConfigured();
+        model.addAttribute("pixabayConfigured", pixabayConfigured);
+        model.addAttribute("pixabaySearchQuery",
+                pixabayConfigured ? pixabayImageManagementService.defaultSearchQuery(id) : "");
+        model.addAttribute("pixabaySelectionLimit", DestinationPixabayImageManagementService.MAX_SELECTION);
         model.addAttribute("imageLicenseOptions", DestinationImageLicenseType.values());
         model.addAttribute("imageLicenseCodes", Arrays.stream(DestinationImageLicenseType.values())
                 .map(DestinationImageLicenseType::getCode)
@@ -205,6 +215,26 @@ public class AdminDestinationImageController {
                     "Commons 사진 저장에 실패했습니다. 선택한 사진은 하나도 저장되지 않았습니다. 다시 시도해 주세요.");
         }
         return managementRedirect(id) + "#commons-add";
+    }
+
+    /**
+     * 검색 결과에서 고른 Pixabay 사진만 내려받아 더한다. 화면은 사진 ID만 보낸다.
+     * 이미지 주소 같은 다른 값은 받지 않으며, 서버가 최근 검색 결과에서 찾은 값만 쓴다.
+     */
+    @PostMapping("/{id}/images/pixabay")
+    public String addPixabayPhotos(@PathVariable Long id,
+                                   @RequestParam(value = "pixabayImageIds", required = false) List<Long> pixabayImageIds,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            int added = pixabayImageManagementService.addPhotos(id, pixabayImageIds);
+            redirectAttributes.addFlashAttribute("pixabayAddResult", "Pixabay 사진 " + added + "장을 추가했습니다.");
+        } catch (IllegalArgumentException | PixabayPhotoException | PixabayApiException exception) {
+            redirectAttributes.addFlashAttribute("pixabayAddError", exception.getMessage());
+        } catch (RuntimeException exception) {
+            redirectAttributes.addFlashAttribute("pixabayAddError",
+                    "Pixabay 사진 저장에 실패했습니다. 선택한 사진은 하나도 저장되지 않았습니다. 다시 시도해 주세요.");
+        }
+        return managementRedirect(id) + "#pixabay-add";
     }
 
     @PostMapping("/images/{imageId}/main")

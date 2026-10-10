@@ -583,12 +583,19 @@ public class DestinationImageService {
         return image;
     }
 
-    /** Commons 사진 출처는 원본에서 재검증한 값이라 관리자 출처 수정·일괄 적용 대상에서 뺀다. */
+    /**
+     * Commons 사진 출처는 원본에서 재검증한 값, Pixabay 사진 출처는 저장 때 검색 응답에서 기록한 값이라
+     * 관리자 출처 수정·일괄 적용 대상에서 뺀다.
+     */
     private DestinationImage requireEditableSourceImage(Long destinationId, Long imageId) {
         DestinationImage image = requireDestinationImage(destinationId, imageId);
         if (image.isCommonsImage()) {
             throw new IllegalArgumentException(
                     "Wikimedia Commons 사진의 출처는 원본에서 검증한 값이라 수정할 수 없습니다.");
+        }
+        if (image.isPixabayImage()) {
+            throw new IllegalArgumentException(
+                    "Pixabay 사진의 출처는 저장할 때 Pixabay에서 받은 값이라 수정할 수 없습니다.");
         }
         return image;
     }

@@ -7,6 +7,7 @@ import com.tripbora.repository.user.UserMapper;
 import com.tripbora.service.destination.DestinationCommonsImageManagementService;
 import com.tripbora.service.destination.DestinationImageService;
 import com.tripbora.service.destination.DestinationKtoImageManagementService;
+import com.tripbora.service.destination.DestinationPixabayImageManagementService;
 import com.tripbora.service.destination.DestinationService;
 import com.tripbora.service.file.DestinationCardThumbnailService;
 import com.tripbora.service.kto.KtoSelectedPhotoRequestParser;
@@ -42,6 +43,7 @@ class AdminDestinationCommonsAddSecurityTest {
     @MockitoBean private KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser;
     @MockitoBean private DestinationKtoImageManagementService ktoImageManagementService;
     @MockitoBean private DestinationCommonsImageManagementService commonsImageManagementService;
+    @MockitoBean private DestinationPixabayImageManagementService pixabayImageManagementService;
     @MockitoBean private DestinationCardThumbnailService cardThumbnailService;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -63,5 +65,24 @@ class AdminDestinationCommonsAddSecurityTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/destinations/10/images#commons-add"));
         verify(commonsImageManagementService).addPhotos(10L, SEARCH_JSON);
+    }
+
+    @Test
+    void onlyAdministratorsWithTheCsrfTokenCanAddPixabayPhotos() throws Exception {
+        String pixabayUrl = "/admin/destinations/10/images/pixabay";
+        mockMvc.perform(post(pixabayUrl).param("pixabayImageIds", "195893")
+                        .with(user("user").roles("USER")).with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(pixabayUrl).param("pixabayImageIds", "195893")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+        verify(pixabayImageManagementService, never()).addPhotos(any(), any());
+
+        when(pixabayImageManagementService.addPhotos(10L, java.util.List.of(195893L))).thenReturn(1);
+        mockMvc.perform(post(pixabayUrl).param("pixabayImageIds", "195893")
+                        .with(user("admin").roles("ADMIN")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#pixabay-add"));
+        verify(pixabayImageManagementService).addPhotos(10L, java.util.List.of(195893L));
     }
 }

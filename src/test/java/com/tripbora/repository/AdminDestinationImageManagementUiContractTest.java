@@ -146,7 +146,9 @@ class AdminDestinationImageManagementUiContractTest {
                 .satisfies(choice -> assertThat(choice.hasAttr("data-image-bulk-select")).isTrue())
                 .satisfies(choice -> assertThat(choice.attr("name")).isEqualTo("imageIds"))
                 .satisfies(choice -> assertThat(choice.attr("form")).isEqualTo("image-bulk-delete-form"))
-                .satisfies(choice -> assertThat(choice.attr("th:attr")).contains("data-image-commons=${img.commonsImage}"));
+                // Commons·Pixabay 사진은 출처를 고칠 수 없어 출처 일괄 적용에서 빠진다.
+                .satisfies(choice -> assertThat(choice.attr("th:attr"))
+                        .contains("data-image-commons=${img.commonsImage or img.pixabayImage}"));
         assertThat(card.select(".admin-image-card-select").text()).isEqualTo("선택");
         assertThat(card.text()).doesNotContain("삭제 선택", "일괄 적용");
         // 단건 삭제는 그대로 둔다

@@ -122,4 +122,26 @@ class DestinationImageAttributionTest {
         image.setSourceType(DestinationImage.COMMONS_SOURCE_TYPE);
         assertThat(image.getSourceStatus()).isEqualTo("COMMONS");
     }
+
+    /** Pixabay 사진은 공개 화면에 작가·Pixabay·라이선스와 사진별 Pixabay 원본 페이지 링크를 보인다. */
+    @Test
+    void pixabayPhotoLinksToItsPixabayPageAndShowsTheContentLicense() {
+        DestinationImage image = new DestinationImage();
+        image.setSourceType(DestinationImage.PIXABAY_SOURCE_TYPE);
+        image.setSourceName("Pixabay");
+        image.setPhotographer("Hans");
+        image.setLicenseType("PIXABAY_CONTENT_LICENSE");
+        image.setLicenseName("Pixabay Content License");
+        image.setLicenseUrl("https://pixabay.com/service/license-summary/");
+        image.setWorkPageUrl("https://pixabay.com/photos/eiffel-195893/");
+        image.setSourceUrl("https://example.com/not-used");
+
+        assertThat(image.isPixabayImage()).isTrue();
+        assertThat(image.isCommonsImage()).isFalse();
+        assertThat(image.getSourceStatus()).isEqualTo("PIXABAY");
+        assertThat(image.getAttributionUrl()).isEqualTo("https://pixabay.com/photos/eiffel-195893/");
+        assertThat(image.getLicenseDisplay()).isEqualTo("Pixabay Content License");
+        assertThat(image.getSafeLicenseUrl()).isEqualTo("https://pixabay.com/service/license-summary/");
+        assertThat(image.getSourceSummary()).isEqualTo("Pixabay · Hans · Pixabay Content License");
+    }
 }

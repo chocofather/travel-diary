@@ -12,6 +12,7 @@
     @NoArgsConstructor
     public class DestinationImage {
         public static final String COMMONS_SOURCE_TYPE = "WIKIMEDIA_COMMONS";
+        public static final String PIXABAY_SOURCE_TYPE = "PIXABAY";
 
         private Long id; // 여행지 이미지 번호
         private String imageUrl; // 이미지 Url
@@ -70,10 +71,16 @@
             return COMMONS_SOURCE_TYPE.equals(sourceType);
         }
 
+        /** Pixabay 검색 응답에서 고른 사진. 출처는 저장 때 서버가 받은 값이라 관리 화면에서 고치지 않는다. */
+        public boolean isPixabayImage() {
+            return PIXABAY_SOURCE_TYPE.equals(sourceType);
+        }
+
         /**
          * 관리 화면 카드의 출처 등록 상태.
          * <ul>
          *   <li>COMMONS: 원본에서 검증한 Commons 사진 (관리 화면에서 고치지 않는다)</li>
+         *   <li>PIXABAY: Pixabay 검색 응답으로 저장한 사진 (관리 화면에서 고치지 않는다)</li>
          *   <li>MISSING: 제공기관·촬영자가 모두 비어 있다 — '출처 입력 필요'</li>
          *   <li>LICENSE_NEEDED: 제공기관·촬영자는 있으나 라이선스가 비었거나 '확인 안 됨'</li>
          *   <li>COMPLETE: 그 밖</li>
@@ -82,6 +89,9 @@
         public String getSourceStatus() {
             if (isCommonsImage()) {
                 return "COMMONS";
+            }
+            if (isPixabayImage()) {
+                return "PIXABAY";
             }
             if (text(sourceName) == null && text(photographer) == null) {
                 return "MISSING";
@@ -101,9 +111,9 @@
             return summary.isEmpty() ? null : summary;
         }
 
-        /** 공개 화면의 출처 링크. Commons 사진은 사진별 파일 페이지, 그 외는 기존 출처 URL을 쓴다. */
+        /** 공개 화면의 출처 링크. Commons·Pixabay 사진은 사진별 원본 페이지, 그 외는 기존 출처 URL을 쓴다. */
         public String getAttributionUrl() {
-            return isCommonsImage() ? safeHttpUrl(workPageUrl) : getSafeSourceUrl();
+            return isCommonsImage() || isPixabayImage() ? safeHttpUrl(workPageUrl) : getSafeSourceUrl();
         }
 
         public String getSafeLicenseUrl() {

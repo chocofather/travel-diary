@@ -730,6 +730,23 @@ class DestinationImageServiceTest {
     }
 
     @Test
+    void pixabayPhotoSourceCannotBeOverwrittenByManualOrBulkSourceEditing() {
+        DestinationImage pixabay = image(3L, 10L, 0, false);
+        pixabay.setSourceType("PIXABAY");
+        pixabay.setSourceRecordPresent(true);
+        when(destinationMapper.findImageById(3L)).thenReturn(pixabay);
+
+        assertThatThrownBy(() -> service.updateImageMetadataAndPages(10L, 3L, "기관", "촬영자",
+                "KOGL_TYPE_1", null, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Pixabay");
+        assertThatThrownBy(() -> service.applyBulkSource(10L, List.of(3L),
+                "기관", null, null, null, null, java.util.Set.of(), false, false))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Pixabay");
+        verify(destinationMapper, never()).upsertImageSourceMetadata(any(), any(), any(), any(), any(), any());
+        verify(destinationMapper, never()).updateBulkImageSource(any(), any());
+    }
+
+    @Test
     void bulkSourceOnLegacyOnlyPhotoCopiesUnchangedKtoIdentifiersAndKeepsLegacyUrl() {
         DestinationImage image = image(2L, 10L, 0, false);
         image.setExternalContentId("kto-42");

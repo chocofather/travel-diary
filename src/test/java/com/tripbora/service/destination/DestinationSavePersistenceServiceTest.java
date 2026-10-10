@@ -9,6 +9,8 @@ import com.tripbora.repository.destination.DestinationMapper;
 import com.tripbora.repository.destination.DestinationTranslationSourceMapper;
 import com.tripbora.service.kto.KtoPhotoImportPersistenceService;
 import com.tripbora.service.kto.PreparedKtoPhoto;
+import com.tripbora.service.pixabay.PixabayPhotoException;
+import com.tripbora.service.pixabay.PreparedPixabayPhoto;
 import com.tripbora.service.wikidata.CommonsPhotoSelectionException;
 import com.tripbora.service.wikidata.PreparedCommonsPhoto;
 import org.junit.jupiter.api.BeforeEach;
@@ -242,6 +244,60 @@ class DestinationSavePersistenceServiceTest {
                 .isNotInstanceOf(CommonsPhotoSelectionException.class);
         verify(imageService, never()).saveImages(any(), anyList());
         verify(destinationMapper, never()).insertCommonsImageSource(any());
+    }
+
+    @Test
+    void pixabayPhotosAreSavedAsPixabayImagesWithTheirSourceRowAfterTheLockedDuplicateCheck() throws Exception {
+        PreparedPixabayPhoto photo = pixabayPhoto("/uploads/destinations/p.jpg", "195893", true);
+        when(destinationMapper.lockDestinationForImageUpdate(9L)).thenReturn(9L);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<DestinationImage>> images = ArgumentCaptor.forClass(List.class);
+        doAnswer(invocation -> {
+            invocation.<List<DestinationImage>>getArgument(1).get(0).setId(701L);
+            return null;
+        }).when(imageService).saveImages(eq(9L), images.capture());
+
+        service.addPixabayPhotosToExistingDestination(9L, List.of(photo));
+
+        InOrder order = inOrder(destinationMapper, imageService);
+        order.verify(destinationMapper).lockDestinationForImageUpdate(9L);
+        order.verify(destinationMapper).countPixabayImageSource(9L, "195893");
+        order.verify(imageService).saveImages(eq(9L), anyList());
+        order.verify(destinationMapper).insertCommonsImageSource(photo.source());
+        DestinationImage saved = images.getValue().get(0);
+        assertThat(saved.getSourceType()).isEqualTo("PIXABAY");
+        assertThat(saved.getImageUrl()).isEqualTo("/uploads/destinations/p.jpg");
+        assertThat(saved.getIsMain()).isTrue();
+        assertThat(photo.source().getDestinationImageId()).isEqualTo(701L);
+        assertThat(DestinationSavePersistenceService.class.getMethod("addPixabayPhotosToExistingDestination",
+                Long.class, List.class).getAnnotation(Transactional.class)).isNotNull();
+    }
+
+    @Test
+    void theSamePixabayPhotoIsRefusedInsideTheTransactionEvenIfTheScreenAllowedIt() {
+        when(destinationMapper.lockDestinationForImageUpdate(9L)).thenReturn(9L);
+        // 다른 요청이 먼저 같은 사진을 저장했으면 잠금 뒤 재확인에서 막힌다.
+        when(destinationMapper.countPixabayImageSource(9L, "195893")).thenReturn(1);
+        assertThatThrownBy(() -> service.addPixabayPhotosToExistingDestination(9L,
+                List.of(pixabayPhoto("/uploads/destinations/p.jpg", "195893", false))))
+                .isInstanceOf(PixabayPhotoException.class)
+                .hasMessageContaining("195893");
+
+        // 한 요청 안에 같은 ID가 두 번 들어와도 막는다.
+        when(destinationMapper.countPixabayImageSource(9L, "7")).thenReturn(0);
+        assertThatThrownBy(() -> service.addPixabayPhotosToExistingDestination(9L, List.of(
+                pixabayPhoto("/uploads/destinations/a.jpg", "7", false),
+                pixabayPhoto("/uploads/destinations/b.jpg", "7", false))))
+                .isInstanceOf(PixabayPhotoException.class);
+        verify(imageService, never()).saveImages(any(), anyList());
+        verify(destinationMapper, never()).insertCommonsImageSource(any());
+    }
+
+    private PreparedPixabayPhoto pixabayPhoto(String localUrl, String pixabayId, boolean main) {
+        DestinationImageCommonsSource source = new DestinationImageCommonsSource();
+        source.setSourceName("Pixabay");
+        source.setExternalContentId(pixabayId);
+        return new PreparedPixabayPhoto(localUrl, main, source);
     }
 
     private PreparedCommonsPhoto commonsPhoto(String localUrl, String title, boolean main) {

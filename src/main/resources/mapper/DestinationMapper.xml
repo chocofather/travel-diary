@@ -251,6 +251,16 @@
           AND s.commons_file_title = #{commonsFileTitle}
     </select>
 
+    <!-- Pixabay 사진 ID는 출처 행의 external_content_id 에 둔다. 이미지 유입 경로(source_type)로 다른 출처의 같은 숫자와 구분한다. -->
+    <select id="countPixabayImageSource" resultType="int">
+        SELECT COUNT(*)
+        FROM destination_image_sources s
+                 JOIN destination_images di ON di.id = s.destination_image_id
+        WHERE di.destination_id = #{destinationId}
+          AND di.source_type = 'PIXABAY'
+          AND s.external_content_id = #{pixabayImageId}
+    </select>
+
     <select id="findExternalContentIdBySourceType" resultType="string">
         SELECT external_content_id
         FROM destinations

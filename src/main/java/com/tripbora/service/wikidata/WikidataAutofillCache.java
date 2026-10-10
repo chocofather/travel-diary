@@ -132,20 +132,23 @@ public class WikidataAutofillCache {
         executor.shutdownNow();
     }
 
-    /** 만료 시각과 최대 개수가 있는 단일 요청 공유 캐시. null 값(없는 항목)도 만료 전까지 기억한다. */
-    static final class ExpiringCache<V> {
+    /**
+     * 만료 시각과 최대 개수가 있는 단일 요청 공유 캐시. null 값(없는 항목)도 만료 전까지 기억한다.
+     * Pixabay 검색 결과 캐시도 같은 규칙(동시 요청은 외부 호출 하나를 함께 기다림, 실패는 남기지 않음)으로 쓴다.
+     */
+    public static final class ExpiringCache<V> {
         private final Duration ttl;
         private final int maxEntries;
         private final Clock clock;
         private final LinkedHashMap<String, Entry<V>> map = new LinkedHashMap<>(16, 0.75f, true);
 
-        ExpiringCache(Duration ttl, int maxEntries, Clock clock) {
+        public ExpiringCache(Duration ttl, int maxEntries, Clock clock) {
             this.ttl = ttl;
             this.maxEntries = maxEntries;
             this.clock = clock;
         }
 
-        V get(String key, Supplier<V> loader) {
+        public V get(String key, Supplier<V> loader) {
             return getIf(key, loader, value -> true);
         }
 

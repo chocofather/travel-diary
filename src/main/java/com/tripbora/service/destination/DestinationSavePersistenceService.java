@@ -9,6 +9,8 @@ import com.tripbora.repository.destination.DestinationMapper;
 import com.tripbora.repository.destination.DestinationTranslationSourceMapper;
 import com.tripbora.service.kto.KtoPhotoImportPersistenceService;
 import com.tripbora.service.kto.PreparedKtoPhoto;
+import com.tripbora.service.pixabay.PixabayPhotoException;
+import com.tripbora.service.pixabay.PreparedPixabayPhoto;
 import com.tripbora.service.wikidata.CommonsPhotoSelectionException;
 import com.tripbora.service.wikidata.PreparedCommonsPhoto;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +88,43 @@ public class DestinationSavePersistenceService {
             throw new IllegalArgumentException("여행지를 찾을 수 없습니다.");
         }
         persistCommonsPhotos(destinationId, photos);
+    }
+
+    /**
+     * 기존 여행지에 Pixabay 사진과 출처를 한 트랜잭션으로 더한다. Commons 추가와 같이 여행지 행을 먼저 잠근 뒤
+     * 같은 Pixabay 사진 ID가 이미 있는지 다시 확인한다. 한 장이라도 실패하면 전체를 되돌린다(파일 정리는 호출한 쪽이 맡는다).
+     */
+    @Transactional
+    public void addPixabayPhotosToExistingDestination(Long destinationId, List<PreparedPixabayPhoto> photos) {
+        if (!destinationId.equals(destinationMapper.lockDestinationForImageUpdate(destinationId))) {
+            throw new IllegalArgumentException("여행지를 찾을 수 없습니다.");
+        }
+        if (photos == null || photos.isEmpty()) return;
+        Set<String> pixabayIds = new HashSet<>();
+        List<DestinationImage> images = new ArrayList<>();
+        for (PreparedPixabayPhoto photo : photos) {
+            String pixabayId = photo.source().getExternalContentId();
+            if (!pixabayIds.add(pixabayId)
+                    || destinationMapper.countPixabayImageSource(destinationId, pixabayId) > 0) {
+                throw new PixabayPhotoException("이미 이 여행지에 등록된 Pixabay 사진입니다: ID " + pixabayId);
+            }
+            DestinationImage image = new DestinationImage();
+            image.setImageUrl(photo.localImageUrl());
+            image.setSourceType(DestinationImage.PIXABAY_SOURCE_TYPE);
+            image.setIsMain(photo.main());
+            image.setIsSlide(false);
+            images.add(image);
+        }
+        destinationImageService.saveImages(destinationId, images);
+        for (int index = 0; index < photos.size(); index++) {
+            Long imageId = images.get(index).getId();
+            if (imageId == null) {
+                throw new IllegalStateException("저장된 Pixabay 이미지 ID를 확인할 수 없습니다.");
+            }
+            DestinationImageCommonsSource source = photos.get(index).source();
+            source.setDestinationImageId(imageId);
+            destinationMapper.insertCommonsImageSource(source);
+        }
     }
 
     private void persistCommonsPhotos(Long destinationId, List<PreparedCommonsPhoto> photos) {

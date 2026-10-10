@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20261010-1">
   <script src="/js/admin-commons-photo-picker.js?v=20261010-1" defer></script>
   <script src="/js/admin-destination-commons-add.js?v=20261010-2" defer></script>
+  <script src="/js/admin-destination-pixabay-add.js?v=20261010-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-destination-images-page">
@@ -157,6 +158,51 @@
       </form>
     </section>
 
+    <!--
+      Pixabay 스톡 사진. 국내·해외 여행지 모두에 보인다. 검색은 서버 API(/admin/api/.../pixabay/photos)만 부르고
+      브라우저는 Pixabay API를 직접 부르지 않는다. 처음 30장, '사진 더 보기'마다 20장씩 보여 준다.
+      추가 폼은 고른 사진의 Pixabay ID만 보내고, 서버가 최근 검색 결과에서 찾은 사진만 내려받아 저장한다.
+    -->
+    <section id="pixabay-add" class="admin-destination-section admin-commons-add admin-pixabay-add" data-pixabay-add
+             th:attr="data-search-url=@{/admin/api/destinations/{id}/pixabay/photos(id=${destinationId})},
+                      data-selection-limit=${pixabaySelectionLimit}">
+      <div class="admin-destination-section-header">
+        <div>
+          <h2>Pixabay 스톡 사진</h2>
+          <p>
+            Pixabay에서 사진을 검색해 사용할 사진만 선택합니다. 선택한 사진만 TripBora 서버에 내려받아 저장하며,
+            출처(작가·Pixabay 원본 페이지)와 Pixabay Content License 정보를 함께 남깁니다.
+            현재 대표 사진은 바뀌지 않습니다(대표 사진이 없을 때만 첫 사진이 대표가 됩니다).
+          </p>
+        </div>
+      </div>
+      <div th:if="${pixabayAddError}" class="admin-alert" role="alert" th:text="${pixabayAddError}"></div>
+      <div th:if="${pixabayAddResult}" class="admin-alert" role="status" th:text="${pixabayAddResult}"></div>
+      <div th:unless="${pixabayConfigured}" class="admin-alert" role="status">Pixabay API Key가 설정되지 않았습니다.</div>
+      <th:block th:if="${pixabayConfigured}">
+        <form class="admin-destination-form admin-kto-photo-search-controls" role="search" data-pixabay-search-form>
+          <label class="admin-kto-photo-search-field">
+            <span class="admin-form-label">Pixabay 사진 검색어</span>
+            <input type="search" maxlength="100" autocomplete="off" placeholder="예: Eiffel Tower Paris France"
+                   th:value="${pixabaySearchQuery}" data-pixabay-search-query>
+          </label>
+          <button type="submit" class="admin-btn is-primary">검색</button>
+        </form>
+        <p class="admin-field-help">
+          검색 결과는 이 여행지와 관련이 없을 수 있습니다. 'Pixabay에서 보기'로 원본 페이지를 확인한 뒤 선택해 주세요.
+          한 번에 최대 <span th:text="${pixabaySelectionLimit}">20</span>장까지 추가할 수 있습니다.
+        </p>
+        <p class="admin-wikidata-review-note" role="status" aria-live="polite" data-pixabay-message hidden></p>
+        <div class="admin-wikidata-commons" data-pixabay-results></div>
+        <form th:action="@{/admin/destinations/{id}/images/pixabay(id=${destinationId})}" method="post"
+              class="admin-commons-add-form" data-pixabay-add-form>
+          <div hidden data-pixabay-selection></div>
+          <p class="admin-wikidata-review-note" role="status" aria-live="polite" data-pixabay-status hidden></p>
+          <button type="submit" class="admin-btn is-primary" data-pixabay-submit disabled>선택한 Pixabay 사진 추가</button>
+        </form>
+      </th:block>
+    </section>
+
     <section id="registered-images" class="admin-card admin-destination-images-card admin-section-spacer"
              aria-labelledby="registered-images-title">
       <div th:if="${bulkSourceError}" class="admin-alert" role="alert" th:text="${bulkSourceError}"></div>
@@ -291,12 +337,12 @@
               공통 선택. 머리말의 '출처 일괄 적용'과 '선택 삭제'가 이 선택 하나를 같이 쓴다.
               사진 영역(이 미리보기)을 눌러도 이 체크박스가 토글된다(admin-destination-image-bulk-delete.js).
               form 속성으로 선택 삭제 폼에 묶여 체크한 사진 ID만 보낸다.
-              Commons 사진은 출처를 고칠 수 없어 출처 일괄 적용에서만 빠진다(data-image-commons).
+              Commons·Pixabay 사진은 출처를 고칠 수 없어 출처 일괄 적용에서만 빠진다(data-image-commons).
             -->
             <label class="admin-image-bulk-photo-choice admin-image-card-select" title="이 사진 선택">
               <input type="checkbox" name="imageIds" form="image-bulk-delete-form"
                      data-image-delete-select data-image-bulk-select th:value="${img.id}"
-                     th:attr="data-image-main=${img.isMain}, data-image-commons=${img.commonsImage}">
+                     th:attr="data-image-main=${img.isMain}, data-image-commons=${img.commonsImage or img.pixabayImage}">
               <span>선택</span>
             </label>
             <span class="admin-image-order-badge" th:text="${stat.count}"
@@ -311,6 +357,7 @@
             <span class="admin-image-source-status" th:switch="${img.sourceStatus}"
                   th:classappend="|is-${#strings.toLowerCase(img.sourceStatus)}|">
               <th:block th:case="'COMMONS'">Commons 검증됨</th:block>
+              <th:block th:case="'PIXABAY'">Pixabay 저장됨</th:block>
               <th:block th:case="'MISSING'">출처 입력 필요</th:block>
               <th:block th:case="'LICENSE_NEEDED'">라이선스 확인 필요</th:block>
               <th:block th:case="*">출처 등록됨</th:block>
@@ -348,7 +395,7 @@
 
             <details class="admin-image-source-details" data-image-source-details th:open="${failed}">
               <summary>
-                <span class="admin-image-source-toggle is-closed" th:text="${img.commonsImage} ? '출처 정보 보기' : '출처 정보 펼치기'">출처 정보 펼치기</span>
+                <span class="admin-image-source-toggle is-closed" th:text="${img.commonsImage or img.pixabayImage} ? '출처 정보 보기' : '출처 정보 펼치기'">출처 정보 펼치기</span>
                 <span class="admin-image-source-toggle is-open">출처 정보 접기</span>
                 <span class="admin-image-source-dirty">저장 안 된 수정</span>
               </summary>
@@ -376,7 +423,25 @@
                 <p class="admin-field-help">원본에서 검증한 출처라 여기서 수정하지 않습니다. 사진을 바꾸려면 삭제한 뒤 다시 등록하세요.</p>
               </div>
 
-              <form class="admin-destination-image-metadata-form" th:unless="${img.commonsImage}"
+              <!-- Pixabay 사진 출처는 저장 때 서버가 Pixabay 검색 응답에서 받은 값이라 읽기 전용으로 보여준다. -->
+              <div class="admin-destination-image-meta" th:if="${img.pixabayImage}">
+                <span class="admin-image-source-badge">Pixabay</span>
+                <strong th:text="|Pixabay 사진 ID ${img.externalContentId}|">Pixabay 사진 ID</strong>
+                <span th:if="${img.photographer != null and !#strings.isEmpty(img.photographer)}"
+                      th:text="|작가: ${img.photographer}|">작가</span>
+                <span th:if="${img.licenseDisplay != null}" th:text="|라이선스: ${img.licenseDisplay}|">라이선스</span>
+                <span th:if="${img.licenseCheckedAt != null}"
+                      th:text="|저장 시각: ${#dates.format(img.licenseCheckedAt, 'yyyy-MM-dd HH:mm')}|">저장 시각</span>
+                <span>
+                  <a th:if="${img.attributionUrl != null}" th:href="${img.attributionUrl}"
+                     target="_blank" rel="noopener noreferrer">Pixabay 원본 페이지</a>
+                  <a th:if="${img.safeLicenseUrl != null}" th:href="${img.safeLicenseUrl}"
+                     target="_blank" rel="noopener noreferrer">라이선스 요약</a>
+                </span>
+                <p class="admin-field-help">Pixabay에서 받은 출처라 여기서 수정하지 않습니다. 사진을 바꾸려면 삭제한 뒤 다시 등록하세요.</p>
+              </div>
+
+              <form class="admin-destination-image-metadata-form" th:unless="${img.commonsImage or img.pixabayImage}"
                     th:action="@{/admin/destinations/images/{imageId}/metadata(imageId=${img.id})}"
                     method="post">
                 <input type="hidden" name="destinationId" th:value="${destinationId}">

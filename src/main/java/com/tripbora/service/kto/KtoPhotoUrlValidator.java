@@ -20,6 +20,12 @@ public class KtoPhotoUrlValidator {
     /** Commons 원본은 upload, API가 주는 렌디션(thumburl)은 thumb 호스트에서 내려온다. */
     private static final Set<String> COMMONS_HOSTS = Set.of("upload.wikimedia.org", "thumb.wikimedia.org");
     private static final String COMMONS_PATH_PREFIX = "/wikipedia/commons/";
+    /**
+     * Pixabay API 응답의 이미지 주소. largeImageURL·fullHDURL·imageURL 은 pixabay.com/get/,
+     * 미리보기 계열은 cdn.pixabay.com/photo/ 에서 내려온다.
+     */
+    private static final Set<String> PIXABAY_HOSTS = Set.of("pixabay.com", "cdn.pixabay.com");
+    private static final List<String> PIXABAY_PATH_PREFIXES = List.of("/get/", "/photo/");
 
     private final HostResolver hostResolver;
     private final Set<String> allowedHosts;
@@ -54,6 +60,15 @@ public class KtoPhotoUrlValidator {
 
     static KtoPhotoUrlValidator wikimediaCommons(HostResolver hostResolver) {
         return new KtoPhotoUrlValidator(COMMONS_HOSTS, List.of(COMMONS_PATH_PREFIX), List.of(), false, hostResolver);
+    }
+
+    /** 서버가 Pixabay 검색 응답에서 받은 이미지 호스트의 HTTPS URL만 허용한다. */
+    public static KtoPhotoUrlValidator pixabay() {
+        return pixabay(InetAddress::getAllByName);
+    }
+
+    static KtoPhotoUrlValidator pixabay(HostResolver hostResolver) {
+        return new KtoPhotoUrlValidator(PIXABAY_HOSTS, PIXABAY_PATH_PREFIXES, List.of(), false, hostResolver);
     }
 
     public URI validate(String imageUrl) {
